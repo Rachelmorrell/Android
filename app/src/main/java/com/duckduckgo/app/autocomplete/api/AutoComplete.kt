@@ -16,173 +16,669 @@
 
 package com.duckduckgo.app.autocomplete.api
 
+import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
-import com.duckduckgo.app.autocomplete.api.AutoComplete.AutoCompleteResult
-import com.duckduckgo.app.autocomplete.api.AutoComplete.AutoCompleteSuggestion.AutoCompleteBookmarkSuggestion
-import com.duckduckgo.app.autocomplete.api.AutoComplete.AutoCompleteSuggestion.AutoCompleteSearchSuggestion
-import com.duckduckgo.app.bookmarks.db.BookmarkEntity
-import com.duckduckgo.app.bookmarks.db.BookmarksDao
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
-import com.duckduckgo.app.bookmarks.model.SavedSite
-import com.duckduckgo.app.global.UriString
-import com.duckduckgo.app.global.baseHost
-import com.duckduckgo.app.global.toStringDropScheme
-import io.reactivex.Observable
+import com.duckduckgo.app.autocomplete.AutocompleteSpeedFeature
+import com.duckduckgo.app.autocomplete.AutocompleteTabsFeature
+import com.duckduckgo.app.autocomplete.impl.AutoCompletePixelNames
+import com.duckduckgo.app.browser.UriString
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter
+import com.duckduckgo.app.systemsearch.DeviceApp
+import com.duckduckgo.app.systemsearch.DeviceAppLookup
+import com.duckduckgo.app.tabs.model.TabEntity
+import com.duckduckgo.app.tabs.model.TabRepository
+import com.duckduckgo.browser.api.autocomplete.AutoComplete
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteResult
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteDefaultSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteDeviceAppSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteHistoryRelatedSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteHistoryRelatedSuggestion.AutoCompleteHistorySearchSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteHistoryRelatedSuggestion.AutoCompleteHistorySuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteSearchSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteUrlSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteUrlSuggestion.AutoCompleteBookmarkSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteUrlSuggestion.AutoCompleteSwitchToTabSuggestion
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.browsermode.api.BrowserModeDataProvider
+import com.duckduckgo.common.utils.AppUrl
+import com.duckduckgo.common.utils.AppUrl.Url
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.UrlScheme
+import com.duckduckgo.common.utils.baseHost
+import com.duckduckgo.common.utils.extensions.combine
+import com.duckduckgo.common.utils.toStringDropScheme
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.history.api.HistoryEntry
+import com.duckduckgo.history.api.HistoryEntry.VisitedPage
+import com.duckduckgo.history.api.HistoryEntry.VisitedSERP
+import com.duckduckgo.history.api.NavigationHistory
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.savedsites.api.models.SavedSite
+import com.duckduckgo.savedsites.api.models.SavedSite.Bookmark
+import com.duckduckgo.savedsites.api.models.SavedSite.Favorite
+import dev.zacsweers.metro.ContributesBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.math.max
 
-interface AutoComplete {
-    fun autoComplete(query: String): Observable<AutoCompleteResult>
+const val maximumNumberOfSuggestions = 12
+const val maximumNumberOfTopHits = 2
+const val minimumNumberInSuggestionGroup = 5
 
-    data class AutoCompleteResult(
-        val query: String,
-        val suggestions: List<AutoCompleteSuggestion>
-    )
+/**
+ * The omnibar's [AutoComplete]. Unlike instances from [com.duckduckgo.browser.api.autocomplete.AutoCompleteFactory], it may
+ * emit local matches before the suggest query returns, so its first emission is not always the complete result.
+ */
+@ContributesBinding(ActivityScope::class)
+class DefaultAutoComplete @Inject constructor(
+    factory: AutoCompleteFactoryImpl,
+    browserMode: BrowserMode,
+) : AutoComplete by factory.createForOmnibar(browserMode)
 
-    sealed class AutoCompleteSuggestion(open val phrase: String) {
-        data class AutoCompleteSearchSuggestion(override val phrase: String, val isUrl: Boolean) :
-            AutoCompleteSuggestion(phrase)
-
-        data class AutoCompleteBookmarkSuggestion(override val phrase: String, val title: String, val url: String) :
-            AutoCompleteSuggestion(phrase)
-    }
-}
-
-class AutoCompleteApi @Inject constructor(
+class AutoCompleteApi constructor(
     private val autoCompleteService: AutoCompleteService,
-    private val bookmarksDao: BookmarksDao,
-    private val favoritesRepository: FavoritesRepository
+    private val savedSitesRepository: SavedSitesRepository,
+    private val navigationHistory: NavigationHistory,
+    private val autoCompleteScorer: AutoCompleteScorer,
+    private val tabRepositoryProvider: BrowserModeDataProvider<TabRepository>,
+    private val browserMode: BrowserMode,
+    private val autocompleteTabsFeature: AutocompleteTabsFeature,
+    private val autocompleteSpeedFeature: AutocompleteSpeedFeature,
+    private val duckChat: DuckChat,
+    private val history: NavigationHistory,
+    private val dispatchers: DispatcherProvider,
+    private val pixel: Pixel,
+    private val deviceAppLookup: DeviceAppLookup,
+    @AppCoroutineScope private val coroutineScope: CoroutineScope,
+    private val config: AutoComplete.Config,
+    private val isOmnibar: Boolean = false,
 ) : AutoComplete {
 
-    override fun autoComplete(query: String): Observable<AutoCompleteResult> {
+    private val tabRepository: TabRepository
+        get() = tabRepositoryProvider.forMode(browserMode)
 
+    private var isAutocompleteTabsFeatureEnabled: Boolean? = null
+
+    private val localSuggestionsFirst: Boolean by lazy {
+        isOmnibar && autocompleteSpeedFeature.localSuggestionsFirst().isEnabled()
+    }
+
+    private val searchRequestsInFlight = mutableMapOf<String, Deferred<List<AutoCompleteSearchSuggestion>>>()
+    private val latestSearchResults = MutableStateFlow<SearchResults?>(null)
+
+    init {
+        if (config.showInstalledApps) {
+            coroutineScope.launch {
+                deviceAppLookup.refreshAppList()
+            }
+        }
+    }
+
+    override fun autoComplete(query: String): Flow<AutoCompleteResult> {
         if (query.isBlank()) {
-            return Observable.just(AutoCompleteResult(query = query, suggestions = emptyList()))
+            return flowOf(AutoCompleteResult(query = query, suggestions = emptyList()))
         }
 
-        val savedSitesObservable = getAutoCompleteBookmarkResults(query)
-            .zipWith(
-                getAutoCompleteFavoritesResults(query),
-                { bookmarks, favorites ->
-                    (favorites + bookmarks).take(2)
-                }
-            )
+        if (localSuggestionsFirst) {
+            return autoCompleteLocalSuggestionsFirst(query)
+        }
 
-        return savedSitesObservable.zipWith(
+        return combine(
+            getAutoCompleteBookmarkResults(query),
+            getAutoCompleteFavoritesResults(query),
+            getAutocompleteSwitchToTabResults(query),
+            getAutoCompleteHistoryResults(query),
             getAutoCompleteSearchResults(query),
-            { bookmarksResults, searchResults ->
-                AutoCompleteResult(
-                    query = query,
-                    suggestions = (bookmarksResults + searchResults).distinctBy { it.phrase }
-                )
+            getDeviceAppResults(query),
+        ) { bookmarks, favorites, tabs, historyResults, searchResults, deviceAppResults ->
+            val bookmarksFavoritesTabsAndHistory = combineBookmarksFavoritesTabsAndHistory(bookmarks, favorites, tabs, historyResults)
+            val topHits = getTopHits(bookmarksFavoritesTabsAndHistory, searchResults)
+            val filteredBookmarksFavoritesTabsAndHistory = filterBookmarksAndTabsAndHistory(bookmarksFavoritesTabsAndHistory, topHits)
+            val middleSectionSearchResults = getMiddleSearchResults(searchResults, topHits, filteredBookmarksFavoritesTabsAndHistory)
+
+            val searchSuggestions = (topHits + middleSectionSearchResults + filteredBookmarksFavoritesTabsAndHistory).distinctBy {
+                Pair(it.phrase, it::class.java)
             }
+            withDeviceApps(searchSuggestions, deviceAppResults)
+        }.map { suggestions -> toAutoCompleteResult(query, suggestions) }
+    }
+
+    /**
+     * Local matches are emitted without waiting for the search results, which keep their usual place between the top hits
+     * and the remaining local matches. Until they arrive, the latest search results received for an earlier query that
+     * still start with [query] stand in for them, so the list keeps updating while the user types.
+     */
+    private fun autoCompleteLocalSuggestionsFirst(query: String): Flow<AutoCompleteResult> {
+        return combine(
+            getAutoCompleteBookmarkResults(query),
+            getAutoCompleteFavoritesResults(query),
+            getAutocompleteSwitchToTabResults(query),
+            getAutoCompleteHistoryResults(query),
+            getSearchSuggestionsOrStandIns(query),
+            getDeviceAppResults(query),
+        ) { bookmarks, favorites, tabs, historyResults, searchResults, deviceAppResults ->
+            val bookmarksFavoritesTabsAndHistory = combineBookmarksFavoritesTabsAndHistory(bookmarks, favorites, tabs, historyResults)
+            val topHits = getTopHits(bookmarksFavoritesTabsAndHistory, searchResults)
+            val filteredBookmarksFavoritesTabsAndHistory = filterBookmarksAndTabsAndHistory(bookmarksFavoritesTabsAndHistory, topHits)
+            val middleSectionSearchResults = getMiddleSearchResults(searchResults, topHits, filteredBookmarksFavoritesTabsAndHistory)
+
+            val suggestions = (topHits + middleSectionSearchResults + filteredBookmarksFavoritesTabsAndHistory).distinctBy {
+                Pair(it.phrase, it::class.java)
+            }
+            withDeviceApps(suggestions, deviceAppResults)
+        }.distinctUntilChanged().map { suggestions -> toAutoCompleteResult(query, suggestions) }
+    }
+
+    private fun getSearchSuggestionsOrStandIns(query: String): Flow<List<AutoCompleteSearchSuggestion>> = channelFlow {
+        val standIns = launch {
+            latestSearchResults
+                .filter { it?.query != query }
+                .collect { latest ->
+                    val standIn = latest?.suggestions.orEmpty().filter { it.phrase.startsWith(query, ignoreCase = true) }
+                    send(standIn)
+                }
+        }
+        val suggestions = searchRequest(query).await()
+        standIns.cancelAndJoin()
+        send(suggestions)
+    }
+
+    /**
+     * Runs in the app scope: the omnibar restarts its pipeline on every keystroke, and a request cancelled there would never
+     * return while the user keeps typing. Left to finish, its results stand in for the next query's.
+     */
+    private fun searchRequest(query: String): Deferred<List<AutoCompleteSearchSuggestion>> = synchronized(searchRequestsInFlight) {
+        searchRequestsInFlight.getOrPut(query) {
+            coroutineScope.async(dispatchers.io()) {
+                val result = runCatching { autoCompleteService.autoComplete(query).map { it.toSearchSuggestion() } }
+                synchronized(searchRequestsInFlight) { searchRequestsInFlight.remove(query) }
+                result.onSuccess { latestSearchResults.value = SearchResults(query, it) }
+                result.getOrDefault(emptyList())
+            }
+        }
+    }
+
+    private fun withDeviceApps(
+        suggestions: List<AutoCompleteSuggestion>,
+        deviceAppResults: List<AutoCompleteDeviceAppSuggestion>,
+    ): List<AutoCompleteSuggestion> {
+        return if (suggestions.isNotEmpty() && deviceAppResults.isNotEmpty()) {
+            suggestions.take(MAX_RESULTS_PER_GROUP_WITH_INSTALLED_APPS) + deviceAppResults.take(MAX_RESULTS_PER_GROUP_WITH_INSTALLED_APPS)
+        } else {
+            suggestions + deviceAppResults
+        }
+    }
+
+    private fun toAutoCompleteResult(
+        query: String,
+        suggestions: List<AutoCompleteSuggestion>,
+    ): AutoCompleteResult {
+        val duckAIPrompt = mutableListOf<AutoCompleteSuggestion>()
+        if (duckChat.isEnabled()) {
+            duckAIPrompt.add(AutoCompleteSuggestion.AutoCompleteDuckAIPrompt(query))
+        }
+
+        return AutoCompleteResult(
+            query = query,
+            suggestions = suggestions.ifEmpty { listOf(AutoCompleteDefaultSuggestion(query)) } + duckAIPrompt,
         )
     }
 
-    private fun getAutoCompleteSearchResults(query: String) =
-        autoCompleteService.autoComplete(query)
-            .flatMapIterable { it }
-            .map {
-                AutoCompleteSearchSuggestion(phrase = it.phrase, isUrl = (it.isNav ?: UriString.isWebUrl(it.phrase)))
-            }
-            .toList()
-            .onErrorReturn { emptyList() }
-            .toObservable()
+    private fun combineBookmarksFavoritesTabsAndHistory(
+        bookmarks: List<RankedSuggestion<AutoCompleteBookmarkSuggestion>>,
+        favorites: List<RankedSuggestion<AutoCompleteBookmarkSuggestion>>,
+        tabs: List<RankedSuggestion<AutoCompleteSwitchToTabSuggestion>>,
+        historyItems: List<RankedSuggestion<AutoCompleteHistoryRelatedSuggestion>>,
+    ): List<AutoCompleteSuggestion> {
+        val bookmarksAndFavorites = (favorites + bookmarks.filter { favorites.none { favorite -> (it.suggestion).url == favorite.suggestion.url } })
+        val bookmarksFavoritesAndTabs = (tabs + bookmarksAndFavorites) as List<RankedSuggestion<AutoCompleteUrlSuggestion>>
+        val searchHistory = historyItems.filter { it.suggestion is AutoCompleteHistorySearchSuggestion }
+        val navigationHistory =
+            historyItems.filter { it.suggestion is AutoCompleteHistorySuggestion } as List<RankedSuggestion<AutoCompleteHistorySuggestion>>
+        return (removeDuplicates(navigationHistory, bookmarksFavoritesAndTabs) + searchHistory)
+            .sortedByDescending { it.score }
+            .map { it.suggestion }
+    }
 
-    private fun getAutoCompleteBookmarkResults(query: String) =
-        bookmarksDao.bookmarksObservable()
-            .map { rankBookmarks(query, it) }
-            .flattenAsObservable { it }
-            .map {
-                AutoCompleteBookmarkSuggestion(phrase = it.url.toUri().toStringDropScheme(), title = it.title.orEmpty(), url = it.url)
+    private fun getTopHits(
+        bookmarksAndFavoritesAndTabsAndHistory: List<AutoCompleteSuggestion>,
+        searchResults: List<AutoCompleteSearchSuggestion>,
+    ): List<AutoCompleteSuggestion> {
+        return (bookmarksAndFavoritesAndTabsAndHistory + searchResults).filter {
+            when (it) {
+                is AutoCompleteHistorySearchSuggestion -> it.isAllowedInTopHits
+                is AutoCompleteHistorySuggestion -> it.isAllowedInTopHits
+                is AutoCompleteUrlSuggestion -> true
+                is AutoCompleteSearchSuggestion -> it.isAllowedInTopHits
+                else -> false
             }
-            .distinctUntilChanged()
-            .take(2)
-            .toList()
-            .onErrorReturn { emptyList() }
-            .toObservable()
+        }.take(maximumNumberOfTopHits)
+    }
 
-    private fun getAutoCompleteFavoritesResults(query: String) =
-        favoritesRepository.favoritesObservable()
-            .map { rankFavorites(query, it) }
-            .flattenAsObservable { it }
-            .map {
-                AutoCompleteBookmarkSuggestion(phrase = it.url.toUri().toStringDropScheme(), title = it.title.orEmpty(), url = it.url)
+    private fun filterBookmarksAndTabsAndHistory(
+        bookmarksAndFavoritesAndTabsAndHistory: List<AutoCompleteSuggestion>,
+        topHits: List<AutoCompleteSuggestion>,
+    ): List<AutoCompleteSuggestion> {
+        val maxBottomSection = maximumNumberOfSuggestions - (topHits.size + minimumNumberInSuggestionGroup)
+        return bookmarksAndFavoritesAndTabsAndHistory
+            .filter { suggestion -> topHits.none { it.phrase == suggestion.phrase } }
+            .take(maxBottomSection)
+    }
+
+    private fun getMiddleSearchResults(
+        searchResults: List<AutoCompleteSearchSuggestion>,
+        topHits: List<AutoCompleteSuggestion>,
+        filteredBookmarksAndTabsAndHistory: List<AutoCompleteSuggestion>,
+    ): List<AutoCompleteSearchSuggestion> {
+        val middleSectionSearchResults = makeSearchResultsNotAllowedInTopHits(searchResults)
+        val distinctSearchResults = getDistinctSearchResults(middleSectionSearchResults, topHits, filteredBookmarksAndTabsAndHistory)
+        return distinctSearchResults
+            .filter { suggestion -> topHits.none { it.phrase == suggestion.phrase && it::class.isInstance(suggestion) } }
+            .take(MAX_SEARCH_SUGGESTIONS)
+    }
+
+    private fun makeSearchResultsNotAllowedInTopHits(searchResults: List<AutoCompleteSearchSuggestion>): List<AutoCompleteSearchSuggestion> {
+        // we allow for search results to show navigational links if they are not favorites or bookmarks and not in top hits
+        return searchResults.map {
+            it.copy(
+                isAllowedInTopHits = false,
+            )
+        }
+    }
+
+    private fun getDistinctSearchResults(
+        searchResults: List<AutoCompleteSearchSuggestion>,
+        topHits: List<AutoCompleteSuggestion>,
+        filteredBookmarksAndTabsAndHistory: List<AutoCompleteSuggestion>,
+    ): List<AutoCompleteSearchSuggestion> {
+        // we allow for navigational search results if they are not part of top hits
+        val distinctPhrases = (filteredBookmarksAndTabsAndHistory).distinctBy { it.phrase }.map { it.phrase }.toSet()
+        val distinctPairs = (topHits + filteredBookmarksAndTabsAndHistory).distinctBy { Pair(it.phrase, it::class.java) }.size
+
+        val maxSearchResults = maximumNumberOfSuggestions - distinctPairs
+        return searchResults.distinctBy { it.phrase }.filterNot { it.phrase in distinctPhrases }.take(maxSearchResults)
+    }
+
+    private fun removeDuplicates(
+        historySuggestions: List<RankedSuggestion<AutoCompleteHistorySuggestion>>,
+        bookmarkSuggestions: List<RankedSuggestion<AutoCompleteUrlSuggestion>>,
+    ): List<RankedSuggestion<*>> {
+        val bookmarkMap = bookmarkSuggestions.associateBy { it.suggestion.phrase.lowercase() }
+
+        val uniqueHistorySuggestions = historySuggestions.filter { !bookmarkMap.containsKey(it.suggestion.phrase.lowercase()) }
+        val updatedBookmarkSuggestions = bookmarkSuggestions.map { bookmarkSuggestion ->
+            val historySuggestion =
+                historySuggestions.find { it.suggestion.phrase.equals(bookmarkSuggestion.suggestion.phrase, ignoreCase = true) }
+            if (historySuggestion != null) {
+                bookmarkSuggestion.copy(
+                    score = max(historySuggestion.score, bookmarkSuggestion.score),
+                )
+            } else {
+                bookmarkSuggestion
             }
-            .distinctUntilChanged()
-            .take(2)
-            .toList()
-            .onErrorReturn { emptyList() }
-            .toObservable()
+        }
 
-    private fun rankBookmarks(query: String, bookmarks: List<BookmarkEntity>): List<SavedSite> {
+        return uniqueHistorySuggestions + updatedBookmarkSuggestions
+    }
+
+    override suspend fun fireAutocompletePixel(
+        suggestions: List<AutoCompleteSuggestion>,
+        suggestion: AutoCompleteSuggestion,
+        experimentalInputScreen: Boolean,
+        duckAiSurface: Boolean,
+    ) {
+        val hasBookmarks = withContext(dispatchers.io()) {
+            savedSitesRepository.hasBookmarks()
+        }
+        val hasFavorites = withContext(dispatchers.io()) {
+            savedSitesRepository.hasFavorites()
+        }
+        val hasHistory = withContext(dispatchers.io()) {
+            history.hasHistory()
+        }
+        val hasTabs = withContext(dispatchers.io()) {
+            (tabRepository.liveTabs.value?.size ?: 0) > 1
+        }
+
+        val hasBookmarkResults = suggestions.any { it is AutoCompleteBookmarkSuggestion && !it.isFavorite }
+        val hasFavoriteResults = suggestions.any { it is AutoCompleteBookmarkSuggestion && it.isFavorite }
+        val hasHistoryResults = suggestions.any { it is AutoCompleteHistorySuggestion || it is AutoCompleteHistorySearchSuggestion }
+        val hasSwitchToTabResults = suggestions.any { it is AutoCompleteSwitchToTabSuggestion }
+        val params = mapOf(
+            PixelParameter.SHOWED_BOOKMARKS to hasBookmarkResults.toString(),
+            PixelParameter.SHOWED_FAVORITES to hasFavoriteResults.toString(),
+            PixelParameter.BOOKMARK_CAPABLE to hasBookmarks.toString(),
+            PixelParameter.FAVORITE_CAPABLE to hasFavorites.toString(),
+            PixelParameter.HISTORY_CAPABLE to hasHistory.toString(),
+            PixelParameter.SHOWED_HISTORY to hasHistoryResults.toString(),
+            PixelParameter.SWITCH_TO_TAB_CAPABLE to hasTabs.toString(),
+            PixelParameter.SHOWED_SWITCH_TO_TAB to hasSwitchToTabResults.toString(),
+        )
+        val pixelName = when (suggestion) {
+            is AutoCompleteBookmarkSuggestion -> if (suggestion.isFavorite) {
+                AutoCompletePixelNames.AUTOCOMPLETE_FAVORITE_SELECTION
+            } else {
+                AutoCompletePixelNames.AUTOCOMPLETE_BOOKMARK_SELECTION
+            }
+
+            is AutoCompleteSearchSuggestion -> if (suggestion.isUrl) {
+                AutoCompletePixelNames.AUTOCOMPLETE_SEARCH_WEBSITE_SELECTION
+            } else {
+                AutoCompletePixelNames.AUTOCOMPLETE_SEARCH_PHRASE_SELECTION
+            }
+
+            is AutoCompleteHistorySuggestion -> AutoCompletePixelNames.AUTOCOMPLETE_HISTORY_SITE_SELECTION
+            is AutoCompleteHistorySearchSuggestion -> AutoCompletePixelNames.AUTOCOMPLETE_HISTORY_SEARCH_SELECTION
+            is AutoCompleteSwitchToTabSuggestion -> AutoCompletePixelNames.AUTOCOMPLETE_SWITCH_TO_TAB_SELECTION
+            is AutoCompleteSuggestion.AutoCompleteDuckAIPrompt -> if (experimentalInputScreen) {
+                AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_PROMPT_EXPERIMENTAL_SELECTION
+            } else {
+                AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_PROMPT_LEGACY_SELECTION
+            }
+            is AutoCompleteDeviceAppSuggestion -> {
+                pixel.fire(AutoCompletePixelNames.AUTOCOMPLETE_INSTALLED_APP_SELECTION)
+                return
+            }
+
+            else -> return
+        }
+
+        // On the Duck.ai tab the same suggestion taps are attributed to a separate
+        // m_autocomplete_duckai_click_* family so they aren't conflated with search-mode taps.
+        pixel.fire(if (duckAiSurface) pixelName.toDuckAiSurface() else pixelName, params)
+    }
+
+    private fun AutoCompletePixelNames.toDuckAiSurface(): AutoCompletePixelNames = when (this) {
+        AutoCompletePixelNames.AUTOCOMPLETE_FAVORITE_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_FAVORITE_SELECTION
+        AutoCompletePixelNames.AUTOCOMPLETE_BOOKMARK_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_BOOKMARK_SELECTION
+        AutoCompletePixelNames.AUTOCOMPLETE_SEARCH_WEBSITE_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_WEBSITE_SELECTION
+        AutoCompletePixelNames.AUTOCOMPLETE_HISTORY_SITE_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_HISTORY_SITE_SELECTION
+        AutoCompletePixelNames.AUTOCOMPLETE_HISTORY_SEARCH_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_HISTORY_SEARCH_SELECTION
+        AutoCompletePixelNames.AUTOCOMPLETE_SWITCH_TO_TAB_SELECTION -> AutoCompletePixelNames.AUTOCOMPLETE_DUCKAI_SWITCH_TO_TAB_SELECTION
+        else -> this
+    }
+
+    private fun isAllowedInTopHits(entry: HistoryEntry): Boolean {
+        return entry.visits.size > 3 || entry.url.isRoot()
+    }
+
+    private fun getAutocompleteSwitchToTabResults(query: String): Flow<List<RankedSuggestion<AutoCompleteSwitchToTabSuggestion>>> =
+        runCatching {
+            if (autocompleteTabsEnabled) {
+                val repo = tabRepositoryProvider.forMode(browserMode)
+                combine(repo.flowTabs, repo.flowSelectedTab) { tabs, selectedTab ->
+                    rankTabs(query, tabs.filter { it.tabId != selectedTab?.tabId })
+                }.distinctUntilChanged()
+            } else {
+                flowOf(emptyList())
+            }
+        }.getOrElse { flowOf(emptyList()) }
+
+    private val autocompleteTabsEnabled: Boolean by lazy {
+        isAutocompleteTabsFeatureEnabled ?: run {
+            val enabled = autocompleteTabsFeature.self().isEnabled()
+            isAutocompleteTabsFeatureEnabled = enabled
+            enabled
+        }
+    }
+
+    private fun getAutoCompleteSearchResults(query: String) = flow {
+        val searchSuggestionsList = mutableListOf<AutoCompleteSearchSuggestion>()
+        runCatching {
+            val rawResults = autoCompleteService.autoComplete(query)
+            for (rawResult in rawResults) {
+                searchSuggestionsList.add(rawResult.toSearchSuggestion())
+            }
+            emit(searchSuggestionsList.toList())
+        }.getOrElse { emit(searchSuggestionsList.toList()) }
+    }
+
+    private fun AutoCompleteServiceRawResult.toSearchSuggestion() = AutoCompleteSearchSuggestion(
+        phrase = phrase.formatIfUrl(),
+        isUrl = isNav ?: UriString.isWebUrl(phrase),
+        isAllowedInTopHits = isNav ?: UriString.isWebUrl(phrase),
+    )
+
+    private fun getAutoCompleteBookmarkResults(query: String): Flow<List<RankedSuggestion<AutoCompleteBookmarkSuggestion>>> =
+        runCatching {
+            savedSitesRepository.getBookmarks()
+                .map { rankBookmarks(query, it) }
+                .distinctUntilChanged()
+        }.getOrElse { flowOf(emptyList()) }
+
+    private fun getAutoCompleteFavoritesResults(query: String): Flow<List<RankedSuggestion<AutoCompleteBookmarkSuggestion>>> =
+        runCatching {
+            savedSitesRepository.getFavorites()
+                .map { rankFavorites(query, it) }
+                .distinctUntilChanged()
+        }.getOrElse { flowOf(emptyList()) }
+
+    private fun getAutoCompleteHistoryResults(query: String): Flow<List<RankedSuggestion<AutoCompleteHistoryRelatedSuggestion>>> =
+        runCatching {
+            navigationHistory.getHistory()
+                .map { rankHistory(query, it) }
+                .distinctUntilChanged()
+        }.getOrElse { flowOf(emptyList()) }
+
+    private fun getDeviceAppResults(query: String): Flow<List<AutoCompleteDeviceAppSuggestion>> =
+        if (!config.showInstalledApps || query.isBlank()) {
+            flowOf(emptyList())
+        } else {
+            flow {
+                val apps = deviceAppLookup.query(query).toAutoCompleteSuggestion(query)
+                emit(apps)
+            }
+        }
+
+    private fun List<DeviceApp>.toAutoCompleteSuggestion(phrase: String) = map {
+        AutoCompleteDeviceAppSuggestion(
+            phrase = phrase,
+            shortName = it.shortName,
+            packageName = it.packageName,
+            launchIntent = it.launchIntent,
+        )
+    }
+
+    private fun rankTabs(
+        query: String,
+        tabs: List<TabEntity>,
+    ): List<RankedSuggestion<AutoCompleteSwitchToTabSuggestion>> {
+        return tabs.asSequence()
+            .filter { it.url != null }
+            .distinctBy { it.url }
+            .sortTabsByRank(query)
+    }
+
+    private fun rankBookmarks(
+        query: String,
+        bookmarks: List<Bookmark>,
+    ): List<RankedSuggestion<AutoCompleteBookmarkSuggestion>> {
         return bookmarks.asSequence()
-            .map { SavedSite.Bookmark(it.id, it.title ?: "", it.url) }
             .sortByRank(query)
     }
 
-    private fun rankFavorites(query: String, favorites: List<SavedSite.Favorite>): List<SavedSite> {
+    private fun rankFavorites(
+        query: String,
+        favorites: List<Favorite>,
+    ): List<RankedSuggestion<AutoCompleteBookmarkSuggestion>> {
         return favorites.asSequence().sortByRank(query)
     }
 
-    private fun Sequence<SavedSite>.sortByRank(query: String): List<SavedSite> {
-        return this.map { RankedBookmark(savedSite = it) }
+    private fun rankHistory(
+        query: String,
+        history: List<HistoryEntry>,
+    ): List<RankedSuggestion<AutoCompleteHistoryRelatedSuggestion>> {
+        return history.asSequence().sortHistoryByRank(query)
+    }
+
+    private fun Sequence<TabEntity>.sortTabsByRank(query: String): List<RankedSuggestion<AutoCompleteSwitchToTabSuggestion>> {
+        return this.map { tabEntity ->
+            RankedSuggestion(
+                AutoCompleteSwitchToTabSuggestion(
+                    phrase = tabEntity.url?.formatIfUrl().orEmpty(),
+                    title = tabEntity.title.orEmpty(),
+                    url = tabEntity.url.orEmpty(),
+                    tabId = tabEntity.tabId,
+                ),
+            )
+        }
             .map { scoreTitle(it, query) }
             .map { scoreTokens(it, query) }
-            .filter { it.score >= 0 }
-            .sortedByDescending { it.score }
-            .map { it.savedSite }
+            .filter { it.score > 0 }
             .toList()
     }
 
-    private fun scoreTitle(rankedBookmark: RankedBookmark, query: String): RankedBookmark {
-        if (rankedBookmark.savedSite.title.startsWith(query, ignoreCase = true)) {
-            rankedBookmark.score += 200
-        } else if (rankedBookmark.savedSite.title.contains(" $query", ignoreCase = true)) {
-            rankedBookmark.score += 100
+    private fun Sequence<SavedSite>.sortByRank(query: String): List<RankedSuggestion<AutoCompleteBookmarkSuggestion>> {
+        return this.map { savedSite ->
+            RankedSuggestion(
+                AutoCompleteBookmarkSuggestion(
+                    phrase = savedSite.url.formatIfUrl(),
+                    title = savedSite.title,
+                    url = savedSite.url,
+                    isFavorite = savedSite is Favorite,
+                ),
+            )
         }
-
-        return rankedBookmark
+            .map { scoreTitle(it, query) }
+            .map { scoreTokens(it, query) }
+            .map { if (it.suggestion.isFavorite && it.score > 0) it.copy(score = it.score + 5) else it }
+            .filter { it.score > 0 }
+            .toList()
     }
 
-    private fun scoreTokens(rankedBookmark: RankedBookmark, query: String): RankedBookmark {
-        val savedSite = rankedBookmark.savedSite
-        val domain = savedSite.url.toUri().baseHost
+    private fun Sequence<HistoryEntry>.sortHistoryByRank(query: String): List<RankedSuggestion<AutoCompleteHistoryRelatedSuggestion>> {
+        return this.let { entries ->
+            entries.filterIsInstance<VisitedSERP>()
+                .groupBy { it.query }
+                .mapNotNull { (query, suggestions) ->
+                    val sanitizedUrl =
+                        Uri.Builder()
+                            .scheme(UrlScheme.https)
+                            .appendQueryParameter(AppUrl.ParamKey.QUERY, query)
+                            .authority(Url.HOST)
+                            .build()
+
+                    suggestions.firstOrNull()?.let { suggestion ->
+                        VisitedSERP(sanitizedUrl, suggestion.title, query, suggestions.flatMap { it.visits })
+                    }
+                } + entries.filterIsInstance<VisitedPage>()
+        }
+            .map { entry ->
+                when (entry) {
+                    is VisitedPage -> {
+                        AutoCompleteHistorySuggestion(
+                            phrase = entry.url.toString().formatIfUrl(),
+                            title = entry.title,
+                            url = entry.url.toString(),
+                            isAllowedInTopHits = isAllowedInTopHits(entry),
+                        )
+                    }
+
+                    is VisitedSERP -> {
+                        AutoCompleteHistorySearchSuggestion(
+                            phrase = entry.query.formatIfUrl(),
+                            isAllowedInTopHits = isAllowedInTopHits(entry),
+                        )
+                    }
+                }.let { suggestion ->
+                    RankedSuggestion(suggestion, autoCompleteScorer.score(entry.title, entry.url, entry.visits.size, query))
+                }
+            }.filter { it.score > 0 }
+            .toList()
+    }
+
+    private fun <T : AutoCompleteUrlSuggestion> scoreTitle(
+        rankedSuggestion: RankedSuggestion<T>,
+        query: String,
+    ): RankedSuggestion<T> {
+        return if (rankedSuggestion.suggestion.title.startsWith(query, ignoreCase = true)) {
+            rankedSuggestion.copy(score = rankedSuggestion.score + 200)
+        } else if (rankedSuggestion.suggestion.title.contains(" $query", ignoreCase = true)) {
+            rankedSuggestion.copy(score = rankedSuggestion.score + 100)
+        } else {
+            rankedSuggestion
+        }
+    }
+
+    private fun <T : AutoCompleteUrlSuggestion> scoreTokens(
+        rankedBookmark: RankedSuggestion<T>,
+        query: String,
+    ): RankedSuggestion<T> {
+        val suggestion = rankedBookmark.suggestion
+        val domain = suggestion.url.toUri().baseHost
         val tokens = query.split(" ")
+        var toReturn = rankedBookmark
         if (tokens.size > 1) {
             tokens.forEach { token ->
-                if (!savedSite.title.startsWith(token, ignoreCase = true) &&
-                    !savedSite.title.contains(" $token", ignoreCase = true) &&
-                    domain?.startsWith(token, ignoreCase = true) == false
+                if (!suggestion.title.startsWith(token, ignoreCase = true) &&
+                    !suggestion.title.contains(" $token", ignoreCase = true) &&
+                    (domain == null || !domain.startsWith(token, ignoreCase = true))
                 ) {
                     return rankedBookmark
                 }
             }
 
-            rankedBookmark.score += 10
+            toReturn = toReturn.copy(score = toReturn.score + 10)
 
             if (domain?.startsWith(tokens.first(), ignoreCase = true) == true) {
-                rankedBookmark.score += 300
-            } else if (savedSite.title.startsWith(tokens.first(), ignoreCase = true)) {
-                rankedBookmark.score += 50
+                toReturn = toReturn.copy(score = toReturn.score + 300)
+            } else if (suggestion.title.startsWith(tokens.first(), ignoreCase = true)) {
+                toReturn = toReturn.copy(score = toReturn.score + 50)
             }
-
-        } else if (savedSite.url.redactSchemeAndWwwSubDomain().startsWith(tokens.first().trimEnd { it == '/' }, ignoreCase = true)) {
-            rankedBookmark.score += 300
+        } else if (suggestion.url.redactSchemeAndWwwSubDomain().startsWith(tokens.first().trimEnd { it == '/' }, ignoreCase = true)) {
+            toReturn = toReturn.copy(score = toReturn.score + 300)
         }
 
-        return rankedBookmark
+        return toReturn
     }
 
     private fun String.redactSchemeAndWwwSubDomain(): String {
         return this.toUri().toStringDropScheme().removePrefix("www.")
     }
 
-    private data class RankedBookmark(
-        val savedSite: SavedSite,
-        var score: Int = BOOKMARK_SCORE
+    private data class SearchResults(
+        val query: String,
+        val suggestions: List<AutoCompleteSearchSuggestion>,
     )
 
-    companion object {
-        private const val BOOKMARK_SCORE = -1
+    private data class RankedSuggestion<T : AutoCompleteSuggestion>(
+        val suggestion: T,
+        val score: Int = DEFAULT_SCORE,
+    )
+
+    private companion object {
+        private const val MAX_RESULTS_PER_GROUP_WITH_INSTALLED_APPS = 4
+        private const val MAX_SEARCH_SUGGESTIONS = 5
     }
+}
+
+@VisibleForTesting
+internal fun String.formatIfUrl(): String {
+    val trimmedUrl = this.trimEnd('/')
+
+    val prefixToRemove = listOf("http://www.", "https://www.", "www.", "http://", "https://")
+    val formattedUrl = prefixToRemove.find { trimmedUrl.startsWith(it, ignoreCase = true) }?.let {
+        trimmedUrl.substring(it.length)
+    } ?: trimmedUrl
+
+    return formattedUrl
 }

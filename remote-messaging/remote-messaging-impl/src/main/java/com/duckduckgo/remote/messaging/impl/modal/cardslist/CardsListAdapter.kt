@@ -1,0 +1,322 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.remote.messaging.impl.modal.cardslist
+
+import android.graphics.drawable.Drawable
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.signature.ObjectKey
+import com.duckduckgo.common.ui.view.gone
+import com.duckduckgo.common.ui.view.show
+import com.duckduckgo.remote.messaging.api.CardItem
+import com.duckduckgo.remote.messaging.api.CardItemType
+import com.duckduckgo.remote.messaging.api.Content
+import com.duckduckgo.remote.messaging.impl.databinding.ViewRemoteMessageCardItemBinding
+import com.duckduckgo.remote.messaging.impl.databinding.ViewRemoteMessageFeaturedListItemBinding
+import com.duckduckgo.remote.messaging.impl.databinding.ViewRemoteMessageHeaderBinding
+import com.duckduckgo.remote.messaging.impl.databinding.ViewRemoteMessageSectionTitleItemBinding
+import com.duckduckgo.remote.messaging.impl.mappers.drawable
+import java.io.File
+import javax.inject.Inject
+
+class CardsListAdapter @Inject constructor() : ListAdapter<ModalListItem, CardsListAdapter.RemoteMessageItemHolder>(ModalSurfaceDiffCallback()) {
+
+    private lateinit var cardItemClickListener: CardItemClickListener
+    var imageLoadListener: ImageLoadListener? = null
+
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): RemoteMessageItemHolder = when (viewType) {
+        ITEM_TYPE_HEADER -> RemoteMessageItemHolder.HeaderViewHolder(
+            ViewRemoteMessageHeaderBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false,
+            ),
+            imageLoadListener,
+        )
+
+        ITEM_TYPE_LIST_SECTION_TITLE -> RemoteMessageItemHolder.SectionTitleHolder(
+            ViewRemoteMessageSectionTitleItemBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false,
+            ),
+        )
+
+        ITEM_TYPE_FEATURED_TWO_LINE_LIST_ITEM -> RemoteMessageItemHolder.FeaturedItemHolder(
+            ViewRemoteMessageFeaturedListItemBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false,
+            ),
+            cardItemClickListener,
+            imageLoadListener,
+        )
+
+        else -> RemoteMessageItemHolder.CardItemViewHolder(
+            ViewRemoteMessageCardItemBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false,
+            ),
+            cardItemClickListener,
+            imageLoadListener,
+        )
+    }
+
+    override fun onBindViewHolder(
+        holder: RemoteMessageItemHolder,
+        position: Int,
+    ) {
+        when (holder) {
+            is RemoteMessageItemHolder.HeaderViewHolder -> {
+                holder.bind(getItem(position) as ModalListItem.Header)
+            }
+
+            is RemoteMessageItemHolder.CardItemViewHolder -> {
+                val cardListItem = getItem(position) as ModalListItem.CardListItem
+                holder.bind(cardListItem.cardItem as CardItem.ListItem, cardListItem.imageFilePath)
+            }
+
+            is RemoteMessageItemHolder.FeaturedItemHolder -> {
+                val cardListItem = getItem(position) as ModalListItem.CardListItem
+                holder.bind(cardListItem.cardItem as CardItem.ListItem, cardListItem.imageFilePath)
+            }
+
+            is RemoteMessageItemHolder.SectionTitleHolder -> {
+                holder.bind((getItem(position) as ModalListItem.CardListItem).cardItem as CardItem.SectionTitle)
+            }
+        }
+    }
+
+    override fun getItemViewType(position: Int): Int = when (val item = getItem(position)) {
+        is ModalListItem.Header -> ITEM_TYPE_HEADER
+        is ModalListItem.CardListItem -> when (item.cardItem.type) {
+            CardItemType.TWO_LINE_LIST_ITEM,
+            CardItemType.ONE_ACTION_ITEM,
+            -> ITEM_TYPE_TWO_LINE_LIST_ITEM
+            CardItemType.LIST_SECTION_TITLE -> ITEM_TYPE_LIST_SECTION_TITLE
+            CardItemType.FEATURED_TWO_LINE_SINGLE_ACTION_LIST_ITEM -> ITEM_TYPE_FEATURED_TWO_LINE_LIST_ITEM
+        }
+    }
+
+    sealed class RemoteMessageItemHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+
+        class HeaderViewHolder(
+            private val binding: ViewRemoteMessageHeaderBinding,
+            private val listener: ImageLoadListener?,
+        ) : RemoteMessageItemHolder(binding.root) {
+
+            fun bind(header: ModalListItem.Header) {
+                binding.headerTitle.text = header.titleText
+
+                if (!header.imageUrl.isNullOrEmpty()) {
+                    loadRemoteImage(
+                        imageView = binding.remoteImage,
+                        imageUrl = header.imageUrl,
+                        imageFilePath = header.imageFilePath,
+                        placeholder = header.placeholder,
+                        listener = createGlideListener(listener, ImageLoadSource.Header),
+                    )
+                    binding.headerImage.gone()
+                    binding.remoteImage.show()
+                } else {
+                    binding.headerImage.setImageResource(header.placeholder.drawable(true))
+                    binding.remoteImage.gone()
+                    binding.headerImage.show()
+                }
+            }
+        }
+
+        class CardItemViewHolder(
+            private val binding: ViewRemoteMessageCardItemBinding,
+            private val listener: CardItemClickListener,
+            private val imageLoadListener: ImageLoadListener?,
+        ) : RemoteMessageItemHolder(binding.root) {
+
+            fun bind(
+                item: CardItem.ListItem,
+                imageFilePath: String?,
+            ) {
+                binding.title.text = item.titleText
+                binding.description.text = item.descriptionText
+                loadRemoteImage(
+                    binding.startImage,
+                    item.imageUrl,
+                    imageFilePath,
+                    item.placeholder,
+                    createGlideListener(imageLoadListener, ImageLoadSource.CardItem(item.id)),
+                )
+                if (item.primaryAction != null) {
+                    binding.endImage.show()
+                    binding.listItemContainer.isClickable = true
+                    binding.listItemContainer.setOnClickListener {
+                        listener.onItemClicked(item)
+                    }
+                } else {
+                    binding.endImage.gone()
+                    binding.listItemContainer.setOnClickListener(null)
+                    binding.listItemContainer.isClickable = false
+                }
+            }
+        }
+
+        class SectionTitleHolder(
+            private val binding: ViewRemoteMessageSectionTitleItemBinding,
+        ) : RemoteMessageItemHolder(binding.root) {
+
+            fun bind(item: CardItem.SectionTitle) {
+                binding.sectionTitle.text = item.titleText
+            }
+        }
+
+        class FeaturedItemHolder(
+            private val binding: ViewRemoteMessageFeaturedListItemBinding,
+            private val listener: CardItemClickListener,
+            private val imageLoadListener: ImageLoadListener?,
+        ) : RemoteMessageItemHolder(binding.root) {
+
+            fun bind(
+                item: CardItem.ListItem,
+                imageFilePath: String?,
+            ) {
+                binding.title.text = item.titleText
+                binding.description.text = item.descriptionText
+                binding.action.text = item.primaryActionText
+                loadRemoteImage(
+                    binding.image,
+                    item.imageUrl,
+                    imageFilePath,
+                    item.placeholder,
+                    createGlideListener(imageLoadListener, ImageLoadSource.CardItem(item.id)),
+                )
+                if (item.primaryAction != null) {
+                    binding.endImage.show()
+                    binding.action.setOnClickListener {
+                        listener.onItemClicked(item)
+                    }
+                } else {
+                    binding.endImage.gone()
+                    binding.action.setOnClickListener(null)
+                    binding.action.isClickable = false
+                }
+            }
+        }
+
+        fun createGlideListener(
+            listener: ImageLoadListener?,
+            source: ImageLoadSource,
+        ): RequestListener<Drawable>? = listener?.let {
+            object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>,
+                    isFirstResource: Boolean,
+                ): Boolean {
+                    it.onImageLoadFailed(source)
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Drawable,
+                    model: Any,
+                    target: Target<Drawable>?,
+                    dataSource: DataSource,
+                    isFirstResource: Boolean,
+                ): Boolean {
+                    it.onImageLoadSuccess(source)
+                    return false
+                }
+            }
+        }
+
+        fun loadRemoteImage(
+            imageView: ImageView,
+            imageUrl: String?,
+            imageFilePath: String?,
+            placeholder: Content.Placeholder,
+            listener: RequestListener<Drawable>? = null,
+        ) {
+            if (!imageUrl.isNullOrEmpty()) {
+                val localFile = imageFilePath?.let { File(it) }
+                val imageSource: Any = localFile ?: imageUrl
+                Glide.with(imageView)
+                    .load(imageSource)
+                    .centerCrop()
+                    .error(placeholder.drawable(true))
+                    .apply {
+                        if (localFile != null) {
+                            signature(ObjectKey(localFile.lastModified()))
+                        }
+                        if (listener != null) addListener(listener)
+                    }
+                    .transition(withCrossFade())
+                    .into(imageView)
+            } else {
+                Glide.with(imageView).clear(imageView)
+                imageView.setImageResource(placeholder.drawable(true))
+            }
+        }
+    }
+
+    fun setListener(listener: CardItemClickListener) {
+        this.cardItemClickListener = listener
+    }
+
+    interface ImageLoadListener {
+        fun onImageLoadSuccess(source: ImageLoadSource)
+        fun onImageLoadFailed(source: ImageLoadSource)
+    }
+
+    private class ModalSurfaceDiffCallback : DiffUtil.ItemCallback<ModalListItem>() {
+        override fun areItemsTheSame(
+            oldItem: ModalListItem,
+            newItem: ModalListItem,
+        ): Boolean {
+            return oldItem.id == newItem.id
+        }
+
+        @Suppress("DiffUtilEquals")
+        override fun areContentsTheSame(
+            oldItem: ModalListItem,
+            newItem: ModalListItem,
+        ): Boolean {
+            return oldItem == newItem
+        }
+    }
+
+    companion object {
+        private const val ITEM_TYPE_HEADER = 0
+        private const val ITEM_TYPE_FEATURED_TWO_LINE_LIST_ITEM = 1
+        private const val ITEM_TYPE_TWO_LINE_LIST_ITEM = 2
+        private const val ITEM_TYPE_LIST_SECTION_TITLE = 3
+    }
+}

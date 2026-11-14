@@ -18,24 +18,40 @@ package com.duckduckgo.app.onboarding.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
-import com.duckduckgo.app.onboarding.store.AppStage
-import com.duckduckgo.app.onboarding.store.UserStageStore
+import com.duckduckgo.app.cta.db.DismissedCtaDao
+import com.duckduckgo.app.cta.model.CtaId
+import com.duckduckgo.app.cta.model.DismissedCta
+import com.duckduckgo.app.onboarding.DuckAiOnboardingDemo
+import com.duckduckgo.app.onboarding.orchestrator.NewUserOnboardingEvent
+import com.duckduckgo.app.onboarding.ui.OnboardingViewModel.ExtendedOnboardingFlow.*
+import com.duckduckgo.app.onboarding.ui.OnboardingViewModel.ExtendedOnboardingFlow.DEFAULT
 import com.duckduckgo.app.onboarding.ui.page.OnboardingPageFragment
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import javax.inject.Provider
 
-class OnboardingViewModel(
-    private val userStageStore: UserStageStore,
+@ContributesViewModel(ActivityScope::class)
+class OnboardingViewModel @Inject constructor(
     private val pageLayoutManager: OnboardingPageManager,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
+    private val onboardingSkipper: OnboardingSkipper,
+    private val appBuildConfig: AppBuildConfig,
+    private val dismissedCtaDao: DismissedCtaDao,
+    private val linearOnboardingOrchestrator: LinearOnboardingOrchestrator,
+    private val duckAiOnboardingDemo: DuckAiOnboardingDemo,
 ) : ViewModel() {
 
-    fun initializePages() {
+    private val _viewState = MutableStateFlow(ViewState())
+    val viewState = _viewState.asStateFlow()
+
+    suspend fun initializePages() {
         pageLayoutManager.buildPageBlueprints()
     }
 
@@ -47,26 +63,49 @@ class OnboardingViewModel(
         return pageLayoutManager.buildPage(position)
     }
 
-    fun onOnboardingDone() {
-        // Executing this on IO to avoid any delay changing threads between Main-IO.
-        viewModelScope.launch(dispatchers.io()) {
-            userStageStore.stageCompleted(AppStage.NEW)
-        }
-    }
-}
+    suspend fun onOnboardingDone(extendedOnboardingFlow: ExtendedOnboardingFlow = DEFAULT) {
+        withContext(dispatchers.io()) {
+            when (extendedOnboardingFlow) {
+                DEFAULT -> {
+                    // no-op
+                }
 
-@ContributesMultibinding(AppObjectGraph::class)
-class OnboardingViewModelFactory @Inject constructor(
-    private val userStageStore: Provider<UserStageStore>,
-    private val pageLayoutManager: Provider<OnboardingPageManager>,
-    private val dispatchers: Provider<DispatcherProvider>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(OnboardingViewModel::class.java) -> (OnboardingViewModel(userStageStore.get(), pageLayoutManager.get(), dispatchers.get()) as T)
-                else -> null
+                DUCK_AI_FOCUSED -> {
+                    // Arm the in-browser Duck.ai demo (sets the flow + silences the standard DAX CTAs).
+                    // Shared with the linear-onboarding duck_ai_demo step so both paths arm identically.
+                    duckAiOnboardingDemo.arm()
+                }
+
+                DEFAULT_WITHOUT_INTRO_CTA -> {
+                    dismissedCtaDao.insert(DismissedCta(CtaId.DAX_INTRO))
+                }
             }
         }
+    }
+
+    fun initializeOnboardingSkipper() {
+        if (!appBuildConfig.canSkipOnboarding) return
+
+        // delay showing skip button until privacy config downloaded
+        viewModelScope.launch {
+            onboardingSkipper.privacyConfigDownloaded.collect {
+                _viewState.value = _viewState.value.copy(canShowSkipOnboardingButton = it.skipOnboardingPossible)
+            }
+        }
+    }
+
+    /** Dev-only "skip all onboarding" shortcut handled by the linear onboarding orchestrator. */
+    suspend fun devOnlyFullyCompleteAllOnboarding() {
+        linearOnboardingOrchestrator.onEvent(NewUserOnboardingEvent.SkipNewUserOnboardingDevOptionClicked)
+    }
+
+    companion object {
+        data class ViewState(val canShowSkipOnboardingButton: Boolean = false)
+    }
+
+    enum class ExtendedOnboardingFlow {
+        DEFAULT,
+        DUCK_AI_FOCUSED,
+        DEFAULT_WITHOUT_INTRO_CTA,
     }
 }

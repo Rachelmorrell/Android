@@ -18,47 +18,22 @@ package com.duckduckgo.app.notification
 
 import android.app.IntentService
 import android.app.PendingIntent
-import android.app.TaskStackBuilder
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.VisibleForTesting
-import androidx.core.app.NotificationManagerCompat
-import com.duckduckgo.app.browser.BrowserActivity
-import com.duckduckgo.app.email.ui.EmailProtectionActivity
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.icon.ui.ChangeIconActivity
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.APP_LAUNCH
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CANCEL
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CHANGE_ICON_FEATURE
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CLEAR_DATA_LAUNCH
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.WAITLIST_CODE
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.WEBSITE
-import com.duckduckgo.app.notification.model.NotificationSpec
-import com.duckduckgo.app.notification.model.WebsiteNotificationSpecification
-import com.duckduckgo.app.settings.SettingsActivity
-import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.app.pixels.AppPixelName.NOTIFICATION_CANCELLED
-import com.duckduckgo.app.pixels.AppPixelName.NOTIFICATION_LAUNCHED
-import dagger.android.AndroidInjection
-import timber.log.Timber
+import com.duckduckgo.app.notification.model.SchedulableNotification
+import com.duckduckgo.app.notification.model.SchedulableNotificationPlugin
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.di.android.AndroidInjection
+import com.duckduckgo.di.scopes.ServiceScope
 import javax.inject.Inject
 
+@InjectWith(ServiceScope::class)
 class NotificationHandlerService : IntentService("NotificationHandlerService") {
 
     @Inject
-    lateinit var pixel: Pixel
-
-    @Inject
-    lateinit var context: Context
-
-    @Inject
-    lateinit var notificationManager: NotificationManagerCompat
-
-    @Inject
-    lateinit var notificationScheduler: AndroidNotificationScheduler
-
-    @Inject
-    lateinit var dispatcher: DispatcherProvider
+    lateinit var schedulableNotificationPluginPoint: PluginPoint<SchedulableNotificationPlugin>
 
     override fun onCreate() {
         super.onCreate()
@@ -67,102 +42,22 @@ class NotificationHandlerService : IntentService("NotificationHandlerService") {
 
     @VisibleForTesting
     public override fun onHandleIntent(intent: Intent?) {
-        val pixelSuffix = intent?.getStringExtra(PIXEL_SUFFIX_EXTRA) ?: return
-
-        when (intent.type) {
-            APP_LAUNCH -> onAppLaunched(pixelSuffix)
-            CLEAR_DATA_LAUNCH -> onClearDataLaunched(pixelSuffix)
-            CANCEL -> onCancelled(pixelSuffix)
-            WEBSITE -> onWebsiteNotification(intent, pixelSuffix)
-            CHANGE_ICON_FEATURE -> onCustomizeIconLaunched(pixelSuffix)
-            WAITLIST_CODE -> onWaitlistCodeReceived(pixelSuffix)
+        if (intent == null) return
+        val notificationJavaClass = intent.type ?: return
+        val notificationPlugin = schedulableNotificationPluginPoint.getPlugins().firstOrNull {
+            notificationJavaClass == it.getSchedulableNotification().javaClass.simpleName
         }
-
-        if (intent.getBooleanExtra(NOTIFICATION_AUTO_CANCEL, true)) {
-            val notificationId = intent.getIntExtra(NOTIFICATION_SYSTEM_ID_EXTRA, 0)
-            clearNotification(notificationId)
-            closeNotificationPanel()
-        }
-    }
-
-    private fun onWaitlistCodeReceived(pixelSuffix: String) {
-        Timber.i("Email waitlist code received launched!")
-        val intent = EmailProtectionActivity.intent(context)
-        TaskStackBuilder.create(context)
-            .addNextIntentWithParentStack(intent)
-            .startActivities()
-        pixel.fire("${NOTIFICATION_LAUNCHED.pixelName}_$pixelSuffix")
-    }
-
-    private fun onWebsiteNotification(intent: Intent, pixelSuffix: String) {
-        val url = intent.getStringExtra(WebsiteNotificationSpecification.WEBSITE_KEY)
-        val newIntent = BrowserActivity.intent(context, queryExtra = url)
-        TaskStackBuilder.create(context)
-            .addNextIntentWithParentStack(newIntent)
-            .startActivities()
-        pixel.fire("${NOTIFICATION_LAUNCHED.pixelName}_$pixelSuffix")
-    }
-
-    private fun onCustomizeIconLaunched(pixelSuffix: String) {
-        val intent = ChangeIconActivity.intent(context)
-        TaskStackBuilder.create(context)
-            .addNextIntentWithParentStack(intent)
-            .startActivities()
-        pixel.fire("${NOTIFICATION_LAUNCHED.pixelName}_$pixelSuffix")
-    }
-
-    private fun onAppLaunched(pixelSuffix: String) {
-        val intent = BrowserActivity.intent(context, newSearch = true)
-        TaskStackBuilder.create(context)
-            .addNextIntentWithParentStack(intent)
-            .startActivities()
-        pixel.fire("${NOTIFICATION_LAUNCHED.pixelName}_$pixelSuffix")
-    }
-
-    private fun onClearDataLaunched(pixelSuffix: String) {
-        Timber.i("Clear Data Launched!")
-        val intent = SettingsActivity.intent(context)
-        TaskStackBuilder.create(context)
-            .addNextIntentWithParentStack(intent)
-            .startActivities()
-        pixel.fire("${NOTIFICATION_LAUNCHED.pixelName}_$pixelSuffix")
-    }
-
-    private fun onCancelled(pixelSuffix: String) {
-        pixel.fire("${NOTIFICATION_CANCELLED.pixelName}_$pixelSuffix")
-    }
-
-    private fun clearNotification(notificationId: Int) {
-        notificationManager.cancel(notificationId)
-    }
-
-    private fun closeNotificationPanel() {
-        val it = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-        context.sendBroadcast(it)
-    }
-
-    object NotificationEvent {
-        const val APP_LAUNCH = "com.duckduckgo.notification.launch.app"
-        const val CLEAR_DATA_LAUNCH = "com.duckduckgo.notification.launch.clearData"
-        const val CANCEL = "com.duckduckgo.notification.cancel"
-        const val WEBSITE = "com.duckduckgo.notification.website"
-        const val CHANGE_ICON_FEATURE = "com.duckduckgo.notification.app.feature.changeIcon"
-        const val WAITLIST_CODE = "com.duckduckgo.notification.email.waitlist.code"
+        notificationPlugin?.onNotificationCancelled()
     }
 
     companion object {
-        const val PIXEL_SUFFIX_EXTRA = "PIXEL_SUFFIX_EXTRA"
-        const val NOTIFICATION_SYSTEM_ID_EXTRA = "NOTIFICATION_SYSTEM_ID"
-        const val NOTIFICATION_AUTO_CANCEL = "NOTIFICATION_AUTO_CANCEL"
-
-        fun pendingNotificationHandlerIntent(context: Context, eventType: String, specification: NotificationSpec): PendingIntent {
+        fun pendingCancelNotificationHandlerIntent(
+            context: Context,
+            notificationJavaClass: Class<SchedulableNotification>,
+        ): PendingIntent {
             val intent = Intent(context, NotificationHandlerService::class.java)
-            intent.type = eventType
-            intent.putExtras(specification.bundle)
-            intent.putExtra(PIXEL_SUFFIX_EXTRA, specification.pixelSuffix)
-            intent.putExtra(NOTIFICATION_SYSTEM_ID_EXTRA, specification.systemId)
-            intent.putExtra(NOTIFICATION_AUTO_CANCEL, specification.autoCancel)
-            return PendingIntent.getService(context, 0, intent, 0)!!
+            intent.type = notificationJavaClass.simpleName
+            return PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)!!
         }
     }
 }

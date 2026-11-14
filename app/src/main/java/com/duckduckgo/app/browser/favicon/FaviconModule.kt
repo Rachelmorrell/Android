@@ -17,46 +17,57 @@
 package com.duckduckgo.app.browser.favicon
 
 import android.content.Context
-import com.duckduckgo.app.bookmarks.db.BookmarksDao
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.events.db.UserEventsRepository
-import com.duckduckgo.app.location.data.LocationPermissionsRepository
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.autofill.api.store.AutofillStore
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.savedsites.store.SavedSitesEntitiesDao
+import com.duckduckgo.sync.api.favicons.FaviconsFetchingStore
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class FaviconModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun faviconManager(
         faviconPersister: FaviconPersister,
-        bookmarksDao: BookmarksDao,
+        bookmarksDao: SavedSitesEntitiesDao,
         fireproofWebsiteRepository: FireproofWebsiteRepository,
-        locationPermissionsRepository: LocationPermissionsRepository,
-        favoritesRepository: FavoritesRepository,
-        userEventsRepository: UserEventsRepository,
+        savedSitesRepository: SavedSitesRepository,
         faviconDownloader: FaviconDownloader,
-        dispatcherProvider: DispatcherProvider
+        dispatcherProvider: DispatcherProvider,
+        autofillStore: AutofillStore,
+        faviconsFetchingStore: FaviconsFetchingStore,
+        context: Context,
     ): FaviconManager {
         return DuckDuckGoFaviconManager(
             faviconPersister,
             bookmarksDao,
             fireproofWebsiteRepository,
-            locationPermissionsRepository,
-            favoritesRepository,
+            savedSitesRepository,
             faviconDownloader,
-            userEventsRepository,
-            dispatcherProvider
+            dispatcherProvider,
+            autofillStore,
+            faviconsFetchingStore,
+            context,
         )
     }
 
     @Provides
-    @Singleton
-    fun faviconDownloader(context: Context, dispatcherProvider: DispatcherProvider): FaviconDownloader {
-        return GlideFaviconDownloader(context, dispatcherProvider)
+    @SingleIn(AppScope::class)
+    fun faviconDownloader(
+        context: Context,
+        dispatcherProvider: DispatcherProvider,
+        androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+        downsamplingStrategyFixFeature: FaviconDownloaderGlideDownsamplingStrategyFixFeature,
+    ): FaviconDownloader {
+        return GlideFaviconDownloader(context, dispatcherProvider, androidBrowserConfigFeature, downsamplingStrategyFixFeature)
     }
 }

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="autoconsentTitle">Защита от изскачащи прозорци за бисквитки</string>
+    <string name="autoconsentDescription"><![CDATA[DuckDuckGo ще се опита да избере възможно най-поверителните настройки и ще скрива досадните изскачащи прозорци.\n<a href=\"\">Научете повече</a>]]></string>
+    <string name="autoconsentToggle">Позволете на DuckDuckGo да се погрижи за изскачащите прозорци за бисквитки</string>
+    <string name="autoconsentAutoManageToggle">Отхвърляне на незадължителни бисквитки</string>
+    <string name="autoconsentAutoManageDescription">Ще се стремим да отхвърляме възможно най-много бисквитки вместо Вас, след което ще затваряме изскачащите прозорци.</string>
+    <string name="autoconsentCookiePopUpPreferenceHeaderDescription"><![CDATA[DuckDuckGo може автоматично да управлява изскачащите прозорци за бисквитки, за да увеличи поверителността и да сведе до минимум бисквитките, преди дори да ги видите.\n<a href=\"\">Научете повече</a>]]></string>
+    <string name="autoconsentPopUpsWithoutOptOutsToggle">Приемане на бисквитки, които не могат да бъдат отхвърлени</string>
+    <string name="autoconsentPopUpsWithoutOptOutsDescription">Ако няма опция за отказ, ще Ви спестим едно кликване, ще приемем тези бисквитки вместо Вас и ще затворим изскачащите прозорци.</string>
+    <string name="autoconsentPromptTitle">Омръзнаха ли Ви изскачащите прозорци за бисквитки?</string>
+    <string name="autoconsentPromptFootnote">Можете винаги да коригирате това по-късно в Настройки.</string>
+    <string name="autoconsentPromptCpmOnMessage">Някои бисквитки не могат да бъдат отхвърлени. Ние можем да ги приемаме вместо Вас.</string>
+    <string name="autoconsentPromptCpmOnPrimaryButton">Приемане на бисквитки вместо мен</string>
+    <string name="autoconsentPromptCpmOnPrimaryButtonV2">Отхвърляне, ако е възможно, или приемане вместо мен</string>
+    <string name="autoconsentPromptCpmOnSecondaryButton">Ще ги приемам самостоятелно</string>
+    <string name="autoconsentPromptCpmOffMessage">Нека ние се погрижим за това. Ще отхвърляме бисквитките, когато е възможно, и ще приемаме тези, които не могат да бъдат отхвърлени.</string>
+    <string name="autoconsentPromptCpmOffPrimaryButton">Отхвърляне, ако е възможно, или приемане вместо мен</string>
+    <string name="autoconsentPromptCpmOffSecondaryButton">Ще се справя с тях самостоятелно</string>
+</resources>

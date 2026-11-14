@@ -23,29 +23,29 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.core.net.toUri
 import androidx.test.annotation.UiThreadTest
 import androidx.test.platform.app.InstrumentationRegistry
-import com.duckduckgo.app.CoroutineTestRule
-import com.duckduckgo.app.bookmarks.db.BookmarksDao
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
 import com.duckduckgo.app.browser.favicon.FileBasedFaviconPersister.Companion.FAVICON_PERSISTED_DIR
 import com.duckduckgo.app.browser.favicon.FileBasedFaviconPersister.Companion.FAVICON_TEMP_DIR
 import com.duckduckgo.app.browser.favicon.FileBasedFaviconPersister.Companion.NO_SUBFOLDER
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteDao
-import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
-import com.duckduckgo.app.global.events.db.UserEventsDependencies
-import com.duckduckgo.app.global.faviconLocation
+import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepositoryImpl
 import com.duckduckgo.app.location.data.LocationPermissionsDao
-import com.duckduckgo.app.location.data.LocationPermissionsRepository
-import com.duckduckgo.app.runBlocking
-import com.nhaarman.mockitokotlin2.*
-import dagger.Lazy
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.duckduckgo.autofill.api.store.AutofillStore
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.faviconLocation
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.savedsites.store.SavedSitesEntitiesDao
+import com.duckduckgo.sync.api.favicons.FaviconsFetchingStore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.*
 import java.io.File
 
-@ExperimentalCoroutinesApi
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DuckDuckGoFaviconManagerTest {
 
     @get:Rule
@@ -56,42 +56,38 @@ class DuckDuckGoFaviconManagerTest {
     var instantTaskExecutorRule = InstantTaskExecutorRule()
 
     private val mockFaviconPersister: FaviconPersister = mock()
-    private val mockBookmarksDao: BookmarksDao = mock()
-    private val mockFavoriteRepository: FavoritesRepository = mock()
+    private val mockSavedSitesDao: SavedSitesEntitiesDao = mock()
+    private val mockSavedSitesRepository: SavedSitesRepository = mock()
     private val mockFireproofWebsiteDao: FireproofWebsiteDao = mock()
     private val mockLocationPermissionsDao: LocationPermissionsDao = mock()
     private val mockFaviconDownloader: FaviconDownloader = mock()
+    private val mockAutofillStore: AutofillStore = mock()
+    private val mockFaviconFetchingStore: FaviconsFetchingStore = mock()
     private val mockFile: File = File("test")
     private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private lateinit var userEventsDependencies: UserEventsDependencies
     private lateinit var testee: FaviconManager
 
     @Before
     fun setup() {
-        whenever(mockFavoriteRepository.favoritesCountByDomain(any())).thenReturn(0)
-
-        userEventsDependencies = object : UserEventsDependencies(context, coroutineRule.testDispatcherProvider) {
-            override val lazyFaviconManager: Lazy<FaviconManager>
-                get() = Lazy {
-                    testee
-                }
-        }
+        whenever(mockSavedSitesRepository.getFavoritesCountByDomain(any())).thenReturn(0)
+        mockAutofillStore.stub { onBlocking { getCredentials(any()) }.thenReturn(emptyList()) }
 
         testee = DuckDuckGoFaviconManager(
             faviconPersister = mockFaviconPersister,
-            bookmarksDao = mockBookmarksDao,
-            fireproofWebsiteRepository = FireproofWebsiteRepository(mockFireproofWebsiteDao, coroutineRule.testDispatcherProvider, mock()),
-            locationPermissionsRepository = LocationPermissionsRepository(mockLocationPermissionsDao, mock(), coroutineRule.testDispatcherProvider),
-            favoritesRepository = mockFavoriteRepository,
+            savedSitesDao = mockSavedSitesDao,
+            fireproofWebsiteRepository = FireproofWebsiteRepositoryImpl(mockFireproofWebsiteDao, coroutineRule.testDispatcherProvider, mock()),
+            savedSitesRepository = mockSavedSitesRepository,
             faviconDownloader = mockFaviconDownloader,
-            userEventsRepository = userEventsDependencies.userEventsRepository,
-            dispatcherProvider = coroutineRule.testDispatcherProvider
+            dispatcherProvider = coroutineRule.testDispatcherProvider,
+            autofillStore = mockAutofillStore,
+            faviconsFetchingStore = mockFaviconFetchingStore,
+            context = context,
         )
     }
 
     @Test
-    fun whenLoadFromDiskIfFileExistsInTempThenGetFaviconFromDisk() = coroutineRule.runBlocking {
+    fun whenLoadFromDiskIfFileExistsInTempThenGetFaviconFromDisk() = runTest {
         givenFaviconExistsInTemp()
 
         testee.loadFromDisk("subfolder", "example.com")
@@ -100,7 +96,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenLoadFromDiskIfFileExistsInPersistedThenGetFaviconFromDisk() = coroutineRule.runBlocking {
+    fun whenLoadFromDiskIfFileExistsInPersistedThenGetFaviconFromDisk() = runTest {
         givenFaviconExistsInDirectory(FAVICON_PERSISTED_DIR)
 
         testee.loadFromDisk("subfolder", "example.com")
@@ -109,36 +105,14 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenLoadFromDiskIfFileDoesNotExistThenDoNothing() = coroutineRule.runBlocking {
+    fun whenLoadFromDiskIfFileDoesNotExistThenDoNothing() = runTest {
         testee.loadFromDisk("subfolder", "example.com")
 
         verify(mockFaviconDownloader, never()).getFaviconFromDisk(any())
     }
 
     @Test
-    @UiThreadTest
-    fun whenLoadToViewFromLocalOrFallbackIfCannotFindFaviconThenDownloadFromUrl() = coroutineRule.runBlocking {
-        val view = ImageView(context)
-        val url = "https://example.com"
-
-        testee.loadToViewFromLocalOrFallback(url = url, view = view)
-
-        verify(mockFaviconDownloader).getFaviconFromUrl(url.toUri().faviconLocation()!!)
-    }
-
-    @Test
-    @UiThreadTest
-    fun whenLoadToViewFromLocalOrFallbackWithTabIdIfCannotFindFaviconThenDownloadFromUrl() = coroutineRule.runBlocking {
-        val view = ImageView(context)
-        val url = "https://example.com"
-
-        testee.loadToViewFromLocalOrFallback("subFolder", "example.com", view)
-
-        verify(mockFaviconDownloader).getFaviconFromUrl(url.toUri().faviconLocation()!!)
-    }
-
-    @Test
-    fun whenTryFetchFaviconForUrlThenGetFaviconFromUrlAndStoreFile() = coroutineRule.runBlocking {
+    fun whenTryFetchFaviconForUrlThenGetFaviconFromUrlAndStoreFile() = runTest {
         val bitmap = asBitmap()
         val url = "https://example.com"
         whenever(mockFaviconDownloader.getFaviconFromUrl(url.toUri().faviconLocation()!!)).thenReturn(bitmap)
@@ -149,7 +123,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenTryFetchFaviconForUrlAndCannotDownloadThenReturnNull() = coroutineRule.runBlocking {
+    fun whenTryFetchFaviconForUrlAndCannotDownloadThenReturnNull() = runTest {
         val url = "https://example.com"
         whenever(mockFaviconDownloader.getFaviconFromUrl(url.toUri().faviconLocation()!!)).thenReturn(null)
 
@@ -159,7 +133,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenStoreFaviconIfFaviconHasBetterQualityThenReplacePersistedFavicons() = coroutineRule.runBlocking {
+    fun whenStoreFaviconIfFaviconHasBetterQualityThenReplacePersistedFavicons() = runTest {
         val bitmap = asBitmap()
         givenFaviconShouldBePersisted()
         whenever(mockFaviconPersister.store(FAVICON_TEMP_DIR, "subFolder", bitmap, "example.com")).thenReturn(File("example"))
@@ -170,7 +144,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenStoreFaviconIfFaviconDoesNotHaveBetterQualityThenDoNotReplacePersistedFavicons() = coroutineRule.runBlocking {
+    fun whenStoreFaviconIfFaviconDoesNotHaveBetterQualityThenDoNotReplacePersistedFavicons() = runTest {
         val bitmap = asBitmap()
         givenFaviconShouldBePersisted()
         whenever(mockFaviconPersister.store(FAVICON_TEMP_DIR, "subFolder", bitmap, "example.com")).thenReturn(null)
@@ -181,7 +155,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenStoreFaviconThenStoreFile() = coroutineRule.runBlocking {
+    fun whenStoreFaviconThenStoreFile() = runTest {
         val bitmap = asBitmap()
 
         testee.storeFavicon("subFolder", FaviconSource.ImageFavicon(bitmap, "example.com"))
@@ -190,7 +164,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenPersistFaviconThenCopyToPersistedDirectory() = coroutineRule.runBlocking {
+    fun whenPersistFaviconThenCopyToPersistedDirectory() = runTest {
         givenFaviconExistsInTemp()
 
         testee.persistCachedFavicon("subFolder", "example.com")
@@ -199,14 +173,14 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenPersistFaviconIfFaviconDoesNotExistThenDoNotCopyToPersistedDirectory() = coroutineRule.runBlocking {
+    fun whenPersistFaviconIfFaviconDoesNotExistThenDoNotCopyToPersistedDirectory() = runTest {
         testee.persistCachedFavicon("subFolder", "example.com")
 
         verify(mockFaviconPersister, never()).copyToDirectory(any(), any(), any(), any())
     }
 
     @Test
-    fun whenDeletePersistedFaviconIfNoRemainingFaviconsInDatabaseThenDeleteFavicon() = coroutineRule.runBlocking {
+    fun whenDeletePersistedFaviconIfNoRemainingFaviconsInDatabaseThenDeleteFavicon() = runTest {
         givenFaviconShouldBePersisted()
         testee.deletePersistedFavicon("example.com")
 
@@ -214,7 +188,7 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenDeletePersistedFaviconIfRemainingFaviconsInDatabaseThenDoNotDeleteFavicon() = coroutineRule.runBlocking {
+    fun whenDeletePersistedFaviconIfRemainingFaviconsInDatabaseThenDoNotDeleteFavicon() = runTest {
         whenever(mockFireproofWebsiteDao.fireproofWebsitesCountByDomain(any())).thenReturn(2)
 
         testee.deletePersistedFavicon("example.com")
@@ -223,26 +197,64 @@ class DuckDuckGoFaviconManagerTest {
     }
 
     @Test
-    fun whenDeletePersistedFaviconAndForceDeleteTruThenDeleteFavicon() = coroutineRule.runBlocking {
-        whenever(mockFireproofWebsiteDao.fireproofWebsitesCountByDomain(any())).thenReturn(2)
-
-        testee.deletePersistedFavicon("example.com", true)
-
-        verify(mockFaviconPersister).deletePersistedFavicon("example.com")
-    }
-
-    @Test
-    fun whenDeleteOldFaviconThenDeleteFaviconFromTempDirectory() = coroutineRule.runBlocking {
+    fun whenDeleteOldFaviconThenDeleteFaviconFromTempDirectory() = runTest {
         testee.deleteOldTempFavicon("subFolder", "example.com")
 
         verify(mockFaviconPersister).deleteFaviconsForSubfolder(FAVICON_TEMP_DIR, "subFolder", "example.com")
     }
 
     @Test
-    fun whenDeleteAllTempThenDeleteAllFaviconsFromTempDirectory() = coroutineRule.runBlocking {
+    fun whenDeleteAllTempThenDeleteAllFaviconsFromTempDirectory() = runTest {
         testee.deleteAllTemp()
 
         verify(mockFaviconPersister).deleteAll(FAVICON_TEMP_DIR)
+    }
+
+    @Test
+    @UiThreadTest
+    fun whenLoadToViewFromLocalWithPlaceholderCalledThenFaviconLoadedFromDisk() = runTest {
+        givenFaviconExistsInDirectory(FAVICON_PERSISTED_DIR)
+        val url = "https://example.com"
+        val view = ImageView(context)
+
+        testee.loadToViewFromLocalWithPlaceholder(tabId = null, url = url, view = view)
+
+        verify(mockFaviconDownloader).getFaviconFromDisk(mockFile)
+    }
+
+    @Test
+    @UiThreadTest
+    fun whenLoadToViewFromLocalWithCancellableRetryCalledThenFaviconLoadedFromDisk() = runTest {
+        givenFaviconExistsInDirectory(FAVICON_PERSISTED_DIR)
+        whenever(mockFaviconDownloader.getFaviconFromDisk(mockFile)).thenReturn(asBitmap())
+        val url = "https://example.com"
+        val view = ImageView(context)
+
+        testee.loadToViewFromLocalWithRetry(tabId = null, url = url, view = view)
+
+        verify(mockFaviconDownloader).getFaviconFromDisk(mockFile)
+    }
+
+    @Test
+    @UiThreadTest
+    fun whenLoadToViewFromLocalWithCancellableRetryCancelledThenRetriesStop() = runTest {
+        val url = "https://example.com"
+        val view = ImageView(context)
+
+        val job = launch {
+            testee.loadToViewFromLocalWithRetry(tabId = null, url = url, view = view)
+        }
+
+        // Let initial load + first retry complete
+        advanceTimeBy(2100)
+        job.cancel()
+
+        // Advance past all remaining retry delays
+        advanceTimeBy(10000)
+
+        // Each loadFromDisk call with tabId=null makes 1 call to faviconFile(PERSISTED_DIR, ...)
+        // Initial + 1 completed retry = 2 calls. Without cancellation would be 4 (1 initial + 3 retries).
+        verify(mockFaviconPersister, atMost(2)).faviconFile(eq(FAVICON_PERSISTED_DIR), any(), any())
     }
 
     private fun asBitmap(): Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565)

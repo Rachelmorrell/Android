@@ -1,0 +1,151 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'com.android.library'
+    id 'dev.zacsweers.metro'
+    id 'com.google.devtools.ksp'
+    id 'kotlin-parcelize'
+}
+
+apply from: "$rootProject.projectDir/gradle/android-library.gradle"
+
+ext {
+    syncDisableAuthRequirementBuildFlag = "sync-disable-auth-requirement"
+}
+
+android {
+    namespace 'com.duckduckgo.sync.impl'
+}
+
+dependencies {
+    ksp project(':codegen-ksp')
+    implementation project(path: ':di')
+    implementation project(':browser-api')
+    implementation project(':browser-ui')
+    implementation project(path: ':common-utils')
+    implementation project(':data-store-api')
+    implementation project(path: ':design-system')
+    implementation project(path: ':sync-api')
+    implementation project(':device-migration-api')
+    implementation project(path: ':sync-store')
+    implementation project(path: ':sync-lib')
+    implementation project(path: ':saved-sites-api')
+    implementation project(':feature-toggles-api')
+    implementation project(':navigation-api')
+    implementation project(':next-steps-api')
+    implementation project(':desktop-app-promotion-api')
+    implementation project(':remote-messaging-api')
+    implementation project(path: ':autofill-api')
+    implementation project(path: ':settings-api') // temporary until we release new settings
+    implementation project(path: ':attributed-metrics-api')
+
+    implementation project(path: ':app-build-config-api')
+    implementation project(path: ':privacy-config-api')
+    implementation project(':statistics-api')
+    implementation project(':content-scope-scripts-api')
+    implementation project(':js-messaging-api')
+    implementation project(':duckchat-api')
+    implementation project(':persistent-storage-api')
+    implementation project(':browser-mode-api')
+
+    implementation project(path: ':codegen-annotations')
+
+    implementation AndroidX.appCompat
+    implementation Google.android.material
+    implementation "com.squareup.logcat:logcat:_"
+
+    implementation KotlinX.coroutines.core
+    implementation AndroidX.fragment.ktx
+    implementation AndroidX.biometric
+
+    implementation Square.retrofit2.converter.moshi
+    implementation "com.squareup.moshi:moshi-kotlin:_"
+    implementation AndroidX.core.ktx
+    implementation('com.journeyapps:zxing-android-embedded:_') { transitive = false }
+    implementation 'com.google.zxing:core:_'
+    implementation "androidx.datastore:datastore-preferences:_"
+
+    // JWE crypto (for scoped access credentials)
+    implementation "io.jsonwebtoken:jjwt-api:_"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:_"
+    runtimeOnly("io.jsonwebtoken:jjwt-orgjson:_") {
+        exclude(group: 'org.json', module: 'json') // provided by Android natively
+    }
+
+    // Shimmer
+    implementation "com.facebook.shimmer:shimmer:_"
+
+    // WorkManager
+    implementation AndroidX.work.runtimeKtx
+    testImplementation AndroidX.work.testing
+
+    // Room
+    implementation AndroidX.room.runtime
+
+    // Lottie
+    implementation "com.airbnb.android:lottie:_"
+
+    // Testing dependencies
+    testImplementation "org.mockito.kotlin:mockito-kotlin:_"
+    testImplementation Testing.junit4
+    testImplementation AndroidX.core
+    testImplementation AndroidX.test.ext.junit
+    testImplementation AndroidX.test.rules
+    testImplementation "androidx.test:runner:_"
+    testImplementation Testing.robolectric
+    testImplementation CashApp.turbine
+    testImplementation AndroidX.archCore.testing
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect:_"
+    testImplementation 'org.json:json:_'
+    testImplementation "com.google.testparameterinjector:test-parameter-injector:_"
+
+    testImplementation project(path: ':common-test')
+    testImplementation project(path: ':feature-toggles-test')
+
+    testImplementation (KotlinX.coroutines.test) {
+        // https://github.com/Kotlin/kotlinx.coroutines/issues/2023
+        // conflicts with mockito due to direct inclusion of byte buddy
+        exclude group: "org.jetbrains.kotlinx", module: "kotlinx-coroutines-debug"
+    }
+}
+
+android {
+    lint {
+        baseline file("lint-baseline.xml")
+        abortOnError = !project.hasProperty("abortOnError") || project.property("abortOnError") != "false"
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    defaultConfig {
+        if (project.hasProperty("$syncDisableAuthRequirementBuildFlag")) {
+            buildConfigField "boolean", "AUTH_REQUIRED", "false"
+        } else {
+            buildConfigField "boolean", "AUTH_REQUIRED", "true"
+        }
+    }
+}
+
+tasks.register('installForSyncTesting', Exec) {
+    commandLine "$rootDir/gradlew", ':app:installInternalDebug', "-P$syncDisableAuthRequirementBuildFlag"
+}
+

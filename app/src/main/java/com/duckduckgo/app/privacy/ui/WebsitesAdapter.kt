@@ -16,40 +16,42 @@
 
 package com.duckduckgo.app.privacy.ui
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.ImageView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.browser.databinding.ViewListItemDescriptionBinding
+import com.duckduckgo.app.browser.databinding.ViewListItemEmptyHintBinding
 import com.duckduckgo.app.browser.favicon.FaviconManager
-import com.duckduckgo.app.privacy.model.UserWhitelistedDomain
-import com.duckduckgo.mobile.android.ui.menu.PopupMenu
-import com.duckduckgo.mobile.android.ui.view.SingleLineListItem
+import com.duckduckgo.app.privacy.model.UserAllowListedDomain
+import com.duckduckgo.common.ui.menu.PopupMenu
+import com.duckduckgo.mobile.android.databinding.RowOneLineListItemBinding
+import com.duckduckgo.mobile.android.databinding.ViewSectionHeaderBinding
 import kotlinx.coroutines.launch
-import timber.log.Timber
+import logcat.logcat
 
 class WebsitesAdapter(
-    private val viewModel: WhitelistViewModel,
+    private val viewModel: AllowListViewModel,
     private val lifecycleOwner: LifecycleOwner,
-    private val faviconManager: FaviconManager
+    private val faviconManager: FaviconManager,
 ) : RecyclerView.Adapter<WebsiteViewHolder>() {
 
     companion object {
         const val SITE_ENTRY = 0
         const val DESCRIPTION_TYPE = 1
         const val EMPTY_STATE_TYPE = 2
-        const val DIVIDER_TYPE = 3
-        const val SECTION_TITLE_TYPE = 4
+        const val SECTION_TITLE_TYPE = 3
 
         const val EMPTY_HINT_ITEM_SIZE = 1
     }
 
     private val sortedHeaderElements = listOf(
         DESCRIPTION_TYPE,
-        DIVIDER_TYPE,
         SECTION_TITLE_TYPE,
     )
 
@@ -57,7 +59,7 @@ class WebsitesAdapter(
 
     private fun getWebsiteItemPosition(position: Int) = position - itemsOnTopOfList()
 
-    var entries: List<UserWhitelistedDomain> = emptyList()
+    var entries: List<UserAllowListedDomain> = emptyList()
         set(value) {
             field = value
             notifyDataSetChanged()
@@ -89,98 +91,106 @@ class WebsitesAdapter(
         entries.size
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WebsiteViewHolder {
-        Timber.d("Whitelist: onCreateViewHolder $viewType ")
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): WebsiteViewHolder {
+        logcat { "AllowList: onCreateViewHolder $viewType " }
         val inflater = LayoutInflater.from(parent.context)
         return when (viewType) {
             DESCRIPTION_TYPE -> {
-                val view = inflater.inflate(R.layout.view_list_item_description, parent, false)
-                val description = view.findViewById<TextView>(R.id.websiteDescription)
-                description.setText(R.string.whitelistExplanation)
-                WebsiteViewHolder.SimpleViewHolder(view)
-            }
-            DIVIDER_TYPE -> {
-                val view = inflater.inflate(R.layout.view_list_item_divider, parent, false)
-                WebsiteViewHolder.SimpleViewHolder(view)
+                val binding = ViewListItemDescriptionBinding.inflate(inflater, parent, false)
+                binding.websiteDescription.setText(R.string.allowlistExplanation)
+                WebsiteViewHolder.SimpleViewHolder(binding.root)
             }
             SECTION_TITLE_TYPE -> {
-                val view = inflater.inflate(R.layout.view_list_item_section_title, parent, false)
-                view.findViewById<TextView>(R.id.listItemSectionTitle).setText(R.string.fireproofWebsiteItemsSectionTitle)
-                WebsiteViewHolder.SimpleViewHolder(view)
+                val binding = ViewSectionHeaderBinding.inflate(inflater, parent, false)
+                binding.sectionHeader.setText(R.string.settingsPrivacyProtectionAllowlist)
+                WebsiteViewHolder.SimpleViewHolder(binding.root)
             }
             SITE_ENTRY -> {
-                val view = inflater.inflate(R.layout.view_list_single_item_entry, parent, false)
+                val binding = RowOneLineListItemBinding.inflate(inflater, parent, false)
                 WebsiteViewHolder.WebsiteItemViewHolder(
                     inflater,
-                    view,
+                    binding,
                     viewModel,
                     lifecycleOwner,
-                    faviconManager
+                    faviconManager,
                 )
             }
             EMPTY_STATE_TYPE -> {
-                val view = inflater.inflate(R.layout.view_list_item_empty_hint, parent, false)
-                view.findViewById<TextView>(R.id.listItemEmptyHintTitle).setText(R.string.whitelistNoEntries)
-                WebsiteViewHolder.SimpleViewHolder(view)
+                val binding = ViewListItemEmptyHintBinding.inflate(inflater, parent, false)
+                binding.listItemEmptyHintTitle.setText(R.string.allowlistNoEntries)
+                WebsiteViewHolder.SimpleViewHolder(binding.root)
             }
             else -> throw IllegalArgumentException("viewType not found")
         }
     }
 
-    override fun onBindViewHolder(holder: WebsiteViewHolder, position: Int) {
+    override fun onBindViewHolder(
+        holder: WebsiteViewHolder,
+        position: Int,
+    ) {
         when (holder) {
             is WebsiteViewHolder.WebsiteItemViewHolder -> {
                 holder.bind(entries[getWebsiteItemPosition(position)])
             }
+            else -> {}
         }
     }
 }
 
 sealed class WebsiteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-    class SimpleViewHolder(itemView: View) : WebsiteViewHolder(itemView)
+    class SimpleViewHolder(view: View) : WebsiteViewHolder(view)
     class WebsiteItemViewHolder(
         private val layoutInflater: LayoutInflater,
-        itemView: View,
-        private val viewModel: WhitelistViewModel,
+        private val binding: RowOneLineListItemBinding,
+        private val viewModel: AllowListViewModel,
         private val lifecycleOwner: LifecycleOwner,
-        private val faviconManager: FaviconManager
-    ) : WebsiteViewHolder(itemView) {
+        private val faviconManager: FaviconManager,
+    ) : WebsiteViewHolder(binding.root) {
 
-        lateinit var entity: UserWhitelistedDomain
+        private val context: Context = binding.root.context
+        private lateinit var entity: UserAllowListedDomain
 
-        fun bind(entity: UserWhitelistedDomain) {
-            val listItem = itemView as SingleLineListItem
+        fun bind(entity: UserAllowListedDomain) {
+            val listItem = binding.root
             this.entity = entity
 
-            listItem.setContentDescription(
-                itemView.context.getString(
-                    R.string.fireproofWebsiteOverflowContentDescription,
-                    entity.domain
-                )
+            listItem.contentDescription = context.getString(
+                R.string.fireproofWebsiteOverflowContentDescription,
+                entity.domain,
             )
 
-            listItem.setTitle(entity.domain)
-            loadFavicon(entity.domain)
-            listItem.setOverflowClickListener { anchor ->
+            loadFavicon(entity.domain, listItem.leadingIcon())
+            listItem.setPrimaryText(entity.domain)
+            listItem.showTrailingIcon()
+            listItem.setTrailingIconClickListener { anchor ->
                 showOverFlowMenu(anchor, entity)
             }
         }
 
-        private fun loadFavicon(url: String) {
+        private fun loadFavicon(
+            url: String,
+            leadingIcon: ImageView,
+        ) {
             lifecycleOwner.lifecycleScope.launch {
-                faviconManager.loadToViewFromLocalOrFallback(url = url, view = itemView.findViewById(R.id.image))
+                faviconManager.loadToViewFromLocalWithPlaceholder(url = url, view = leadingIcon)
             }
         }
 
-        private fun showOverFlowMenu(anchor: View, entity: UserWhitelistedDomain) {
+        private fun showOverFlowMenu(
+            anchor: View,
+            entity: UserAllowListedDomain,
+        ) {
             val popupMenu = PopupMenu(layoutInflater, R.layout.popup_window_edit_delete_menu)
             val view = popupMenu.contentView
             popupMenu.apply {
                 onMenuItemClicked(view.findViewById(R.id.edit)) { viewModel.onEditRequested(entity) }
                 onMenuItemClicked(view.findViewById(R.id.delete)) { viewModel.onDeleteRequested(entity) }
             }
-            popupMenu.show(itemView, anchor)
+            popupMenu.show(binding.root, anchor)
         }
     }
 }

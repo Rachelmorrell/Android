@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl
+
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.pir.impl.store.PirEventsRepository
+import com.duckduckgo.pir.impl.store.PirFreemiumDataStore
+import com.duckduckgo.pir.impl.store.PirRepository
+import com.duckduckgo.pir.impl.store.PirSchedulingRepository
+import com.duckduckgo.pir.impl.wideevents.PirInitialScanCompletionWideEvent
+import com.duckduckgo.pir.impl.wideevents.PirScanWideEvent
+import dev.zacsweers.metro.ContributesBinding
+import javax.inject.Inject
+
+interface PirFeatureDataCleaner {
+    suspend fun removeAllData()
+    suspend fun removeUserData()
+}
+
+@ContributesBinding(AppScope::class)
+class RealPirFeatureDataCleaner @Inject constructor(
+    private val pirRepository: PirRepository,
+    private val pirSchedulingRepository: PirSchedulingRepository,
+    private val pirEventsRepository: PirEventsRepository,
+    private val pirScanWideEvent: PirScanWideEvent,
+    private val pirInitialScanCompletionWideEvent: PirInitialScanCompletionWideEvent,
+    private val pirFreemiumDataStore: PirFreemiumDataStore,
+) : PirFeatureDataCleaner {
+
+    override suspend fun removeAllData() {
+        // keep data for freemium users
+        if (pirFreemiumDataStore.didActivate) return
+
+        pirScanWideEvent.onUserReset()
+        pirInitialScanCompletionWideEvent.onUserReset()
+        pirRepository.clearAllData()
+        pirSchedulingRepository.clearAllData()
+        pirEventsRepository.clearAllData()
+    }
+
+    override suspend fun removeUserData() {
+        pirFreemiumDataStore.reset()
+        pirScanWideEvent.onUserReset()
+        pirInitialScanCompletionWideEvent.onUserReset()
+        pirRepository.clearUserData()
+        pirSchedulingRepository.clearAllData()
+        pirEventsRepository.clearAllData()
+    }
+}

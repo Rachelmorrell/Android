@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">Αποτυχία λήψης. Ελέγξτε τη σύνδεση στο διαδίκτυο.</string>
+
+    <string name="notificationChannelFileDownloading">Λήψη αρχείου</string>
+    <string name="notificationChannelFileDownloaded">Έγινε λήψη του αρχείου</string>
+
+    <string name="downloadInProgress">Λήψη…</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">Άρχισε η λήψη για το αρχείο %1$s</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">Ολοκληρώθηκε η λήψη για το αρχείο %1$s</string>
+    <string name="downloadsDownloadGenericErrorMessage">Αποτυχία λήψης.</string>
+    <string name="downloadsCancel">Ακύρωση</string>
+    <string name="downloadsRetry">Επανάληψη</string>
+    <string name="notificationDownloadComplete">Η λήψη ολοκληρώθηκε.</string>
+    <string name="notificationDownloadFailed">Αποτυχία λήψης.</string>
+
+    <string name="downloadConfirmationContinue">Αποθήκευση στις λήψεις</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">Από: %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Διαγραφή όλων</string>
+    <string name="downloadsActivityNoItemsDescription">Δεν έχει γίνει ακόμα λήψη αρχείων</string>
+    <string name="downloadsActivityTitle">Λήψεις</string>
+    <string name="downloadsAllFilesDeletedMessage">Διαγράφηκαν όλα τα αρχεία</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Δεν ήταν δυνατό το άνοιγμα του αρχείου. Ελέγξτε για μια συμβατή εφαρμογή.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">Διαγράφηκε %1$s</string>
+    <string name="downloadsFileNotFoundErrorMessage">Το αρχείο δεν υπάρχει πλέον</string>
+    <string name="downloadsItemMenuCancel">Ακύρωση</string>
+    <string name="downloadsItemMenuDelete">Διαγραφή</string>
+    <string name="downloadsItemMenuShare">Κοινή χρήση</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">Περισσότερες επιλογές για %1$s</string>
+    <string name="downloadsNotifyMeSubtitle">Λάβετε ειδοποίηση όταν ολοκληρωθούν οι λήψεις.</string>
+    <string name="downloadsNotifyMeTitle">Ανακαλύψτε πότε είναι έτοιμες οι λήψεις</string>
+    <string name="downloadsShareTitle">Κοινή χρήση με...</string>
+    <string name="downloadsStateInProgress">Σε εξέλιξη...</string>
+    <string name="downloadsUndoActionName">Αναίρεση</string>
+    <string name="downloadsSearchHint">Αναζήτηση</string>
+</resources>

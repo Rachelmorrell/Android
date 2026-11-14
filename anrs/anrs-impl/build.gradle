@@ -1,0 +1,78 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'com.android.library'
+    id 'dev.zacsweers.metro'
+    id 'com.google.devtools.ksp'
+}
+
+apply from: "$rootProject.projectDir/gradle/android-library.gradle"
+
+dependencies {
+    ksp project(':codegen-ksp')
+    implementation project(':codegen-annotations')
+
+    implementation project(':app-build-config-api')
+    implementation project(':anrs-api')
+    implementation project(':anrs-store')
+    implementation project(':common-utils')
+    implementation project(':di')
+    implementation project(':browser-api')
+    implementation project(':custom-tabs-api')
+    implementation project(':statistics-api')
+    implementation project(':verified-installation-api')
+    implementation project(':feature-toggles-api')
+    implementation project(':data-store-api')
+    implementation "com.duckduckgo.crashkit:android-crashkit:_"
+
+    implementation AndroidX.core.ktx
+    implementation KotlinX.coroutines.core
+    implementation "com.squareup.logcat:logcat:_"
+    implementation Square.okio
+    implementation AndroidX.room.runtime
+    implementation AndroidX.room.rxJava2
+    implementation AndroidX.room.rxJava2
+    implementation AndroidX.webkit
+
+    testImplementation project(':common-test')
+    testImplementation project(':data-store-test')
+    testImplementation project(":feature-toggles-test")
+    testImplementation Testing.junit4
+    testImplementation AndroidX.archCore.testing
+    testImplementation AndroidX.test.ext.junit
+    testImplementation "org.mockito.kotlin:mockito-kotlin:_"
+    testImplementation Testing.robolectric
+}
+
+android {
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = !project.hasProperty("abortOnError") || project.property("abortOnError") != "false"
+    }
+
+    namespace 'com.duckduckgo.app.anr'
+
+    packagingOptions {
+        jniLibs {
+            // Required: libcrashpad_handler.so is an executable that Crashpad launches as a
+            // subprocess via exec(). It must exist as a real file on disk. Without this,
+            // AGP stores .so files uncompressed inside the APK (not extracted), so the
+            // handler path would not resolve and StartHandler() would fail silently.
+            useLegacyPackaging = true
+        }
+    }
+}

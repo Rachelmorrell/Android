@@ -1,0 +1,310 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.statistics.api
+
+import androidx.lifecycle.LifecycleOwner
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.app.statistics.config.StatisticsLibraryConfig
+import com.duckduckgo.app.statistics.model.PixelEntity
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Count
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Daily
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Unique
+import com.duckduckgo.app.statistics.store.PendingPixelDao
+import com.duckduckgo.app.statistics.store.PixelFiredRepository
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.common.utils.plugins.pixel.PixelRequiringAtbPlugin
+import com.duckduckgo.devicemigration.api.DeviceMigration
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import io.reactivex.Completable
+import io.reactivex.Single
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
+import logcat.LogPriority.INFO
+import logcat.LogPriority.VERBOSE
+import logcat.LogPriority.WARN
+import logcat.asLog
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesBinding(
+    scope = AppScope::class,
+    binding = binding<PixelSender>(),
+)
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<MainProcessLifecycleObserver>(),
+)
+@SingleIn(AppScope::class)
+class RxPixelSender @Inject constructor(
+    private val api: PixelService,
+    private val pendingPixelDao: PendingPixelDao,
+    private val statisticsDataStore: StatisticsDataStore,
+    private val deviceInfo: DeviceInfo,
+    private val statisticsLibraryConfig: StatisticsLibraryConfig,
+    private val pixelFiredRepository: PixelFiredRepository,
+    private val pixelSenderFeature: Lazy<PixelSenderFeature>,
+    private val pixelRequiringAtbPlugins: PluginPoint<PixelRequiringAtbPlugin>,
+    private val concurrencyLimitFeature: Lazy<PixelConcurrencyLimitFeature>,
+    private val deviceMigration: Lazy<DeviceMigration>, // break any possible DI dependency cycle
+) : PixelSender, MainProcessLifecycleObserver {
+
+    private val compositeDisposable = CompositeDisposable()
+
+    private val transferredQueueLock = Any()
+
+    @Volatile
+    private var transferredQueueChecked = false
+
+    private val shouldFirePixelsAsDev: Int? by lazy {
+        if (statisticsLibraryConfig.shouldFirePixelsAsDev()) 1 else null
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        compositeDisposable.add(
+            Completable.fromAction { clearTransferredQueueOnce() }
+                .andThen(
+                    pendingPixelDao.pixels()
+                        .flatMapIterable { it }
+                        .switchMapCompletable(this::sendAndDeletePixel),
+                )
+                .subscribeOn(Schedulers.io())
+                .subscribe(
+                    { logcat(VERBOSE) { "Pixel finished sync" } },
+                    { logcat(WARN) { "Pixel failed to sync: ${it.asLog()}" } },
+                ),
+        )
+    }
+
+    /**
+     * The pixel queue lives in app.db, which a device transfer copies with the bookmarks and tabs. Its rows are the previous
+     * phone's unsent pixels, which that phone may still send, so they are dropped before this phone first sends or enqueues
+     * a pixel: clearing after an enqueue would drop this phone's pixel too, and a unique pixel would never be sent again.
+     */
+    private fun clearTransferredQueueOnce() {
+        if (transferredQueueChecked) return
+        synchronized(transferredQueueLock) {
+            if (transferredQueueChecked) return
+            try {
+                val migration = deviceMigration.value
+                if (!migration.isDoneOnThisInstall(TRANSFERRED_QUEUE_CLEARED_KEY)) {
+                    if (runBlocking { migration.isMigratedInstall() }) pendingPixelDao.deleteAll()
+                    migration.markDoneOnThisInstall(TRANSFERRED_QUEUE_CLEARED_KEY)
+                }
+                transferredQueueChecked = true
+            } catch (e: Exception) {
+                logcat(WARN) { "Could not clear the pixel queue from the previous phone: ${e.asLog()}" }
+            }
+        }
+    }
+
+    private companion object {
+        const val TRANSFERRED_QUEUE_CLEARED_KEY = "statistics.transferredPixelQueueCleared"
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        compositeDisposable.clear()
+    }
+
+    private fun sendAndDeletePixel(pixel: PixelEntity): Completable {
+        return sendPixel(pixel)
+            .andThen(deletePixel(pixel))
+            .andThen {
+                with(pixel) {
+                    logcat(INFO) { "Pixel sent: $id $pixelName with params: $additionalQueryParams $encodedQueryParams" }
+                }
+            }
+            .doOnError {
+                with(pixel) {
+                    logcat(INFO) { "Pixel failed: $id $pixelName with params: $additionalQueryParams $encodedQueryParams" }
+                }
+            }.onErrorComplete()
+    }
+
+    override fun sendPixel(
+        pixelName: String,
+        parameters: Map<String, String>,
+        encodedParameters: Map<String, String>,
+        type: Pixel.PixelType,
+    ): Single<PixelSender.SendPixelResult> = Single.fromCallable {
+        runBlocking {
+            if (shouldFirePixel(pixelName, type)) {
+                if (isConcurrencyLimitEnabled()) {
+                    fireThroughDispatcher(pixelName, getAtbInfo(), addDeviceParametersTo(parameters), encodedParameters)
+                } else {
+                    val completable = if (shouldSendAtb(pixelName)) {
+                        api.fire(
+                            pixelName,
+                            getDeviceFactor(),
+                            getAtbInfo(),
+                            addDeviceParametersTo(parameters),
+                            encodedParameters,
+                            devMode = shouldFirePixelsAsDev,
+                        )
+                    } else {
+                        api.fireWithoutAtb(
+                            pixelName,
+                            getDeviceFactor(),
+                            addDeviceParametersTo(parameters),
+                            encodedParameters,
+                            devMode = shouldFirePixelsAsDev,
+                        )
+                    }
+                    completable.blockingAwait()
+                }
+                storePixelFired(pixelName, type)
+                PixelSender.SendPixelResult.PIXEL_SENT
+            } else {
+                PixelSender.SendPixelResult.PIXEL_IGNORED
+            }
+        }
+    }
+
+    override fun enqueuePixel(
+        pixelName: String,
+        parameters: Map<String, String>,
+        encodedParameters: Map<String, String>,
+        type: Pixel.PixelType,
+    ): Single<PixelSender.EnqueuePixelResult> {
+        return Single.fromCallable {
+            clearTransferredQueueOnce()
+            runBlocking {
+                if (shouldFirePixel(pixelName, type)) {
+                    val pixelEntity = PixelEntity(
+                        pixelName = pixelName,
+                        atb = getAtbInfo(),
+                        additionalQueryParams = addDeviceParametersTo(parameters),
+                        encodedQueryParams = encodedParameters,
+                    )
+                    pendingPixelDao.insert(pixelEntity)
+                    storePixelFired(pixelName, type)
+                    PixelSender.EnqueuePixelResult.PIXEL_ENQUEUED
+                } else {
+                    PixelSender.EnqueuePixelResult.PIXEL_IGNORED
+                }
+            }
+        }
+    }
+
+    private fun sendPixel(pixelEntity: PixelEntity): Completable {
+        if (isConcurrencyLimitEnabled()) {
+            return Completable.create { emitter ->
+                try {
+                    // Must block, or switchMapCompletable will cancel this send when the next queued pixel arrives.
+                    runBlocking {
+                        val job = coroutineContext.job
+                        // If the app stops mid-send, cancel the request like the old Rx path does, so the pixel stays queued and isn't sent twice
+                        emitter.setCancellable { job.cancel() }
+                        with(pixelEntity) { fireThroughDispatcher(pixelName, atb, additionalQueryParams, encodedQueryParams) }
+                    }
+                    emitter.onComplete()
+                } catch (e: Throwable) {
+                    // Use tryOnError: onError after cancelling would crash
+                    emitter.tryOnError(e)
+                }
+            }
+        }
+        with(pixelEntity) {
+            return if (shouldSendAtb(this.pixelName)) {
+                api.fire(
+                    this.pixelName,
+                    getDeviceFactor(),
+                    this.atb,
+                    this.additionalQueryParams,
+                    this.encodedQueryParams,
+                    devMode = shouldFirePixelsAsDev,
+                )
+            } else {
+                api.fireWithoutAtb(
+                    this.pixelName,
+                    getDeviceFactor(),
+                    this.additionalQueryParams,
+                    this.encodedQueryParams,
+                    devMode = shouldFirePixelsAsDev,
+                )
+            }
+        }
+    }
+
+    private suspend fun fireThroughDispatcher(
+        pixelName: String,
+        atb: String,
+        additionalQueryParams: Map<String, String>,
+        encodedQueryParams: Map<String, String>,
+    ) {
+        if (shouldSendAtb(pixelName)) {
+            api.fireAsync(pixelName, getDeviceFactor(), atb, additionalQueryParams, encodedQueryParams, devMode = shouldFirePixelsAsDev)
+        } else {
+            api.fireWithoutAtbAsync(pixelName, getDeviceFactor(), additionalQueryParams, encodedQueryParams, devMode = shouldFirePixelsAsDev)
+        }
+    }
+
+    private fun isConcurrencyLimitEnabled(): Boolean = concurrencyLimitFeature.value.self().isEnabled()
+
+    private fun deletePixel(pixel: PixelEntity): Completable {
+        return Completable.fromAction {
+            pendingPixelDao.delete(pixel)
+        }
+    }
+
+    private fun addDeviceParametersTo(parameters: Map<String, String>): Map<String, String> {
+        val defaultParameters = mapOf(Pixel.PixelParameter.APP_VERSION to deviceInfo.appVersion)
+        return defaultParameters.plus(parameters)
+    }
+
+    private fun getAtbInfo() = statisticsDataStore.atb?.formatWithVariant(statisticsDataStore.variant) ?: ""
+
+    private val pixelsRequiringAtb: Set<String> by lazy {
+        pixelRequiringAtbPlugins.getPlugins().flatMap { it.names() }.toSet()
+    }
+
+    private fun shouldSendAtb(pixelName: String): Boolean {
+        if (!pixelSenderFeature.value.self().isEnabled()) return true
+        return pixelsRequiringAtb.any { pixelName.startsWith(it) }
+    }
+
+    private fun getDeviceFactor() = deviceInfo.formFactor().description
+
+    private suspend fun shouldFirePixel(
+        pixelName: String,
+        type: Pixel.PixelType,
+    ): Boolean =
+        when (type) {
+            is Count -> true
+            is Daily -> !pixelFiredRepository.hasDailyPixelFiredToday(type.tag ?: pixelName)
+            is Unique -> !pixelFiredRepository.hasUniquePixelFired(type.tag ?: pixelName)
+        }
+
+    private suspend fun storePixelFired(
+        pixelName: String,
+        type: Pixel.PixelType,
+    ) {
+        when (type) {
+            is Count -> {} // no-op
+            is Daily -> pixelFiredRepository.storeDailyPixelFiredToday(type.tag ?: pixelName)
+            is Unique -> pixelFiredRepository.storeUniquePixelFired(type.tag ?: pixelName)
+        }
+    }
+}

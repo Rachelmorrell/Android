@@ -1,0 +1,263 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.messaging.fakes
+
+import android.net.Uri
+import androidx.lifecycle.LifecycleOwner
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import com.duckduckgo.duckchat.api.DuckChatInputModeState
+import com.duckduckgo.duckchat.api.InputMode
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState
+import com.duckduckgo.duckchat.impl.DuckChatInternal
+import com.duckduckgo.duckchat.impl.EditPromptRequest
+import com.duckduckgo.duckchat.impl.store.DefaultTogglePosition
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
+
+/**
+ * Fake implementation of [DuckChatInternal] for testing purposes.
+ */
+class FakeDuckChatInternal(
+    private var enabled: Boolean = true,
+) : DuckChatInternal, DuckChatInputModeState {
+
+    private val enableDuckChatUserSetting = MutableStateFlow(enabled)
+    private val showInBrowserMenuUserSetting = MutableStateFlow(false)
+    private val showInAddressBarUserSetting = MutableStateFlow(false)
+    private val showInVoiceSearchUserSetting = MutableStateFlow(false)
+    private val showInVoiceChatUserSetting = MutableStateFlow(false)
+    private val inputScreenUserSettingEnabled = MutableStateFlow(false)
+    private val cosmeticInputScreenUserSettingEnabled = MutableStateFlow<Boolean?>(null)
+    private val nativeChatInputEnabled = MutableStateFlow(false)
+    private val nativeInputNavBarEnabled = MutableStateFlow(false)
+    private val automaticContextAttachmentUserSettingEnabled = MutableStateFlow<Boolean>(false)
+    private val areMultipleContentAttachmentsEnabled = MutableStateFlow<Boolean>(false)
+    private val chatSuggestionsUserSettingEnabled = MutableStateFlow(true)
+    private val standaloneMigrationCompleted = MutableStateFlow(false)
+
+    // DuckChat interface methods
+    override fun isEnabled(): Boolean = enabled
+
+    var openDuckChatCalls: Int = 0
+        private set
+
+    override fun openDuckChat(entryPoint: DuckChatEntryPoint) {
+        openDuckChatCalls += 1
+    }
+
+    override fun openDuckChatWithAutoPrompt(query: String, entryPoint: DuckChatEntryPoint, voice: Boolean) { }
+
+    override fun openDuckChatWithPrefill(query: String, entryPoint: DuckChatEntryPoint) { }
+
+    override fun reportDuckChatEntry(entryPoint: DuckChatEntryPoint, opensNewTab: Boolean, hasPrompt: Boolean, voice: Boolean) { }
+
+    override fun getDuckChatUrl(query: String, autoPrompt: Boolean, sidebar: Boolean): String {
+        return "https://duckduckgo.com/?q=DuckDuckGo+AI+Chat&ia=chat&duckai=5"
+    }
+
+    override fun getDuckChatSettingsUrl(): String = "https://duck.ai?settings=open"
+
+    override fun isDuckChatUrl(uri: Uri): Boolean = uri.host == "duck.ai"
+
+    override suspend fun wasOpenedBefore(): Boolean = false
+
+    override suspend fun setInputScreenUserSetting(enabled: Boolean) {
+        inputScreenUserSettingEnabled.value = enabled
+    }
+
+    override suspend fun isInputScreenEverEnabled(): Boolean = false
+
+    override suspend fun setCosmeticInputScreenUserSetting(enabled: Boolean) {
+        cosmeticInputScreenUserSettingEnabled.value = enabled
+    }
+
+    override fun observeInputScreenUserSettingEnabled(): Flow<Boolean> = inputScreenUserSettingEnabled
+
+    override fun observeCosmeticInputScreenUserSettingEnabled(): Flow<Boolean?> = cosmeticInputScreenUserSettingEnabled
+    override fun observeAutomaticContextAttachmentUserSettingEnabled(): Flow<Boolean> = automaticContextAttachmentUserSettingEnabled
+    override fun observeNativeChatInputEnabled(): Flow<Boolean> = nativeChatInputEnabled
+    override fun observeNativeInputNavBarEnabled(): Flow<Boolean> = nativeInputNavBarEnabled
+
+    override suspend fun isStandaloneMigrationCompleted(): Boolean = standaloneMigrationCompleted.value
+
+    override fun isAutomaticContextAttachmentEnabled(): Boolean = automaticContextAttachmentUserSettingEnabled.value
+
+    override fun areMultipleContentAttachmentsEnabled(): Boolean = areMultipleContentAttachmentsEnabled.value
+
+    // DuckChatInternal interface methods
+    override suspend fun setEnableDuckChatUserSetting(enabled: Boolean) {
+        enableDuckChatUserSetting.value = enabled
+    }
+
+    override suspend fun setShowInBrowserMenuUserSetting(showDuckChat: Boolean) {
+        showInBrowserMenuUserSetting.value = showDuckChat
+    }
+
+    override suspend fun setShowInAddressBarUserSetting(showDuckChat: Boolean) {
+        showInAddressBarUserSetting.value = showDuckChat
+    }
+
+    override suspend fun setShowInVoiceSearchUserSetting(showToggle: Boolean) {
+        showInVoiceSearchUserSetting.value = showToggle
+    }
+
+    override suspend fun setShowInVoiceChatUserSetting(showToggle: Boolean) {
+        showInVoiceChatUserSetting.value = showToggle
+    }
+
+    override suspend fun setAutomaticPageContextUserSetting(isEnabled: Boolean) {
+        automaticContextAttachmentUserSettingEnabled.value = isEnabled
+    }
+
+    override fun observeEnableDuckChatUserSetting(): Flow<Boolean> = enableDuckChatUserSetting
+
+    override fun observeShowInBrowserMenuUserSetting(): Flow<Boolean> = showInBrowserMenuUserSetting
+
+    override fun observeShowInAddressBarUserSetting(): Flow<Boolean> = showInAddressBarUserSetting
+
+    override fun observeShowInVoiceSearchUserSetting(): Flow<Boolean> = showInVoiceSearchUserSetting
+
+    override fun observeShowInVoiceChatUserSetting(): Flow<Boolean> = showInVoiceChatUserSetting
+
+    override fun openDuckChatSettings() { }
+
+    override fun closeDuckChat() { }
+
+    override fun openNewDuckChatSession(entryPoint: DuckChatEntryPoint) { }
+
+    override fun observeCloseEvent(lifecycleOwner: LifecycleOwner, onClose: () -> Unit) { }
+
+    override fun isAddressBarEntryPointEnabled(): Boolean = true
+
+    override fun isVoiceSearchEntryPointEnabled(): Boolean = false
+
+    override fun isDuckChatUserEnabled(): Boolean = enableDuckChatUserSetting.value
+
+    private val _showModelPickerEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    override fun requestShowModelPicker(tabId: String) {
+        _showModelPickerEvents.tryEmit(tabId)
+    }
+
+    override val showModelPickerEvents: Flow<String> = _showModelPickerEvents.asSharedFlow()
+
+    private val _editPromptRequests = MutableSharedFlow<EditPromptRequest>(extraBufferCapacity = 1)
+
+    override fun requestEditPrompt(request: EditPromptRequest) {
+        _editPromptRequests.tryEmit(request)
+    }
+
+    override val editPromptRequests: Flow<EditPromptRequest> = _editPromptRequests.asSharedFlow()
+
+    override fun isImageUploadEnabled(): Boolean = false
+
+    override fun isStandaloneMigrationEnabled(): Boolean = false
+    override fun isNativeStorageEnabled(): Boolean = false
+    override fun isNativeChatInputEnabled(): Boolean = false
+
+    override fun isContextualNativeInputEnabled(): Boolean = false
+
+    override fun isNativePromptEditingEnabled(): Boolean = false
+
+    override fun keepSessionIntervalInMinutes(): Int = 30
+
+    override fun isInputScreenFeatureAvailable(): Boolean = false
+
+    override fun isDuckChatFullScreenModeEnabled(): Boolean = false
+
+    override fun isDuckChatContextualModeEnabled(): Boolean = false
+
+    override fun isContextualMenuAllChatsEnabled(): Boolean = false
+
+    override fun resolvedTogglePosition(): NativeInputState.ToggleSelection = NativeInputState.ToggleSelection.SEARCH
+
+    override fun isDuckChatFeatureEnabled(): Boolean = true
+
+    override fun isChatSyncFeatureEnabled(): Boolean = true
+
+    override fun canHandleOnAiWebView(url: String): Boolean = false
+
+    override suspend fun setChatSuggestionsUserSetting(enabled: Boolean) {
+        chatSuggestionsUserSettingEnabled.value = enabled
+    }
+
+    override fun observeChatSuggestionsUserSettingEnabled(): Flow<Boolean> = chatSuggestionsUserSettingEnabled
+
+    override fun openVoiceDuckChat(entryPoint: DuckChatEntryPoint) { }
+    override fun isVoiceChatSessionActive(tabId: String): Boolean = false
+    override val activeVoiceChatSessions: Flow<Set<String>> = MutableStateFlow(emptySet())
+    override fun observeTriggerVoiceChatSessionEnd(): Flow<String> = emptyFlow()
+    override fun endVoiceChatSession(tabId: String) { }
+
+    override suspend fun isChatHistoryAvailable(): Boolean = false
+
+    override suspend fun hasUserEnabledChatHistory(): Boolean = false
+
+    override fun observeHasChatSuggestions(): Flow<Boolean> = emptyFlow()
+
+    override suspend fun onAddressBarPickerDuckAiSelected() { }
+
+    override fun openDuckChatImageGeneration(entryPoint: DuckChatEntryPoint) { }
+
+    override fun buildChatUrl(chatId: String): String = "https://duck.ai?chatID=$chatId"
+
+    private val _defaultTogglePosition = MutableStateFlow<String?>(null)
+
+    override suspend fun setDefaultTogglePosition(position: DefaultTogglePosition) {
+        _defaultTogglePosition.value = position.name
+    }
+
+    override fun observeDefaultTogglePosition(): Flow<DefaultTogglePosition> =
+        _defaultTogglePosition.map { DefaultTogglePosition.fromName(it) }
+
+    override suspend fun saveLastUsedTogglePosition(position: String) { }
+
+    override fun observeLastUsedTogglePosition(): Flow<String?> = MutableStateFlow(null)
+
+    private val _displayedMode = MutableStateFlow(InputMode.SEARCH)
+
+    override val displayedMode: StateFlow<InputMode> = _displayedMode.asStateFlow()
+
+    override fun setSelectedMode(mode: InputMode) {
+        _displayedMode.value = mode
+    }
+
+    private val _inputQuery = MutableStateFlow("")
+
+    override val inputQuery: StateFlow<String> = _inputQuery.asStateFlow()
+
+    val inputModeCapabilityFlow = MutableStateFlow(NativeInputState.InputMode.SEARCH_ONLY)
+    override val inputModeCapability: StateFlow<NativeInputState.InputMode> = inputModeCapabilityFlow.asStateFlow()
+
+    override suspend fun getSelectedInputMode(): NativeInputState.InputMode = inputModeCapabilityFlow.value
+
+    override suspend fun getInitialToggleSelection(): NativeInputState.ToggleSelection = resolvedTogglePosition()
+
+    override fun setInputQuery(query: String) {
+        _inputQuery.value = query
+    }
+
+    fun setDuckChatUserEnabled(enabled: Boolean) {
+        enableDuckChatUserSetting.value = enabled
+    }
+}

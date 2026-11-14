@@ -20,16 +20,28 @@ import android.os.Bundle
 import android.os.Parcel
 import android.util.LruCache
 import android.webkit.WebView
-import timber.log.Timber
+import logcat.LogPriority.INFO
+import logcat.LogPriority.VERBOSE
+import logcat.LogPriority.WARN
+import logcat.logcat
+import javax.inject.Inject
 
 interface WebViewSessionStorage {
-    fun saveSession(webView: WebView?, tabId: String)
-    fun restoreSession(webView: WebView?, tabId: String): Boolean
+    fun saveSession(
+        webView: WebView?,
+        tabId: String,
+    )
+
+    suspend fun restoreSession(
+        webView: WebView?,
+        tabId: String,
+    ): Boolean
+
     fun deleteSession(tabId: String)
-    fun deleteAllSessions()
+    suspend fun deleteAllSessions()
 }
 
-class WebViewSessionInMemoryStorage : WebViewSessionStorage {
+class WebViewSessionInMemoryStorage @Inject constructor() : WebViewSessionStorage {
 
     private val cache = object : LruCache<String, Bundle>(CACHE_SIZE_BYTES) {
 
@@ -37,22 +49,33 @@ class WebViewSessionInMemoryStorage : WebViewSessionStorage {
          * Size (in bytes) of a single entry in the cache for the given key.
          * We specify the max cache size in bytes, so we need to calculate an approximate size of the cache entry in bytes.
          */
-        override fun sizeOf(key: String, bundle: Bundle) = bundle.sizeInBytes()
+        override fun sizeOf(
+            key: String,
+            bundle: Bundle,
+        ) = bundle.sizeInBytes()
 
-        override fun entryRemoved(evicted: Boolean, key: String?, oldValue: Bundle?, newValue: Bundle?) {
+        override fun entryRemoved(
+            evicted: Boolean,
+            key: String?,
+            oldValue: Bundle?,
+            newValue: Bundle?,
+        ) {
             if (evicted) {
-                Timber.v("Evicted $key from WebView session storage")
+                logcat(VERBOSE) { "Evicted $key from WebView session storage" }
             }
         }
     }
 
-    override fun saveSession(webView: WebView?, tabId: String) {
+    override fun saveSession(
+        webView: WebView?,
+        tabId: String,
+    ) {
         if (webView == null) {
-            Timber.w("WebView is null; cannot save session")
+            logcat(WARN) { "WebView is null; cannot save session" }
             return
         }
 
-        Timber.i("Saving WebView session for $tabId")
+        logcat(INFO) { "Saving WebView session for $tabId" }
 
         val webViewBundle = createWebViewBundle(webView)
 
@@ -61,7 +84,7 @@ class WebViewSessionInMemoryStorage : WebViewSessionStorage {
         bundle.putInt(CACHE_KEY_SCROLL_POSITION, webView.scrollY)
         cache.put(tabId, bundle)
 
-        Timber.d("Stored ${bundle.sizeInBytes()} bytes for WebView $webView")
+        logcat { "Stored ${bundle.sizeInBytes()} bytes for WebView $webView" }
         logCacheSize()
     }
 
@@ -71,17 +94,20 @@ class WebViewSessionInMemoryStorage : WebViewSessionStorage {
         }
     }
 
-    override fun restoreSession(webView: WebView?, tabId: String): Boolean {
+    override suspend fun restoreSession(
+        webView: WebView?,
+        tabId: String,
+    ): Boolean {
         if (webView == null) {
-            Timber.w("WebView is null; cannot restore session")
+            logcat(WARN) { "WebView is null; cannot restore session" }
             return false
         }
 
-        Timber.i("Restoring WebView session for $tabId")
+        logcat(INFO) { "Restoring WebView session for $tabId" }
 
         val bundle = cache[tabId]
         if (bundle == null) {
-            Timber.v("No saved bundle for tab $tabId")
+            logcat(VERBOSE) { "No saved bundle for tab $tabId" }
             return false
         }
 
@@ -99,17 +125,17 @@ class WebViewSessionInMemoryStorage : WebViewSessionStorage {
 
     override fun deleteSession(tabId: String) {
         cache.remove(tabId)
-        Timber.i("Deleted web session for $tabId")
+        logcat(INFO) { "Deleted web session for $tabId" }
         logCacheSize()
     }
 
-    override fun deleteAllSessions() {
+    override suspend fun deleteAllSessions() {
         cache.evictAll()
         logCacheSize()
     }
 
     private fun logCacheSize() {
-        Timber.v("Cache size is now ~${cache.size()} bytes out of a max size of ${cache.maxSize()} bytes")
+        logcat(VERBOSE) { "Cache size is now ~${cache.size()} bytes out of a max size of ${cache.maxSize()} bytes" }
     }
 
     private fun Bundle.sizeInBytes(): Int {
@@ -127,7 +153,5 @@ class WebViewSessionInMemoryStorage : WebViewSessionStorage {
 
         private const val CACHE_KEY_WEBVIEW = "webview"
         private const val CACHE_KEY_SCROLL_POSITION = "scroll-position"
-
     }
-
 }

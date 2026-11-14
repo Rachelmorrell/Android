@@ -17,30 +17,20 @@
 package com.duckduckgo.app.di
 
 import android.content.Context
-import com.duckduckgo.app.autocomplete.api.AutoCompleteService
-import com.duckduckgo.app.brokensite.api.BrokenSiteSender
-import com.duckduckgo.app.brokensite.api.BrokenSiteSubmitter
-import com.duckduckgo.app.email.api.EmailService
-import com.duckduckgo.app.browser.useragent.UserAgentProvider
-import com.duckduckgo.app.feedback.api.FeedbackService
-import com.duckduckgo.app.feedback.api.FeedbackSubmitter
-import com.duckduckgo.app.feedback.api.FireAndForgetFeedbackSubmitter
-import com.duckduckgo.app.feedback.api.SubReasonApiMapper
-import com.duckduckgo.app.global.AppUrl.Url
 import com.duckduckgo.app.global.api.*
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControl
-import com.duckduckgo.app.httpsupgrade.api.HttpsUpgradeService
-import com.duckduckgo.app.statistics.VariantManager
-import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.app.statistics.store.StatisticsDataStore
-import com.duckduckgo.app.surrogates.api.ResourceSurrogateListService
-import com.duckduckgo.app.survey.api.SurveyService
-import com.duckduckgo.app.trackerdetection.api.TrackerListService
-import com.duckduckgo.app.trackerdetection.db.TdsMetadataDao
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.utils.AppUrl.Url
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.common.utils.plugins.pixel.PixelInterceptorPlugin
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.user.agent.api.UserAgentProvider
 import com.squareup.moshi.Moshi
-import dagger.Module
-import dagger.Provides
-import kotlinx.coroutines.CoroutineScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
 import okhttp3.Cache
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -48,53 +38,87 @@ import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
-import timber.log.Timber
 import java.io.File
+import java.io.IOException
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.SocketAddress
+import java.net.URI
 import javax.inject.Named
-import javax.inject.Singleton
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class NetworkModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @Named("api")
-    fun apiOkHttpClient(context: Context, apiRequestInterceptor: ApiRequestInterceptor): OkHttpClient {
+    fun apiOkHttpClient(
+        context: Context,
+        apiRequestInterceptor: ApiRequestInterceptor,
+        apiInterceptorPlugins: PluginPoint<ApiInterceptorPlugin>,
+    ): OkHttpClient {
         val cacheLocation = File(context.cacheDir, NetworkApiCache.FILE_NAME)
         val cache = Cache(cacheLocation, CACHE_SIZE)
         return OkHttpClient.Builder()
             .addInterceptor(apiRequestInterceptor)
-            .cache(cache)
+            .cache(cache).apply {
+                apiInterceptorPlugins.getPlugins().forEach {
+                    addInterceptor(it.getInterceptor())
+                }
+            }
+            // See https://app.asana.com/0/1202552961248957/1204588257103865/f and
+            // https://github.com/square/okhttp/issues/6877#issuecomment-1438554879
+            .proxySelector(
+                object : ProxySelector() {
+                    override fun select(uri: URI?): List<Proxy> {
+                        return try {
+                            getDefault().select(uri)
+                        } catch (t: Throwable) {
+                            listOf(Proxy.NO_PROXY)
+                        }
+                    }
+
+                    override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
+                        getDefault().connectFailed(uri, sa, ioe)
+                    }
+                },
+            )
             .build()
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @Named("nonCaching")
     fun pixelOkHttpClient(
         apiRequestInterceptor: ApiRequestInterceptor,
         pixelReQueryInterceptor: PixelReQueryInterceptor,
-        pixelAtbRemovalInterceptor: PixelAtbRemovalInterceptor
+        pixelInterceptorPlugins: PluginPoint<PixelInterceptorPlugin>,
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(apiRequestInterceptor)
             .addInterceptor(pixelReQueryInterceptor)
-            .addInterceptor(pixelAtbRemovalInterceptor)
+            .apply {
+                pixelInterceptorPlugins.getPlugins().forEach { addInterceptor(it.getInterceptor()) }
+            }
             // shall be the last one as it is logging the pixel request url that goes out
             .addInterceptor { chain: Interceptor.Chain ->
-                Timber.v("Pixel url request: ${chain.request().url}")
+                logcat(VERBOSE) { "Pixel url request: ${chain.request().url}" }
                 return@addInterceptor chain.proceed(chain.request())
             }
             .build()
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @Named("api")
-    fun apiRetrofit(@Named("api") okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+    fun apiRetrofit(
+        @Named("api") okHttpClient: Lazy<OkHttpClient>,
+        moshi: Moshi,
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(Url.API)
-            .client(okHttpClient)
+            .callFactory { okHttpClient.value.newCall(it) }
             .addConverterFactory(ScalarsConverterFactory.create())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
@@ -102,12 +126,15 @@ class NetworkModule {
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @Named("nonCaching")
-    fun nonCachingRetrofit(@Named("nonCaching") okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+    fun nonCachingRetrofit(
+        @Named("nonCaching") okHttpClient: Lazy<OkHttpClient>,
+        moshi: Moshi,
+    ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(Url.API)
-            .client(okHttpClient)
+            .callFactory { okHttpClient.value.newCall(it) }
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
@@ -116,70 +143,16 @@ class NetworkModule {
     @Provides
     fun apiRequestInterceptor(
         context: Context,
-        userAgentProvider: UserAgentProvider
+        userAgentProvider: UserAgentProvider,
+        appBuildConfig: AppBuildConfig,
     ): ApiRequestInterceptor {
-        return ApiRequestInterceptor(context, userAgentProvider)
+        return ApiRequestInterceptor(context, userAgentProvider, appBuildConfig)
     }
 
     @Provides
     fun pixelReQueryInterceptor(): PixelReQueryInterceptor {
         return PixelReQueryInterceptor()
     }
-
-    @Provides
-    fun pixelAtbRemovalInterceptor(): PixelAtbRemovalInterceptor {
-        return PixelAtbRemovalInterceptor()
-    }
-
-    @Provides
-    fun trackerListService(@Named("api") retrofit: Retrofit): TrackerListService =
-        retrofit.create(TrackerListService::class.java)
-
-    @Provides
-    fun httpsUpgradeService(@Named("api") retrofit: Retrofit): HttpsUpgradeService =
-        retrofit.create(HttpsUpgradeService::class.java)
-
-    @Provides
-    fun autoCompleteService(@Named("nonCaching") retrofit: Retrofit): AutoCompleteService =
-        retrofit.create(AutoCompleteService::class.java)
-
-    @Provides
-    fun emailService(@Named("nonCaching") retrofit: Retrofit): EmailService =
-        retrofit.create(EmailService::class.java)
-
-    @Provides
-    fun surrogatesService(@Named("api") retrofit: Retrofit): ResourceSurrogateListService =
-        retrofit.create(ResourceSurrogateListService::class.java)
-
-    @Provides
-    fun brokenSiteSender(
-        statisticsStore: StatisticsDataStore,
-        variantManager: VariantManager,
-        tdsMetadataDao: TdsMetadataDao,
-        pixel: Pixel,
-        globalPrivacyControl: GlobalPrivacyControl,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
-    ): BrokenSiteSender =
-        BrokenSiteSubmitter(statisticsStore, variantManager, tdsMetadataDao, globalPrivacyControl, pixel, appCoroutineScope)
-
-    @Provides
-    fun surveyService(@Named("api") retrofit: Retrofit): SurveyService =
-        retrofit.create(SurveyService::class.java)
-
-    @Provides
-    fun feedbackSubmitter(
-        feedbackService: FeedbackService,
-        variantManager: VariantManager,
-        apiKeyMapper: SubReasonApiMapper,
-        statisticsStore: StatisticsDataStore,
-        pixel: Pixel,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
-    ): FeedbackSubmitter =
-        FireAndForgetFeedbackSubmitter(feedbackService, variantManager, apiKeyMapper, statisticsStore, pixel, appCoroutineScope)
-
-    @Provides
-    fun feedbackService(@Named("api") retrofit: Retrofit): FeedbackService =
-        retrofit.create(FeedbackService::class.java)
 
     companion object {
         private const val CACHE_SIZE: Long = 10 * 1024 * 1024 // 10MB

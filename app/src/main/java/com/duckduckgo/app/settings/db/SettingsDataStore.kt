@@ -19,27 +19,57 @@ package com.duckduckgo.app.settings.db
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.duckduckgo.app.browser.BuildConfig
+import com.duckduckgo.app.browser.omnibar.OmnibarType
+import com.duckduckgo.app.fire.fireproofwebsite.ui.AutomaticFireproofSetting
+import com.duckduckgo.app.fire.fireproofwebsite.ui.AutomaticFireproofSetting.ASK_EVERY_TIME
+import com.duckduckgo.app.fire.fireproofwebsite.ui.AutomaticFireproofSetting.NEVER
 import com.duckduckgo.app.icon.api.AppIcon
 import com.duckduckgo.app.settings.clear.ClearWhatOption
 import com.duckduckgo.app.settings.clear.ClearWhenOption
 import com.duckduckgo.app.settings.clear.FireAnimation
-import com.duckduckgo.app.statistics.VariantManager
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.api.autocomplete.AutoCompleteSettings
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import javax.inject.Inject
 
 interface SettingsDataStore {
-
     var lastExecutedJobId: String?
+
     var hideTips: Boolean
-    var autoCompleteSuggestionsEnabled: Boolean
+    var maliciousSiteProtectionEnabled: Boolean
     var appIcon: AppIcon
     var selectedFireAnimation: FireAnimation
     val fireAnimationEnabled: Boolean
     var appIconChanged: Boolean
+
+    @Deprecated(message = "Not used anymore after adding automatic fireproof", replaceWith = ReplaceWith(expression = "automaticFireproofSetting"))
     var appLoginDetection: Boolean
+    var automaticFireproofSetting: AutomaticFireproofSetting
+
+    @Deprecated(
+        message = "Not used anymore after migration to SitePermissionsRepository - https://app.asana.com/0/1174433894299346/1206170291275949/f",
+        replaceWith = ReplaceWith(expression = "SitePermissionsRepository.askLocationEnabled"),
+    )
     var appLocationPermission: Boolean
+
+    @Deprecated(
+        message = "Not used anymore after migration to SitePermissionsRepository - https://app.asana.com/0/1174433894299346/1206170291275949/f",
+        replaceWith = ReplaceWith(expression = "SitePermissionsRepository.askLocationEnabled"),
+    )
     var appLocationPermissionDeniedForever: Boolean
+    var appLocationPermissionMigrated: Boolean
+
     var globalPrivacyControlEnabled: Boolean
     var appLinksEnabled: Boolean
+    var showAppLinksPrompt: Boolean
+    var showAutomaticFireproofDialog: Boolean
+    var omnibarType: OmnibarType
+
+    // Temporary cache value for split omnibar feature, in case the flag is temporarily disabled
+    var isSplitOmnibarSelected: Boolean
 
     /**
      * This will be checked upon app startup and used to decide whether it should perform a clear or not.
@@ -49,27 +79,83 @@ interface SettingsDataStore {
      * If the app is cleared in the foreground, but the process isn't restarted, we can set this to true.
      */
     var appUsedSinceLastClear: Boolean
+    var tabsClearedCount: Int
     var automaticallyClearWhatOption: ClearWhatOption
     var automaticallyClearWhenOption: ClearWhenOption
     var appBackgroundedTimestamp: Long
+    var lastSessionBackgroundTimestamp: Long
+    var userSelectedIdleThresholdSeconds: Long?
     var appNotificationsEnabled: Boolean
+    var notifyMeInDownloadsDismissed: Boolean
+    var experimentalWebsiteDarkMode: Boolean
+    var isFullUrlEnabled: Boolean
+
+    /**
+     * Indicates whether URL preference migration has been performed for this installation.
+     * This ensures users who manually set their URL preference in older app versions
+     * have their choice preserved and protected from feature flag rollbacks.
+     */
+    var urlPreferenceMigrated: Boolean
+
+    /**
+     * Indicates whether the user has manually set their URL display preference.
+     * You shouldn't use `hasUrlPreferenceSet` to check the same thing because we can edit
+     * automatically (e.g. in `UrlDisplayRepository`) the preference without a manual action
+     * from the user.
+     *
+     * When true, the user's preference should be preserved even if default behavior changes.
+     * When false, the preference may be updated if business rules change (via feature flags).
+     */
+    var urlPreferenceSetByUser: Boolean
+    var clearDuckAiData: Boolean
+    var showTrackersCountInAddressBar: Boolean
+    var singleTabFireDialogShownCount: Int
+    var getDesktopBrowserSettingDismissed: Boolean
+    var nextStepsAddressBarDismissed: Boolean
+    var nextStepsVoiceSearchDismissed: Boolean
+    var nextStepsSectionHidden: Boolean
+
+    /**
+     * Check if a value has been set to the URL display preference.
+     */
+    fun hasUrlPreferenceSet(): Boolean
+
     fun isCurrentlySelected(clearWhatOption: ClearWhatOption): Boolean
+
     fun isCurrentlySelected(clearWhenOption: ClearWhenOption): Boolean
+
     fun isCurrentlySelected(fireAnimation: FireAnimation): Boolean
+
     fun hasBackgroundTimestampRecorded(): Boolean
+
     fun clearAppBackgroundTimestamp()
 }
 
-class SettingsSharedPreferences constructor(private val context: Context, private val variantManager: VariantManager) : SettingsDataStore {
-
+@ContributesBinding(
+    scope = AppScope::class,
+    binding = binding<SettingsDataStore>(),
+)
+@ContributesBinding(
+    scope = AppScope::class,
+    binding = binding<AutoCompleteSettings>(),
+)
+@SingleIn(AppScope::class)
+class SettingsSharedPreferences @Inject constructor(
+    private val context: Context,
+    private val appBuildConfig: AppBuildConfig,
+) : SettingsDataStore,
+    AutoCompleteSettings {
     private val fireAnimationMapper = FireAnimationPrefsMapper()
 
     override var lastExecutedJobId: String?
         get() = preferences.getString(KEY_BACKGROUND_JOB_ID, null)
         set(value) {
             preferences.edit(commit = true) {
-                if (value == null) remove(KEY_BACKGROUND_JOB_ID)
-                else putString(KEY_BACKGROUND_JOB_ID, value)
+                if (value == null) {
+                    remove(KEY_BACKGROUND_JOB_ID)
+                } else {
+                    putString(KEY_BACKGROUND_JOB_ID, value)
+                }
             }
         }
 
@@ -81,9 +167,17 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
         get() = preferences.getBoolean(KEY_AUTOCOMPLETE_ENABLED, true)
         set(enabled) = preferences.edit { putBoolean(KEY_AUTOCOMPLETE_ENABLED, enabled) }
 
+    override var maliciousSiteProtectionEnabled: Boolean
+        get() = preferences.getBoolean(KEY_MALICIOUS_SITE_PROTECTION_ENABLED, true)
+        set(enabled) = preferences.edit { putBoolean(KEY_MALICIOUS_SITE_PROTECTION_ENABLED, enabled) }
+
     override var appLoginDetection: Boolean
-        get() = preferences.getBoolean(KEY_LOGIN_DETECTION_ENABLED, true)
-        set(enabled) = preferences.edit { putBoolean(KEY_LOGIN_DETECTION_ENABLED, enabled) }
+        get() = preferences.getBoolean("KEY_LOGIN_DETECTION_ENABLED", true)
+        set(enabled) = preferences.edit { putBoolean("KEY_LOGIN_DETECTION_ENABLED", enabled) }
+
+    override var automaticFireproofSetting: AutomaticFireproofSetting
+        get() = AutomaticFireproofSetting.valueOf(preferences.getString(KEY_AUTOMATIC_FIREPROOF_SETTING, ASK_EVERY_TIME.name) ?: ASK_EVERY_TIME.name)
+        set(loginDetectionSetting) = preferences.edit { putString(KEY_AUTOMATIC_FIREPROOF_SETTING, loginDetectionSetting.name) }
 
     override var appLocationPermission: Boolean
         get() = preferences.getBoolean(KEY_SITE_LOCATION_PERMISSION_ENABLED, true)
@@ -93,9 +187,13 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
         get() = preferences.getBoolean(KEY_SYSTEM_LOCATION_PERMISSION_DENIED_FOREVER, false)
         set(enabled) = preferences.edit { putBoolean(KEY_SYSTEM_LOCATION_PERMISSION_DENIED_FOREVER, enabled) }
 
+    override var appLocationPermissionMigrated: Boolean
+        get() = preferences.getBoolean(KEY_SITE_LOCATION_PERMISSION_MIGRATED, false)
+        set(enabled) = preferences.edit { putBoolean(KEY_SITE_LOCATION_PERMISSION_MIGRATED, enabled) }
+
     override var appIcon: AppIcon
         get() {
-            val componentName = preferences.getString(KEY_APP_ICON, DEFAULT_ICON.componentName) ?: return DEFAULT_ICON
+            val componentName = preferences.getString(KEY_APP_ICON, defaultIcon().componentName) ?: return defaultIcon()
             return AppIcon.from(componentName)
         }
         set(appIcon) = preferences.edit(commit = true) { putString(KEY_APP_ICON, appIcon.componentName) }
@@ -118,6 +216,10 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
         get() = preferences.getBoolean(KEY_APP_USED_SINCE_LAST_CLEAR, true)
         set(enabled) = preferences.edit(commit = true) { putBoolean(KEY_APP_USED_SINCE_LAST_CLEAR, enabled) }
 
+    override var tabsClearedCount: Int
+        get() = preferences.getInt(KEY_TABS_CLEARED_COUNT, 0)
+        set(value) = preferences.edit(commit = true) { putInt(KEY_TABS_CLEARED_COUNT, value) }
+
     override var automaticallyClearWhatOption: ClearWhatOption
         get() = automaticallyClearWhatSavedValue() ?: ClearWhatOption.CLEAR_NONE
         set(value) = preferences.edit { putString(KEY_AUTOMATICALLY_CLEAR_WHAT_OPTION, value.name) }
@@ -129,6 +231,23 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
     override var appBackgroundedTimestamp: Long
         get() = preferences.getLong(KEY_APP_BACKGROUNDED_TIMESTAMP, 0)
         set(value) = preferences.edit(commit = true) { putLong(KEY_APP_BACKGROUNDED_TIMESTAMP, value) }
+
+    override var lastSessionBackgroundTimestamp: Long
+        get() = preferences.getLong(KEY_LAST_SESSION_BACKGROUND_TIMESTAMP, 0)
+        set(value) = preferences.edit(commit = true) { putLong(KEY_LAST_SESSION_BACKGROUND_TIMESTAMP, value) }
+
+    override var userSelectedIdleThresholdSeconds: Long?
+        get() {
+            val value = preferences.getLong(KEY_USER_SELECTED_IDLE_THRESHOLD_SECONDS, Long.MIN_VALUE)
+            return if (value == Long.MIN_VALUE) null else value
+        }
+        set(value) = preferences.edit(commit = true) {
+            if (value == null) {
+                remove(KEY_USER_SELECTED_IDLE_THRESHOLD_SECONDS)
+            } else {
+                putLong(KEY_USER_SELECTED_IDLE_THRESHOLD_SECONDS, value)
+            }
+        }
 
     override var appNotificationsEnabled: Boolean
         get() = preferences.getBoolean(KEY_APP_NOTIFICATIONS_ENABLED, true)
@@ -142,7 +261,68 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
         get() = preferences.getBoolean(APP_LINKS_ENABLED, true)
         set(enabled) = preferences.edit { putBoolean(APP_LINKS_ENABLED, enabled) }
 
+    override var showAppLinksPrompt: Boolean
+        get() = preferences.getBoolean(SHOW_APP_LINKS_PROMPT, true)
+        set(enabled) = preferences.edit { putBoolean(SHOW_APP_LINKS_PROMPT, enabled) }
+
+    override var showAutomaticFireproofDialog: Boolean
+        get() = preferences.getBoolean(SHOW_AUTOMATIC_FIREPROOF_DIALOG, true)
+        set(enabled) = preferences.edit { putBoolean(SHOW_AUTOMATIC_FIREPROOF_DIALOG, enabled) }
+
+    override var omnibarType: OmnibarType
+        get() = OmnibarType.fromString(
+            preferences.getString(KEY_OMNIBAR_TYPE, OmnibarType.SINGLE_TOP.typeName) ?: OmnibarType.SINGLE_TOP.typeName,
+        )
+        set(value) = preferences.edit { putString(KEY_OMNIBAR_TYPE, value.typeName) }
+
+    override var isSplitOmnibarSelected: Boolean
+        get() = preferences.getBoolean(KEY_SPLIT_OMNIBAR, false)
+        set(value) = preferences.edit { putBoolean(KEY_SPLIT_OMNIBAR, value) }
+
+    override var isFullUrlEnabled: Boolean
+        get() = preferences.getBoolean(KEY_IS_FULL_URL_ENABLED, true)
+        set(enabled) = preferences.edit { putBoolean(KEY_IS_FULL_URL_ENABLED, enabled) }
+
+    override fun hasUrlPreferenceSet(): Boolean = preferences.contains(KEY_IS_FULL_URL_ENABLED)
+
+    override var urlPreferenceMigrated: Boolean
+        get() = preferences.getBoolean(URL_PREFERENCE_MIGRATED, false)
+        set(value) = preferences.edit { putBoolean(URL_PREFERENCE_MIGRATED, value) }
+
+    override var urlPreferenceSetByUser: Boolean
+        get() = preferences.getBoolean(URL_PREFERENCE_SET_BY_USER, false)
+        set(value) = preferences.edit { putBoolean(URL_PREFERENCE_SET_BY_USER, value) }
+
+    override var clearDuckAiData: Boolean
+        get() = preferences.getBoolean(KEY_CLEAR_DUCK_AI_DATA, false)
+        set(enabled) = preferences.edit { putBoolean(KEY_CLEAR_DUCK_AI_DATA, enabled) }
+
+    override var showTrackersCountInAddressBar: Boolean
+        get() = preferences.getBoolean(KEY_SHOW_TRACKERS_COUNT_IN_ADDRESS_BAR, true)
+        set(enabled) = preferences.edit { putBoolean(KEY_SHOW_TRACKERS_COUNT_IN_ADDRESS_BAR, enabled) }
+
+    override var singleTabFireDialogShownCount: Int
+        get() = preferences.getInt(KEY_SINGLE_TAB_FIRE_DIALOG_SHOWN_COUNT, 0)
+        set(value) = preferences.edit { putInt(KEY_SINGLE_TAB_FIRE_DIALOG_SHOWN_COUNT, value) }
+
+    override var getDesktopBrowserSettingDismissed: Boolean
+        get() = preferences.getBoolean(KEY_GET_DESKTOP_BROWSER_SETTING_DISMISSED, false)
+        set(value) = preferences.edit { putBoolean(KEY_GET_DESKTOP_BROWSER_SETTING_DISMISSED, value) }
+
+    override var nextStepsAddressBarDismissed: Boolean
+        get() = preferences.getBoolean(KEY_NEXT_STEPS_ADDRESS_BAR_DISMISSED, false)
+        set(value) = preferences.edit { putBoolean(KEY_NEXT_STEPS_ADDRESS_BAR_DISMISSED, value) }
+
+    override var nextStepsVoiceSearchDismissed: Boolean
+        get() = preferences.getBoolean(KEY_NEXT_STEPS_VOICE_SEARCH_DISMISSED, false)
+        set(value) = preferences.edit { putBoolean(KEY_NEXT_STEPS_VOICE_SEARCH_DISMISSED, value) }
+
+    override var nextStepsSectionHidden: Boolean
+        get() = preferences.getBoolean(KEY_NEXT_STEPS_SECTION_HIDDEN, false)
+        set(value) = preferences.edit { putBoolean(KEY_NEXT_STEPS_SECTION_HIDDEN, value) }
+
     override fun hasBackgroundTimestampRecorded(): Boolean = preferences.contains(KEY_APP_BACKGROUNDED_TIMESTAMP)
+
     override fun clearAppBackgroundTimestamp() = preferences.edit { remove(KEY_APP_BACKGROUNDED_TIMESTAMP) }
 
     override fun isCurrentlySelected(clearWhatOption: ClearWhatOption): Boolean {
@@ -155,9 +335,11 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
         return currentlySelected == clearWhenOption
     }
 
-    override fun isCurrentlySelected(fireAnimation: FireAnimation): Boolean {
-        return selectedFireAnimationSavedValue() == fireAnimation
-    }
+    override fun isCurrentlySelected(fireAnimation: FireAnimation): Boolean = selectedFireAnimationSavedValue() == fireAnimation
+
+    override var notifyMeInDownloadsDismissed: Boolean
+        get() = preferences.getBoolean(KEY_NOTIFY_ME_IN_DOWNLOADS_DISMISSED, false)
+        set(enabled) = preferences.edit { putBoolean(KEY_NOTIFY_ME_IN_DOWNLOADS_DISMISSED, enabled) }
 
     private fun automaticallyClearWhatSavedValue(): ClearWhatOption? {
         val savedValue = preferences.getString(KEY_AUTOMATICALLY_CLEAR_WHAT_OPTION, null) ?: return null
@@ -170,39 +352,63 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
     }
 
     private fun selectedFireAnimationSavedValue(): FireAnimation {
-        val selectedFireAnimationSavedValue = preferences.getString(KEY_SELECTED_FIRE_ANIMATION, null)
-        return fireAnimationMapper.fireAnimationFrom(selectedFireAnimationSavedValue, FireAnimation.HeroFire)
+        val savedValue = preferences.getString(KEY_SELECTED_FIRE_ANIMATION, null)
+        val implicitDefault = FireAnimation.Inferno
+        return fireAnimationMapper.fireAnimationFrom(savedValue, implicitDefault)
     }
 
-    private val preferences: SharedPreferences
-        get() = context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE)
+    private val preferences: SharedPreferences by lazy { context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE) }
+
+    private fun defaultIcon(): AppIcon =
+        if (appBuildConfig.isDebug) {
+            AppIcon.BLUE
+        } else {
+            AppIcon.DEFAULT
+        }
+
+    override var experimentalWebsiteDarkMode: Boolean
+        get() = preferences.getBoolean(KEY_EXPERIMENTAL_SITE_DARK_MODE, false)
+        set(enabled) = preferences.edit { putBoolean(KEY_EXPERIMENTAL_SITE_DARK_MODE, enabled) }
 
     companion object {
         const val FILENAME = "com.duckduckgo.app.settings_activity.settings"
         const val KEY_BACKGROUND_JOB_ID = "BACKGROUND_JOB_ID"
-        const val KEY_THEME = "THEME"
         const val KEY_AUTOCOMPLETE_ENABLED = "AUTOCOMPLETE_ENABLED"
-        const val KEY_LOGIN_DETECTION_ENABLED = "KEY_LOGIN_DETECTION_ENABLED"
+        const val KEY_MALICIOUS_SITE_PROTECTION_ENABLED = "MALICIOUS_SITE_PROTECTION_ENABLED"
+        const val KEY_AUTOMATIC_FIREPROOF_SETTING = "KEY_AUTOMATIC_FIREPROOF_SETTING"
         const val KEY_AUTOMATICALLY_CLEAR_WHAT_OPTION = "AUTOMATICALLY_CLEAR_WHAT_OPTION"
         const val KEY_AUTOMATICALLY_CLEAR_WHEN_OPTION = "AUTOMATICALLY_CLEAR_WHEN_OPTION"
         const val KEY_APP_BACKGROUNDED_TIMESTAMP = "APP_BACKGROUNDED_TIMESTAMP"
+        const val KEY_LAST_SESSION_BACKGROUND_TIMESTAMP = "LAST_SESSION_BACKGROUND_TIMESTAMP"
+        const val KEY_USER_SELECTED_IDLE_THRESHOLD_SECONDS = "KEY_USER_SELECTED_IDLE_THRESHOLD_SECONDS"
         const val KEY_APP_NOTIFICATIONS_ENABLED = "APP_NOTIFCATIONS_ENABLED"
         const val KEY_APP_USED_SINCE_LAST_CLEAR = "APP_USED_SINCE_LAST_CLEAR"
+        const val KEY_TABS_CLEARED_COUNT = "TABS_CLEARED_COUNT"
         const val KEY_HIDE_TIPS = "HIDE_TIPS"
         const val KEY_APP_ICON = "APP_ICON"
         const val KEY_SELECTED_FIRE_ANIMATION = "SELECTED_FIRE_ANIMATION"
         const val KEY_APP_ICON_CHANGED = "APP_ICON_CHANGED"
         const val KEY_SITE_LOCATION_PERMISSION_ENABLED = "KEY_SITE_LOCATION_PERMISSION_ENABLED"
         const val KEY_SYSTEM_LOCATION_PERMISSION_DENIED_FOREVER = "KEY_SYSTEM_LOCATION_PERMISSION_DENIED_FOREVER"
+        const val KEY_SITE_LOCATION_PERMISSION_MIGRATED = "KEY_SITE_LOCATION_PERMISSION_MIGRATED"
         const val KEY_DO_NOT_SELL_ENABLED = "KEY_DO_NOT_SELL_ENABLED"
         const val APP_LINKS_ENABLED = "APP_LINKS_ENABLED"
-
-        private val DEFAULT_ICON = if (BuildConfig.DEBUG) {
-            AppIcon.BLUE
-        } else {
-            AppIcon.DEFAULT
-        }
-        const val KEY_SEARCH_NOTIFICATION = "SEARCH_NOTIFICATION"
+        const val SHOW_APP_LINKS_PROMPT = "SHOW_APP_LINKS_PROMPT"
+        const val SHOW_AUTOMATIC_FIREPROOF_DIALOG = "SHOW_AUTOMATIC_FIREPROOF_DIALOG"
+        const val KEY_NOTIFY_ME_IN_DOWNLOADS_DISMISSED = "KEY_NOTIFY_ME_IN_DOWNLOADS_DISMISSED"
+        const val KEY_EXPERIMENTAL_SITE_DARK_MODE = "KEY_EXPERIMENTAL_SITE_DARK_MODE"
+        const val KEY_OMNIBAR_TYPE = "KEY_OMNIBAR_POSITION"
+        const val KEY_SPLIT_OMNIBAR = "KEY_SPLIT_OMNIBAR"
+        const val KEY_IS_FULL_URL_ENABLED = "KEY_IS_FULL_URL_ENABLED"
+        const val URL_PREFERENCE_MIGRATED = "URL_PREFERENCE_MIGRATED"
+        const val URL_PREFERENCE_SET_BY_USER = "URL_PREFERENCE_SET_BY_USER"
+        const val KEY_CLEAR_DUCK_AI_DATA = "KEY_CLEAR_DUCK_AI_DATA"
+        const val KEY_SHOW_TRACKERS_COUNT_IN_ADDRESS_BAR = "KEY_SHOW_TRACKERS_COUNT_IN_ADDRESS_BAR"
+        const val KEY_SINGLE_TAB_FIRE_DIALOG_SHOWN_COUNT = "KEY_SINGLE_TAB_FIRE_DIALOG_SHOWN_COUNT"
+        const val KEY_GET_DESKTOP_BROWSER_SETTING_DISMISSED = "KEY_GET_DESKTOP_BROWSER_SETTING_DISMISSED"
+        const val KEY_NEXT_STEPS_ADDRESS_BAR_DISMISSED = "KEY_NEXT_STEPS_ADDRESS_BAR_DISMISSED"
+        const val KEY_NEXT_STEPS_VOICE_SEARCH_DISMISSED = "KEY_NEXT_STEPS_VOICE_SEARCH_DISMISSED"
+        const val KEY_NEXT_STEPS_SECTION_HIDDEN = "KEY_NEXT_STEPS_SECTION_HIDDEN"
     }
 
     private class FireAnimationPrefsMapper {
@@ -210,22 +416,37 @@ class SettingsSharedPreferences constructor(private val context: Context, privat
             private const val HERO_FIRE_PREFS_VALUE = "HERO_FIRE"
             private const val HERO_WATER_PREFS_VALUE = "HERO_WATER"
             private const val HERO_ABSTRACT_PREFS_VALUE = "HERO_ABSTRACT"
+            private const val INFERNO_PREFS_VALUE = "INFERNO"
             private const val NONE_PREFS_VALUE = "NONE"
         }
 
-        fun prefValue(fireAnimation: FireAnimation) = when (fireAnimation) {
-            FireAnimation.HeroFire -> HERO_FIRE_PREFS_VALUE
-            FireAnimation.HeroWater -> HERO_WATER_PREFS_VALUE
-            FireAnimation.HeroAbstract -> HERO_ABSTRACT_PREFS_VALUE
-            FireAnimation.None -> NONE_PREFS_VALUE
-        }
+        fun prefValue(fireAnimation: FireAnimation) =
+            when (fireAnimation) {
+                FireAnimation.Inferno -> INFERNO_PREFS_VALUE
+                FireAnimation.HeroFire -> HERO_FIRE_PREFS_VALUE
+                FireAnimation.HeroWater -> HERO_WATER_PREFS_VALUE
+                FireAnimation.HeroAbstract -> HERO_ABSTRACT_PREFS_VALUE
+                FireAnimation.None -> NONE_PREFS_VALUE
+            }
 
-        fun fireAnimationFrom(value: String?, defValue: FireAnimation) = when (value) {
+        fun fireAnimationFrom(
+            value: String?,
+            defValue: FireAnimation,
+        ) = when (value) {
+            INFERNO_PREFS_VALUE -> FireAnimation.Inferno
             HERO_FIRE_PREFS_VALUE -> FireAnimation.HeroFire
             HERO_WATER_PREFS_VALUE -> FireAnimation.HeroWater
             HERO_ABSTRACT_PREFS_VALUE -> FireAnimation.HeroAbstract
             NONE_PREFS_VALUE -> FireAnimation.None
             else -> defValue
         }
+    }
+
+    class LoginDetectorPrefsMapper {
+        fun mapToAutomaticFireproofSetting(oldLoginDetectorValue: Boolean): AutomaticFireproofSetting =
+            when (oldLoginDetectorValue) {
+                false -> NEVER
+                else -> ASK_EVERY_TIME
+            }
     }
 }

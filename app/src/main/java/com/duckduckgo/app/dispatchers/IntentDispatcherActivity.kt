@@ -1,0 +1,157 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.dispatchers
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsSessionToken
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.app.browser.BrowserActivity
+import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.browser.customtabs.CustomTabActivity
+import com.duckduckgo.app.browser.customtabs.CustomTabLaunchMode
+import com.duckduckgo.app.browser.mode.ExternalUrl
+import com.duckduckgo.app.browser.mode.InAppNavigation
+import com.duckduckgo.app.dispatchers.IntentDispatcherViewModel.ViewState
+import com.duckduckgo.app.global.sanitize
+import com.duckduckgo.app.pixels.AppReturnPixelSender
+import com.duckduckgo.app.pixels.toPixelLaunchSourceValue
+import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.customtabs.api.CustomTabsSessionRegistry
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import logcat.logcat
+import javax.inject.Inject
+
+@InjectWith(ActivityScope::class)
+class IntentDispatcherActivity : DuckDuckGoActivity() {
+
+    private val viewModel: IntentDispatcherViewModel by bindViewModel()
+
+    @Inject
+    lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject
+    lateinit var customTabsSessionRegistry: CustomTabsSessionRegistry
+
+    @Inject
+    lateinit var appReturnPixelSender: AppReturnPixelSender
+
+    @Inject
+    lateinit var settingsDataStore: SettingsDataStore
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Sanitize before super.onCreate so lifecycle callbacks dispatched from there don't trip over
+        // Parcelable extras whose classes are absent from our classpath.
+        intent?.sanitize()
+        super.onCreate(savedInstanceState)
+
+        appReturnPixelSender.fireIfNeeded(ExternalUrl.toPixelLaunchSourceValue())
+
+        logcat { "onCreate called with intent $intent" }
+
+        lifecycleScope.launch {
+            viewModel.viewState.flowWithLifecycle(lifecycle, Lifecycle.State.CREATED).collectLatest {
+                dispatch(it)
+            }
+        }
+
+        viewModel.onIntentReceived(intent, isExternal = true, isTaskRoot = isTaskRoot)
+    }
+
+    private fun dispatch(viewState: ViewState) {
+        // Ignore the initial default state: routing hasn't been computed yet. Acting on it would
+        // start the browser and finish() this activity before the real decision (e.g. a cached local
+        // PDF) is emitted from the background dispatcher.
+        if (!viewState.resolved) return
+
+        if (viewState.localPdfError) {
+            Toast.makeText(this, R.string.downloadConfirmationUnableToOpenFileText, Toast.LENGTH_LONG).show()
+            finish()
+        } else if (viewState.activityParams != null) {
+            globalActivityStarter.start(this, viewState.activityParams)
+            finish()
+        } else if (viewState.customTabRequested) {
+            showCustomTab(viewState.intentText, viewState.toolbarColor, viewState.isExternal, viewState.customTabLaunchMode)
+        } else {
+            showBrowserActivity(viewState.intentText, viewState.isExternal)
+        }
+    }
+
+    private fun showCustomTab(
+        intentText: String?,
+        toolbarColor: Int?,
+        isExternal: Boolean,
+        launchMode: CustomTabLaunchMode,
+    ) {
+        // The verified calling package (non-null only when the launcher bound the
+        // CustomTabsService). Carried forward as an intent extra so BrowserTabViewModel can
+        // apply the trusted-caller carve-out in handleAppLink.
+        val clientPackage = CustomTabsSessionToken.getSessionTokenFromIntent(intent)
+            ?.let { customTabsSessionRegistry.lookupClientPackage(it) }
+        // Best-effort caller identity from the android-app:// referrer, available even when the launcher never
+        // bound the service (e.g. apps that open a login Custom Tab without a session). The launcher can set the
+        // referrer, so it only decides how links back to the caller are handled (skipping confirmation prompts, or
+        // overriding "Never" in Open Links in Apps), never the no-gesture launch carve-out.
+        val referrerPackage = referrer?.takeIf { it.scheme == "android-app" }?.host
+
+        // As customizations we only support the toolbar color at the moment.
+        startActivity(
+            CustomTabActivity.intent(
+                context = this,
+                launchMode = launchMode,
+                text = intentText,
+                toolbarColor = toolbarColor,
+                isExternal = isExternal,
+                clientPackage = clientPackage,
+                referrerPackage = referrerPackage,
+                tabsClearedCount = settingsDataStore.tabsClearedCount,
+            ),
+        )
+
+        when (launchMode) {
+            // Otherwise the dispatcher's own task stays in Recents as an empty card.
+            CustomTabLaunchMode.DOCUMENT_TASK -> finishAndRemoveTask()
+            CustomTabLaunchMode.DOCUMENT_TASK_HIDE_BROWSER_TASK -> {
+                // After startActivity: once in the background, this activity can't start others.
+                moveTaskToBack(true)
+                finish()
+            }
+            else -> finish()
+        }
+    }
+
+    private fun showBrowserActivity(intentText: String?, isExternal: Boolean) {
+        startActivity(
+            BrowserActivity.intent(
+                context = this,
+                launchSource = if (isExternal) ExternalUrl else InAppNavigation,
+                queryExtra = intentText,
+                isExternal = isExternal,
+            ),
+        )
+
+        overridePendingTransition(0, 0)
+        finish()
+    }
+}

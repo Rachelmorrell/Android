@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.duckduckgo.privacy.config.internal">
+
+    <application>
+        <activity android:name="PrivacyConfigInternalSettingsActivity" android:exported="false"/>
+        <receiver
+            android:name=".PrivacyConfigOverrideReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.duckduckgo.privacy.config.internal.SET_URL" />
+                <action android:name="com.duckduckgo.privacy.config.internal.RESET" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

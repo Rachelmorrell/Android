@@ -18,14 +18,17 @@ package com.duckduckgo.app.surrogates.di
 
 import com.duckduckgo.app.surrogates.ResourceSurrogates
 import com.duckduckgo.app.surrogates.ResourceSurrogatesImpl
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class ResourceSurrogateModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun analyticsSurrogates(): ResourceSurrogates = ResourceSurrogatesImpl()
 }

@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.library'
+    id 'dev.zacsweers.metro'
+    id 'com.google.devtools.ksp'
+}
+
+apply from: "$rootProject.projectDir/gradle/android-library.gradle"
+
+dependencies {
+    implementation project(':content-scope-privacy-features-api')
+    ksp project(':content-scope-privacy-features-ksp')
+
+    implementation project(':di')
+    implementation project(':common-utils')
+    implementation project(':privacy-config-api')
+    implementation project(':content-scope-scripts-api')
+    implementation project(':data-store-api')
+
+    implementation KotlinX.coroutines.core
+}
+
+android {
+    namespace 'com.duckduckgo.contentscopeprivacyfeatures.impl'
+}

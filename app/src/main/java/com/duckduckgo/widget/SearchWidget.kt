@@ -22,93 +22,119 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.RemoteViews
 import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.global.DuckDuckGoApplication
-import com.duckduckgo.app.global.install.AppInstallStore
-import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.app.pixels.AppPixelName.WIDGETS_ADDED
-import com.duckduckgo.app.pixels.AppPixelName.WIDGETS_DELETED
+import com.duckduckgo.app.pixels.AppPixelName.SEARCH_WIDGET_ADDED
+import com.duckduckgo.app.pixels.AppPixelName.SEARCH_WIDGET_DELETED
 import com.duckduckgo.app.systemsearch.SystemSearchActivity
-import com.duckduckgo.app.widget.ui.AppWidgetCapabilities
+import dev.zacsweers.metro.HasMemberInjections
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import logcat.logcat
 import javax.inject.Inject
 
-class SearchWidgetLight : SearchWidget(R.layout.search_widget_light)
+class SearchWidgetLight : SearchWidget(R.layout.search_widget_light, WidgetTheme.LIGHT)
 
-open class SearchWidget(val layoutId: Int = R.layout.search_widget) : AppWidgetProvider() {
-
-    @Inject
-    lateinit var appInstallStore: AppInstallStore
-
-    @Inject
-    lateinit var pixel: Pixel
+@HasMemberInjections
+open class SearchWidget(
+    val layoutId: Int = R.layout.search_widget_dark,
+    private val widgetTheme: WidgetTheme = WidgetTheme.DARK,
+) : AppWidgetProvider() {
 
     @Inject
-    lateinit var widgetCapabilities: AppWidgetCapabilities
+    lateinit var searchWidgetConfigurator: SearchWidgetConfigurator
 
-    override fun onReceive(context: Context, intent: Intent?) {
+    @Inject
+    lateinit var searchWidgetLifecycleDelegate: SearchWidgetLifecycleDelegate
+
+    @Inject
+    @AppCoroutineScope
+    lateinit var appCoroutineScope: CoroutineScope
+
+    override fun onReceive(
+        context: Context,
+        intent: Intent?,
+    ) {
         inject(context)
         super.onReceive(context, intent)
     }
 
     private fun inject(context: Context) {
         val application = context.applicationContext as DuckDuckGoApplication
-        application.daggerAppComponent.inject(this)
+        application.appComponent.inject(this)
     }
 
     override fun onEnabled(context: Context) {
-        if (!appInstallStore.widgetInstalled) {
-            appInstallStore.widgetInstalled = true
-            pixel.fire(WIDGETS_ADDED)
+        super.onEnabled(context)
+        appCoroutineScope.launch {
+            searchWidgetLifecycleDelegate.handleOnWidgetEnabled(SEARCH_WIDGET_ADDED)
         }
     }
 
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
+        logcat { "SearchWidget onUpdate" }
         // There may be multiple widgets active, so update all of them
         for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId, null)
+            logcat { "SearchWidget onUpdate called for widget id = $appWidgetId" }
+            updateAppWidget(context, appWidgetManager, appWidgetId)
         }
     }
 
-    override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
-        updateAppWidget(context, appWidgetManager, appWidgetId, newOptions)
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle?,
+    ) {
+        logcat { "SearchWidget onAppWidgetOptionsChanged called for widget id = $appWidgetId" }
+        updateAppWidget(context, appWidgetManager, appWidgetId)
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
     }
 
-    private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle?) {
-        val appWidgetOptions = appWidgetManager.getAppWidgetOptions(appWidgetId)
-        var portraitWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-
-        if (newOptions != null) {
-            portraitWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-        }
-
-        val shouldShowHint = shouldShowSearchBarHint(portraitWidth)
+    private fun updateAppWidget(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+    ) {
+        logcat { "SearchWidget updateAppWidget called for widget id = $appWidgetId" }
 
         val views = RemoteViews(context.packageName, layoutId)
-        views.setViewVisibility(R.id.searchInputBox, if (shouldShowHint) View.VISIBLE else View.INVISIBLE)
         views.setOnClickPendingIntent(R.id.widgetContainer, buildPendingIntent(context))
-        appWidgetManager.updateAppWidget(appWidgetId, views)
-    }
 
-    private fun shouldShowSearchBarHint(portraitWidth: Int): Boolean {
-        return portraitWidth > SEARCH_BAR_MIN_HINT_WIDTH_SIZE
+        appCoroutineScope.launch {
+            searchWidgetConfigurator.populateRemoteViews(
+                context = context,
+                remoteViews = views,
+                fromFavWidget = false,
+                widgetTheme = widgetTheme,
+            )
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+            logcat { "SearchWidget updateAppWidget completed for widget id = $appWidgetId" }
+        }
     }
 
     private fun buildPendingIntent(context: Context): PendingIntent {
         val intent = SystemSearchActivity.fromWidget(context)
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        return PendingIntent.getActivity(
+            context,
+            SEARCH_WIDGET_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
-    override fun onDeleted(context: Context, appWidgetIds: IntArray?) {
-        if (appInstallStore.widgetInstalled && !widgetCapabilities.hasInstalledWidgets) {
-            appInstallStore.widgetInstalled = false
-            pixel.fire(WIDGETS_DELETED)
-        }
+    override fun onDisabled(context: Context?) {
+        super.onDisabled(context)
+        searchWidgetLifecycleDelegate.handleOnWidgetDisabled(SEARCH_WIDGET_DELETED)
     }
 
     companion object {
-        private const val SEARCH_BAR_MIN_HINT_WIDTH_SIZE = 168
+        private const val SEARCH_WIDGET_REQUEST_CODE = 1530
     }
 }

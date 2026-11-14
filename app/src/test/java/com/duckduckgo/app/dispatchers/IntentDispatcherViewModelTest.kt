@@ -1,0 +1,560 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.dispatchers
+
+import android.content.Intent
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.net.toUri
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.cash.turbine.test
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayerSettingsNoParams
+import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
+import com.duckduckgo.app.browser.customtabs.CustomTabLaunchMode
+import com.duckduckgo.app.browser.customtabs.CustomTabsFeature
+import com.duckduckgo.app.browser.pdf.InlinePdfHandler
+import com.duckduckgo.app.browser.pdf.LocalPdfResult
+import com.duckduckgo.app.browser.pdf.PdfErrorType
+import com.duckduckgo.app.global.intentText
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.appbuildconfig.api.BuildFlavor
+import com.duckduckgo.autofill.api.emailprotection.EmailProtectionLinkVerifier
+import com.duckduckgo.browser.api.ui.BrowserScreens.PdfViewerActivityParams
+import com.duckduckgo.browser.api.ui.BrowserScreens.PdfViewerSource
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.customtabs.api.CustomTabDetector
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.feature.toggles.api.FakeFeatureToggleFactory
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.feature.toggles.api.Toggle.State
+import com.duckduckgo.sync.api.setup.SyncUrlIdentifier
+import com.duckduckgo.sync.impl.ui.qrcode.SyncBarcodeUrl
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
+
+@RunWith(AndroidJUnit4::class)
+class IntentDispatcherViewModelTest {
+    @get:Rule
+    val coroutineTestRule: CoroutineTestRule = CoroutineTestRule()
+
+    private val mockIntent: Intent = mock()
+    private val emailProtectionLinkVerifier: EmailProtectionLinkVerifier = mock()
+    private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector = mock()
+    private val syncUrlIdentifier: SyncUrlIdentifier = mock()
+    private val duckChat: DuckChat = mock()
+    private val mockAppBuildConfig: AppBuildConfig = mock()
+    private val inlinePdfHandler: InlinePdfHandler = mock()
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature = mock()
+    private val customTabDetector: CustomTabDetector = mock()
+    private val customTabsFeature = FakeFeatureToggleFactory.create(CustomTabsFeature::class.java)
+
+    private lateinit var testee: IntentDispatcherViewModel
+
+    @Before
+    fun before() {
+        testee = IntentDispatcherViewModel(
+            dispatcherProvider = coroutineTestRule.testDispatcherProvider,
+            emailProtectionLinkVerifier = emailProtectionLinkVerifier,
+            duckDuckGoUrlDetector = duckDuckGoUrlDetector,
+            syncUrlIdentifier = syncUrlIdentifier,
+            duckChat = duckChat,
+            appBuildConfig = mockAppBuildConfig,
+            inlinePdfHandler = inlinePdfHandler,
+            androidBrowserConfigFeature = androidBrowserConfigFeature,
+            customTabDetector = customTabDetector,
+            customTabsFeature = customTabsFeature,
+        )
+
+        whenever(syncUrlIdentifier.shouldDelegateToSyncSetup(anyOrNull())).thenReturn(false)
+        whenever(mockAppBuildConfig.sdkInt).thenReturn(31)
+        val externalPdfHandlerToggle = mockToggle(enabled = false)
+        whenever(androidBrowserConfigFeature.externalPdfHandler()).thenReturn(externalPdfHandlerToggle)
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionThenCustomTabIsRequested() = runTest {
+        val text = "url"
+        val toolbarColor = 100
+        configureHasSession(true)
+        whenever(mockIntent.hasExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR)).thenReturn(true)
+        whenever(mockIntent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, 0)).thenReturn(toolbarColor)
+        whenever(mockIntent.intentText).thenReturn(text)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+            assertEquals(text, state.intentText)
+            assertEquals(toolbarColor, state.toolbarColor)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionThenCustomTabIsRequestedWithNullToolbarColor() = runTest {
+        val text = "url"
+        configureHasSession(true)
+        whenever(mockIntent.hasExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR)).thenReturn(false)
+        whenever(mockIntent.intentText).thenReturn(text)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+            assertEquals(text, state.intentText)
+            assertEquals(null, state.toolbarColor)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithoutSessionThenCustomTabIsNotRequested() = runTest {
+        val text = "url"
+        configureHasSession(false)
+        whenever(mockIntent.hasExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR)).thenReturn(false)
+        whenever(mockIntent.intentText).thenReturn(text)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+            assertEquals(text, state.intentText)
+            assertEquals(null, state.toolbarColor)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionAndLinkIsEmailProtectionVerificationThenCustomTabIsNotRequested() = runTest {
+        configureHasSession(true)
+        configureIsEmailProtectionLink(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionAndLinkIsNotEmailProtectionVerificationThenCustomTabIsRequested() = runTest {
+        configureHasSession(true)
+        configureIsEmailProtectionLink(false)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionAndUrlContainingSpacesThenSpacesAreReplacedAndCustomTabIsRequested() = runTest {
+        val urlWithSpaces =
+            """
+                https://mastodon.social/oauth/authorize?client_id=AcfPDZlcKUjwIatVtMt8B8cmdW-w1CSOR6_rYS_6Kxs&scope=read write push&redirect_uri=mastify://oauth&response_type=code
+            """.trimIndent()
+        val expectedUrl =
+            """
+                https://mastodon.social/oauth/authorize?client_id=AcfPDZlcKUjwIatVtMt8B8cmdW-w1CSOR6_rYS_6Kxs&scope=read%20write%20push&redirect_uri=mastify://oauth&response_type=code
+            """.trimIndent()
+        whenever(mockIntent.intentText).thenReturn(urlWithSpaces)
+        configureHasSession(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+            assertEquals(expectedUrl, state.intentText)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithNoSessionAndIntentTextContainingSpacesAndNotStartingWithHttpSchemaThenNoChangesAreMadeToTheIntent() = runTest {
+        val intentTextWithSpaces =
+            """
+                Voyager 1 is still bringing us surprises from the very edge of our solar system https://www.independent.co.uk/space/voyager-1-nasa-latest-solar-system-b2535462.html
+            """.trimIndent()
+        whenever(mockIntent.intentText).thenReturn(intentTextWithSpaces)
+        configureHasSession(false)
+        configureIsEmailProtectionLink(false)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+            assertEquals(intentTextWithSpaces, state.intentText)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithSessionAndIntentTextContainingSpacesAndNotStartingWithHttpSchemaThenNoChangesAreMadeToTheIntent() = runTest {
+        val intentTextWithSpaces =
+            """
+                Voyager 1 is still bringing us surprises from the very edge of our solar system https://www.independent.co.uk/space/voyager-1-nasa-latest-solar-system-b2535462.html
+            """.trimIndent()
+        whenever(mockIntent.intentText).thenReturn(intentTextWithSpaces)
+        configureHasSession(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+            assertEquals(intentTextWithSpaces, state.intentText)
+        }
+    }
+
+    @Test
+    fun `when Intent received with session and intent text is a DDG domain then custom tab is not requested`() = runTest {
+        val text = "some DDG url"
+        val toolbarColor = 100
+        configureHasSession(true)
+        whenever(mockIntent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, 0)).thenReturn(toolbarColor)
+        whenever(mockIntent.intentText).thenReturn(text)
+        whenever(duckDuckGoUrlDetector.isDuckDuckGoUrl(text)).thenReturn(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+        }
+    }
+
+    @Test
+    fun `when Intent received with session and intent text is a duck ai url then custom tab is not requested`() = runTest {
+        val text = "https://duck.ai/?q=hello"
+        configureHasSession(true)
+        whenever(mockIntent.intentText).thenReturn(text)
+        whenever(duckChat.isDuckChatUrl(text.toUri())).thenReturn(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+            assertEquals(text, state.intentText)
+        }
+    }
+
+    @Test
+    fun `when Intent received with session and intent text is not a duck ai url then custom tab is requested`() = runTest {
+        val text = "https://example.com"
+        configureHasSession(true)
+        whenever(mockIntent.intentText).thenReturn(text)
+        whenever(duckChat.isDuckChatUrl(text.toUri())).thenReturn(false)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedForSyncPairingUrlThenCustomTabIsNotRequested() = runTest {
+        val intentUrl = SyncBarcodeUrl.URL_BASE
+        whenever(mockIntent.intentText).thenReturn(intentUrl)
+        whenever(syncUrlIdentifier.shouldDelegateToSyncSetup(intentUrl)).thenReturn(true)
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+            assertEquals(intentUrl, state.intentText)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithDuckPlayerDataAndInternalBuildThenActivityParamsAreSet() = runTest {
+        val uri = Uri.parse("duck://settings.player")
+        whenever(mockIntent.data).thenReturn(uri)
+        whenever(mockAppBuildConfig.flavor).thenReturn(BuildFlavor.INTERNAL)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertEquals(DuckPlayerSettingsNoParams, state.activityParams)
+        }
+    }
+
+    @Test
+    fun whenIntentReceivedWithDuckPlayerDataAndNotInternalBuildThenActivityParamsAreNotSet() = runTest {
+        val uri = Uri.parse("duck://settings.player")
+        whenever(mockIntent.data).thenReturn(uri)
+        whenever(mockAppBuildConfig.flavor).thenReturn(BuildFlavor.PLAY)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertNull(state.activityParams)
+        }
+    }
+
+    @Test
+    fun `when VIEW intent with application pdf type and content URI and flags enabled then activityParams targets PdfViewerActivity`() = runTest {
+        val contentUri = Uri.parse("content://com.example.provider/files/doc.pdf")
+        val cachedUri = Uri.parse("file:///data/user/0/com.example/cache/pdf_cache/doc.pdf")
+        val enabledToggle = mockToggle(enabled = true)
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(contentUri)
+        whenever(mockIntent.type).thenReturn("application/pdf")
+        whenever(androidBrowserConfigFeature.externalPdfHandler()).thenReturn(enabledToggle)
+        whenever(inlinePdfHandler.cacheLocalPdf(contentUri)).thenReturn(LocalPdfResult.Success(cachedUri, "doc.pdf"))
+
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertEquals(PdfViewerActivityParams(cachedUri.toString(), "doc.pdf", PdfViewerSource.EXTERNAL_INTENT), state.activityParams)
+            assertFalse(state.localPdfError)
+        }
+    }
+
+    @Test
+    fun `when VIEW intent with pdf path and null type and flags enabled then activityParams targets PdfViewerActivity`() = runTest {
+        val contentUri = Uri.parse("content://com.example.provider/files/report.pdf")
+        val cachedUri = Uri.parse("file:///data/user/0/com.example/cache/pdf_cache/report.pdf")
+        val enabledToggle = mockToggle(enabled = true)
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(contentUri)
+        whenever(mockIntent.type).thenReturn(null)
+        whenever(androidBrowserConfigFeature.externalPdfHandler()).thenReturn(enabledToggle)
+        whenever(inlinePdfHandler.cacheLocalPdf(contentUri)).thenReturn(LocalPdfResult.Success(cachedUri, "report.pdf"))
+
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertEquals(PdfViewerActivityParams(cachedUri.toString(), "report.pdf", PdfViewerSource.EXTERNAL_INTENT), state.activityParams)
+        }
+    }
+
+    @Test
+    fun `when VIEW intent with application pdf type and flags enabled and cacheLocalPdf fails then localPdfError is true`() = runTest {
+        val contentUri = Uri.parse("content://com.example.provider/files/doc.pdf")
+        val enabledToggle = mockToggle(enabled = true)
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(contentUri)
+        whenever(mockIntent.type).thenReturn("application/pdf")
+        whenever(androidBrowserConfigFeature.externalPdfHandler()).thenReturn(enabledToggle)
+        whenever(inlinePdfHandler.cacheLocalPdf(contentUri)).thenReturn(LocalPdfResult.Failure(PdfErrorType.UNKNOWN))
+
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.localPdfError)
+            assertNull(state.activityParams)
+        }
+    }
+
+    @Test
+    fun `when VIEW intent with application pdf type and externalPdfHandler flag disabled then not treated as local PDF`() = runTest {
+        val contentUri = Uri.parse("content://com.example.provider/files/doc.pdf")
+        val disabledToggle = mockToggle(enabled = false)
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(contentUri)
+        whenever(mockIntent.type).thenReturn("application/pdf")
+        whenever(androidBrowserConfigFeature.externalPdfHandler()).thenReturn(disabledToggle)
+
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertNull(state.activityParams)
+        }
+        verify(inlinePdfHandler, never()).cacheLocalPdf(any())
+    }
+
+    @Test
+    fun `when VIEW intent with application pdf type and sdk below 31 then not treated as local PDF`() = runTest {
+        val contentUri = Uri.parse("content://com.example.provider/files/doc.pdf")
+        whenever(mockAppBuildConfig.sdkInt).thenReturn(30)
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(contentUri)
+        whenever(mockIntent.type).thenReturn("application/pdf")
+
+        testee.onIntentReceived(mockIntent, isExternal = true)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertNull(state.activityParams)
+        }
+        verify(inlinePdfHandler, never()).cacheLocalPdf(any())
+    }
+
+    @Test
+    fun `when ordinary https VIEW intent received then activityParams is null and normal flow proceeds`() = runTest {
+        val url = "https://example.com"
+        whenever(mockIntent.action).thenReturn(Intent.ACTION_VIEW)
+        whenever(mockIntent.data).thenReturn(Uri.parse(url))
+        whenever(mockIntent.type).thenReturn(null)
+        configureHasSession(false)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertNull(state.activityParams)
+            assertEquals(url, state.intentText)
+        }
+    }
+
+    @Test
+    fun `when Intent received with session and custom tab is requested then custom tab is marked and not cleared`() = runTest {
+        configureHasSession(true)
+        whenever(mockIntent.intentText).thenReturn("url")
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            assertTrue(awaitItem().customTabRequested)
+        }
+        verify(customTabDetector).setCustomTab(true)
+        verify(customTabDetector, never()).setCustomTab(false)
+    }
+
+    @Test
+    fun `when Intent received with session and custom tab is not requested then custom tab mark is cleared`() = runTest {
+        val text = "some DDG url"
+        configureHasSession(true)
+        whenever(mockIntent.intentText).thenReturn(text)
+        whenever(duckDuckGoUrlDetector.isDuckDuckGoUrl(text)).thenReturn(true)
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            assertFalse(awaitItem().customTabRequested)
+        }
+        inOrder(customTabDetector) {
+            verify(customTabDetector).setCustomTab(true)
+            verify(customTabDetector).setCustomTab(false)
+        }
+    }
+
+    @Test
+    fun `when Intent received without session then custom tab state is not touched`() = runTest {
+        configureHasSession(false)
+        whenever(mockIntent.intentText).thenReturn("url")
+
+        testee.onIntentReceived(mockIntent, isExternal = false)
+
+        testee.viewState.test {
+            assertFalse(awaitItem().customTabRequested)
+        }
+        verifyNoInteractions(customTabDetector)
+    }
+
+    private fun configureHasSession(returnValue: Boolean) {
+        whenever(mockIntent.hasExtra(CustomTabsIntent.EXTRA_SESSION)).thenReturn(returnValue)
+    }
+
+    private fun configureIsEmailProtectionLink(returnValue: Boolean) {
+        whenever(emailProtectionLinkVerifier.shouldDelegateToInContextView(anyOrNull(), any())).thenReturn(returnValue)
+    }
+
+    @Test
+    fun whenKeepOnAppSwitchDisabledThenCustomTabLaunchModeIsLegacy() = runTest {
+        assertLaunchMode(enabled = false, intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK, isTaskRoot = true, CustomTabLaunchMode.LEGACY)
+    }
+
+    @Test
+    fun whenKeepOnAppSwitchEnabledAndLaunchedWithoutNewTaskThenCustomTabLaunchModeIsCallerTask() = runTest {
+        assertLaunchMode(enabled = true, intentFlags = 0, isTaskRoot = false, CustomTabLaunchMode.CALLER_TASK)
+    }
+
+    @Test
+    fun whenKeepOnAppSwitchEnabledAndLaunchedWithNewTaskAsTaskRootThenCustomTabLaunchModeIsDocumentTask() = runTest {
+        assertLaunchMode(enabled = true, intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK, isTaskRoot = true, CustomTabLaunchMode.DOCUMENT_TASK)
+    }
+
+    @Test
+    fun whenKeepOnAppSwitchEnabledAndLaunchedWithNewTaskIntoExistingTaskThenBrowserTaskIsHidden() = runTest {
+        assertLaunchMode(
+            enabled = true,
+            intentFlags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT,
+            isTaskRoot = false,
+            CustomTabLaunchMode.DOCUMENT_TASK_HIDE_BROWSER_TASK,
+        )
+    }
+
+    @Test
+    fun whenKeepOnAppSwitchEnabledAndNotACustomTabThenLaunchModeIsLegacy() = runTest {
+        customTabsFeature.keepCustomTabOnAppSwitch().setRawStoredState(State(enable = true))
+        configureHasSession(false)
+        whenever(mockIntent.intentText).thenReturn("https://example.com")
+
+        testee.onIntentReceived(mockIntent, isExternal = true, isTaskRoot = false)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertFalse(state.customTabRequested)
+            assertEquals(CustomTabLaunchMode.LEGACY, state.customTabLaunchMode)
+        }
+    }
+
+    private suspend fun assertLaunchMode(enabled: Boolean, intentFlags: Int, isTaskRoot: Boolean, expected: CustomTabLaunchMode) {
+        customTabsFeature.keepCustomTabOnAppSwitch().setRawStoredState(State(enable = enabled))
+        configureHasSession(true)
+        whenever(mockIntent.intentText).thenReturn("https://example.com")
+        whenever(mockIntent.hasExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR)).thenReturn(false)
+        whenever(mockIntent.flags).thenReturn(intentFlags)
+
+        testee.onIntentReceived(mockIntent, isExternal = true, isTaskRoot = isTaskRoot)
+
+        testee.viewState.test {
+            val state = awaitItem()
+            assertTrue(state.customTabRequested)
+            assertEquals(expected, state.customTabLaunchMode)
+        }
+    }
+
+    private fun mockToggle(enabled: Boolean): Toggle {
+        val toggle: Toggle = mock()
+        whenever(toggle.isEnabled()).thenReturn(enabled)
+        return toggle
+    }
+
+    private companion object {
+        private const val DEFAULT_COLOR = 0
+    }
+}

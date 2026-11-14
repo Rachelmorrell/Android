@@ -16,22 +16,24 @@
 
 package com.duckduckgo.app.di
 
-import com.duckduckgo.app.httpsupgrade.api.HttpsFalsePositivesJsonAdapter
-import com.duckduckgo.app.privacy.api.TermsOfServiceListAdapter
-import com.duckduckgo.app.trackerdetection.api.ActionJsonAdapter
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.httpsupgrade.impl.HttpsFalsePositivesJsonAdapter
+import com.duckduckgo.privacy.config.impl.network.JSONObjectAdapter
 import com.squareup.moshi.Moshi
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-class JsonModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object JsonModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun moshi(): Moshi = Moshi.Builder()
-        .add(ActionJsonAdapter())
+        // FIXME we should not access HttpsFalsePositivesJsonAdapter directly here because it's in impl module
         .add(HttpsFalsePositivesJsonAdapter())
-        .add(TermsOfServiceListAdapter())
+        .add(JSONObjectAdapter())
         .build()
 }

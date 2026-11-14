@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.pixels
+
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.utils.plugins.pixel.PixelInterceptorPlugin
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import okhttp3.Interceptor
+import okhttp3.Response
+import javax.inject.Inject
+
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<PixelInterceptorPlugin>(),
+)
+class PirPixelInterceptor @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : PixelInterceptorPlugin, Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest = chain.request()
+        val pixel = originalRequest.url.pathSegments.last()
+
+        return if (ALLOWLIST.any { prefix -> pixel.startsWith(prefix) }) {
+            val newUrl = originalRequest.url.newBuilder()
+                .addQueryParameter(KEY_MANUFACTURER, normalizedManufacturer())
+                .build()
+            val newRequest = originalRequest.newBuilder().url(newUrl).build()
+            chain.proceed(newRequest)
+        } else {
+            chain.proceed(originalRequest)
+        }
+    }
+
+    private fun normalizedManufacturer(): String {
+        val raw = appBuildConfig.manufacturer.lowercase()
+        return if (raw in COMMON_MANUFACTURERS) raw else OTHER_MANUFACTURER
+    }
+
+    override fun getInterceptor(): Interceptor = this
+
+    companion object {
+        private const val KEY_MANUFACTURER = "manufacturer"
+        private const val OTHER_MANUFACTURER = "other"
+        private val COMMON_MANUFACTURERS = setOf(
+            "samsung",
+            "google",
+            "xiaomi",
+            "huawei",
+            "honor",
+            "oneplus",
+            "oppo",
+            "vivo",
+            "motorola",
+            "realme",
+            "sony",
+            "lg",
+            "nokia",
+            "lenovo",
+            "asus",
+        )
+        private val ALLOWLIST = listOf(
+            "m_dbp_foreground-run_started",
+            "m_dbp_foreground-run_completed",
+            "m_dbp_foreground-run_start-failed",
+            "m_dbp_foreground-run_low-memory",
+            "m_dbp_scheduled-run_started",
+            "m_dbp_scheduled-run_completed",
+            "m_dbp_email-confirmation_started",
+            "m_dbp_email-confirmation_completed",
+            "m_dbp_initial-scan_incomplete",
+            "m_dbp_initial_scan_duration",
+            "m_dbp_scan_renderer-gone",
+            "wide_pir-initial-scan",
+            "wide_pir-scheduled-scan",
+            "wide_pir-time-to-first-scan-complete",
+        )
+    }
+}

@@ -19,39 +19,68 @@ package com.duckduckgo.app.fire
 import android.content.Context
 import androidx.annotation.WorkerThread
 import androidx.work.CoroutineWorker
-import androidx.work.ListenableWorker
 import androidx.work.ListenableWorker.Result.success
 import androidx.work.WorkerParameters
-import com.duckduckgo.app.global.plugins.worker.WorkerInjectorPlugin
-import com.duckduckgo.app.global.view.ClearDataAction
-import com.duckduckgo.app.settings.clear.ClearWhatOption
+import com.duckduckgo.app.fire.store.FireDataStore
+import com.duckduckgo.app.fire.wideevents.DataClearingWideEvent
 import com.duckduckgo.app.settings.db.SettingsDataStore
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.codegen.annotations.ContributesWorker
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import timber.log.Timber
+import logcat.LogPriority.INFO
+import logcat.logcat
 import javax.inject.Inject
 
-class DataClearingWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams), CoroutineScope {
+@ContributesWorker(AppScope::class)
+class DataClearingWorker(
+    context: Context,
+    workerParams: WorkerParameters,
+) : CoroutineWorker(context, workerParams), CoroutineScope {
 
+    @Inject
     lateinit var settingsDataStore: SettingsDataStore
-    lateinit var clearDataAction: ClearDataAction
+
+    @Inject
+    lateinit var dataClearing: AutomaticDataClearing
+
+    @Inject
+    lateinit var fireDataStore: FireDataStore
+
+    @Inject
+    lateinit var dataClearingWideEvent: DataClearingWideEvent
+
+    @Inject
+    lateinit var dispatchers: DispatcherProvider
 
     @WorkerThread
     override suspend fun doWork(): Result {
-
         if (jobAlreadyExecuted()) {
-            Timber.i("This job has run before; no more work needed")
+            logcat(INFO) { "This job has run before; no more work needed" }
             return success()
         }
 
         settingsDataStore.lastExecutedJobId = id.toString()
 
-        clearData(settingsDataStore.automaticallyClearWhatOption)
+        withContext(dispatchers.io()) {
+            val clearOptions = fireDataStore.getAutomaticClearOptions()
+            dataClearingWideEvent.start(
+                entryPoint = DataClearingWideEvent.EntryPoint.AUTO_BACKGROUND,
+                clearOptions = clearOptions,
+                browserMode = BrowserMode.REGULAR,
+            )
+            try {
+                dataClearing.clearDataUsingAutomaticFireOptions()
+                dataClearingWideEvent.finishSuccess()
+            } catch (e: Exception) {
+                dataClearingWideEvent.finishFailure(e)
+                throw e
+            }
+        }
 
-        Timber.i("Clear data job finished; returning SUCCESS")
+        logcat(INFO) { "Clear data job finished; returning SUCCESS" }
         return success()
     }
 
@@ -67,44 +96,7 @@ class DataClearingWorker(context: Context, workerParams: WorkerParameters) : Cor
         return lastJobId == newJobId
     }
 
-    suspend fun clearData(clearWhat: ClearWhatOption) {
-        Timber.i("Clearing data: $clearWhat")
-
-        when (clearWhat) {
-            ClearWhatOption.CLEAR_NONE -> Timber.w("Automatically clear data invoked, but set to clear nothing")
-            ClearWhatOption.CLEAR_TABS_ONLY -> clearDataAction.clearTabsAsync(appInForeground = false)
-            ClearWhatOption.CLEAR_TABS_AND_DATA -> clearEverything()
-        }
-    }
-
-    private suspend fun clearEverything() {
-        Timber.i("App is in background, so just outright killing the process")
-        withContext(Dispatchers.Main) {
-            clearDataAction.clearTabsAndAllDataAsync(appInForeground = false, shouldFireDataClearPixel = false)
-            clearDataAction.setAppUsedSinceLastClearFlag(false)
-
-            Timber.i("Will kill process now")
-            clearDataAction.killProcess()
-        }
-    }
-
     companion object {
         const val WORK_REQUEST_TAG = "background-clear-data"
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class DataClearingWorkerInjectorPlugin @Inject constructor(
-    private val settingsDataStore: SettingsDataStore,
-    private val clearDataAction: ClearDataAction
-) : WorkerInjectorPlugin {
-
-    override fun inject(worker: ListenableWorker): Boolean {
-        if (worker is DataClearingWorker) {
-            worker.settingsDataStore = settingsDataStore
-            worker.clearDataAction = clearDataAction
-            return true
-        }
-        return false
     }
 }

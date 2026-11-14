@@ -16,15 +16,35 @@
 
 package com.duckduckgo.app.trackerdetection.api
 
+import com.duckduckgo.codegen.annotations.ContributesServiceApi
+import com.duckduckgo.di.scopes.AppScope
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.GET
+import retrofit2.http.Streaming
 
+@ContributesServiceApi(AppScope::class)
 interface TrackerListService {
-
-    @GET("https://staticcdn.duckduckgo.com/trackerblocking/v2.1/tds.json")
-    fun tds(): Call<TdsJson>
+    /**
+     * Returns the raw body rather than a parsed [TdsJson]: the tracker-detection JSON needs
+     * adapters that are not registered on the app-wide Retrofit converter. Streamed, so the
+     * body is parsed as it arrives instead of being buffered whole first.
+     */
+    @GET("$TDS_BASE_URL$TDS_PATH")
+    @TdsRequired
+    @Streaming
+    fun tds(): Call<ResponseBody>
 
     @GET("/contentblocking/trackers-unprotected-temporary.txt")
-    fun temporaryWhitelist(): Call<String>
-
+    fun temporaryAllowList(): Call<String>
 }
+
+/**
+ * This annotation is used in interceptors to be able to intercept the annotated service calls
+ */
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class TdsRequired
+
+const val TDS_BASE_URL = "https://staticcdn.duckduckgo.com/trackerblocking/"
+const val TDS_PATH = "v5/current/android-tds.json"

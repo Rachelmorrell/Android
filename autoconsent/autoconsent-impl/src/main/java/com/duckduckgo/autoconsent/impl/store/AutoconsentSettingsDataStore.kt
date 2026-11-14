@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.autoconsent.impl.store
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.duckduckgo.autoconsent.impl.remoteconfig.AutoconsentFeature
+import com.duckduckgo.common.utils.DispatcherProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+
+interface AutoconsentSettingsDataStore {
+    var userSetting: Boolean
+    var clickAcceptEnabled: Boolean
+    var firstPopupHandled: Boolean
+    var optInPromptShownCount: Int
+    var optInPromptFirstShownAt: Long
+    var optInPromptChoiceMade: Boolean
+    fun invalidateCache()
+}
+
+class RealAutoconsentSettingsDataStore constructor(
+    private val context: Context,
+    private val autoconsentFeature: AutoconsentFeature,
+    private val appCoroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider,
+) : AutoconsentSettingsDataStore {
+
+    private val preferences: SharedPreferences by lazy { context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE) }
+    private var cachedUserSetting: Boolean? = null
+    private var cachedClickAcceptEnabled: Boolean? = null
+
+    private var _defaultValue: Boolean? = null
+    private val defaultValue: Boolean
+        get() {
+            if (_defaultValue == null) {
+                _defaultValue = autoconsentFeature.onByDefault().isEnabled()
+            }
+            return _defaultValue!!
+        }
+
+    init {
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            cachedUserSetting = readUserSetting()
+            cachedClickAcceptEnabled = readClickAcceptEnabled()
+        }
+    }
+
+    override var userSetting: Boolean
+        get() {
+            return cachedUserSetting ?: readUserSetting().also {
+                cachedUserSetting = it
+            }
+        }
+        set(value) {
+            preferences.edit(commit = true) {
+                putBoolean(AUTOCONSENT_USER_SETTING, value)
+            }.also {
+                cachedUserSetting = value
+            }
+        }
+
+    override var clickAcceptEnabled: Boolean
+        get() {
+            return cachedClickAcceptEnabled ?: readClickAcceptEnabled().also {
+                cachedClickAcceptEnabled = it
+            }
+        }
+        set(value) {
+            preferences.edit(commit = true) {
+                putBoolean(AUTOCONSENT_CLICK_ACCEPT_ENABLED, value)
+            }.also {
+                cachedClickAcceptEnabled = value
+            }
+        }
+
+    override var firstPopupHandled: Boolean
+        get() = preferences.getBoolean(AUTOCONSENT_FIRST_POPUP_HANDLED, false)
+        set(value) {
+            preferences.edit(commit = true) {
+                putBoolean(AUTOCONSENT_FIRST_POPUP_HANDLED, value)
+            }
+        }
+
+    override var optInPromptShownCount: Int
+        get() = preferences.getInt(AUTOCONSENT_OPT_IN_PROMPT_SHOWN_COUNT, 0)
+        set(value) {
+            preferences.edit(commit = true) {
+                putInt(AUTOCONSENT_OPT_IN_PROMPT_SHOWN_COUNT, value)
+            }
+        }
+
+    override var optInPromptFirstShownAt: Long
+        get() = preferences.getLong(AUTOCONSENT_OPT_IN_PROMPT_FIRST_SHOWN_AT, 0L)
+        set(value) {
+            preferences.edit(commit = true) {
+                putLong(AUTOCONSENT_OPT_IN_PROMPT_FIRST_SHOWN_AT, value)
+            }
+        }
+
+    override var optInPromptChoiceMade: Boolean
+        get() = preferences.getBoolean(AUTOCONSENT_OPT_IN_PROMPT_CHOICE_MADE, false)
+        set(value) {
+            preferences.edit(commit = true) {
+                putBoolean(AUTOCONSENT_OPT_IN_PROMPT_CHOICE_MADE, value)
+            }
+        }
+
+    override fun invalidateCache() {
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            _defaultValue = autoconsentFeature.onByDefault().isEnabled()
+            cachedUserSetting = null
+            cachedClickAcceptEnabled = null
+        }
+    }
+
+    private fun readUserSetting(): Boolean {
+        return preferences.getBoolean(AUTOCONSENT_USER_SETTING, defaultValue)
+    }
+
+    private fun readClickAcceptEnabled(): Boolean {
+        return preferences.getBoolean(AUTOCONSENT_CLICK_ACCEPT_ENABLED, false)
+    }
+
+    companion object {
+        private const val FILENAME = "com.duckduckgo.autoconsent.store.settings"
+        private const val AUTOCONSENT_USER_SETTING = "AutoconsentUserSetting"
+        private const val AUTOCONSENT_CLICK_ACCEPT_ENABLED = "AutoconsentClickAcceptEnabled"
+        private const val AUTOCONSENT_FIRST_POPUP_HANDLED = "AutoconsentFirstPopupHandled"
+        private const val AUTOCONSENT_OPT_IN_PROMPT_SHOWN_COUNT = "AutoconsentOptInPromptShownCount"
+        private const val AUTOCONSENT_OPT_IN_PROMPT_FIRST_SHOWN_AT = "AutoconsentOptInPromptFirstShownAt"
+        private const val AUTOCONSENT_OPT_IN_PROMPT_CHOICE_MADE = "AutoconsentOptInPromptChoiceMade"
+    }
+}

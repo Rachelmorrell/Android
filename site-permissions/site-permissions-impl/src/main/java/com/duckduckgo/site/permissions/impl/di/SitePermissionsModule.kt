@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.site.permissions.impl.di
+
+import android.content.Context
+import com.duckduckgo.data.store.api.DatabaseProvider
+import com.duckduckgo.data.store.api.RoomDatabaseConfig
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.site.permissions.store.ALL_MIGRATIONS
+import com.duckduckgo.site.permissions.store.SitePermissionsDatabase
+import com.duckduckgo.site.permissions.store.SitePermissionsPreferences
+import com.duckduckgo.site.permissions.store.SitePermissionsPreferencesImp
+import com.duckduckgo.site.permissions.store.sitepermissions.SitePermissionsDao
+import com.duckduckgo.site.permissions.store.sitepermissionsallowed.SitePermissionsAllowedDao
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+
+@BindingContainer
+@ContributesTo(AppScope::class)
+object SitePermissionsModule {
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesSitePermissionsDatabase(databaseProvider: DatabaseProvider): SitePermissionsDatabase {
+        return databaseProvider.buildRoomDatabase(
+            SitePermissionsDatabase::class.java,
+            "site_permissions.db",
+            config = RoomDatabaseConfig(fallbackToDestructiveMigration = true, migrations = ALL_MIGRATIONS),
+        )
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesSitePermissionsDao(sitePermissionsDatabase: SitePermissionsDatabase): SitePermissionsDao {
+        return sitePermissionsDatabase.sitePermissionsDao()
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesSitePermissionsAllowedDao(sitePermissionsDatabase: SitePermissionsDatabase): SitePermissionsAllowedDao {
+        return sitePermissionsDatabase.sitePermissionsAllowedDao()
+    }
+
+    @Provides
+    fun providesSitePermissionsPreferences(context: Context): SitePermissionsPreferences {
+        return SitePermissionsPreferencesImp(context)
+    }
+}

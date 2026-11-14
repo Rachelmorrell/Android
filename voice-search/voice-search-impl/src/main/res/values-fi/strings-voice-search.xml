@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="voiceSearchError">Jokin meni pieleen. Yritä myöhemmin uudelleen.</string>
+    <string name="voiceSearchIconContentDescription">Äänihaku</string>
+    <string name="voiceSearchListening">Puhu nyt</string>
+    <string name="voiceSearchListeningFooter">Ääni käsitellään laitteella. Sitä ei tallenneta eikä jaeta kenellekään, edes DuckDuckGolle.</string>
+    <string name="voiceSearchNegativeAction">Peruuta</string>
+    <string name="voiceSearchMicAccessDeniedDialogTitle">DuckDuckGo tarvitsee mikrofonisi käyttöoikeuden</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessage">Mikrofonin käyttöoikeudet tarvitaan, jos haluat käyttää yksityistä äänihakuamme.</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessageDuckAi">Mikrofonin käyttöoikeudet tarvitaan, jos haluat käyttää yksityisiä äänitoimintojamme.</string>
+    <string name="voiceSearchMicAccessDeniedDialogChangePermissions">Muuta käyttöoikeuksia</string>
+    <string name="voiceSearchMicAccessDeniedDialogHideVoiceSearch">Piilota äänihaku</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarMessage">Mikrofonin käyttöoikeus tarvitaan äänitoimintoja varten</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarAction">Salli</string>
+    <string name="voiceSearchTitle">Äänihaku</string>
+</resources>

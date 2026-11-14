@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="duck_chat_title">Duck.ai</string>
+    <string name="duck_chat_download_finished_action_name">Megnyitás</string>
+    <string name="duck_chat_cannot_open_file_error_message">A fájl nem nyitható meg. Keress kompatibilis alkalmazást.</string>
+
+    <!-- Uploading an image from the camera or choosing to use existing image -->
+    <string name="imageCaptureCameraUnavailable">Nem sikerült hozzáférni a kamerához</string>
+    <string name="imageCaptureCameraGalleryDisambiguationTitle">Kép feltöltése</string>
+    <string name="imageCaptureCameraGalleryDisambiguationGalleryOption">Fájl kiválasztása</string>
+    <string name="imageCaptureCameraGalleryDisambiguationCameraOption">Fénykép készítése</string>
+    <string name="imageCaptureCameraPermissionDeniedTitle">Engedélyezés, hogy a DuckDuckGo hozzáférést kérjen a kamerához ezen az eszközön</string>
+    <string name="imageCaptureCameraPermissionDeniedMessage">A webhelyek csak akkor használhatják a kamerát, ha engedélyezed, hogy a DuckDuckGo hozzáférést kérjen.</string>
+    <string name="imageCaptureCameraPermissionDeniedPositiveButton">Beállítások megnyitása</string>
+    <string name="imageCaptureCameraPermissionDeniedNegativeButton">Mégsem</string>
+
+    <!-- Content capture for upload -->
+    <string name="audioCaptureSoundRecorderUnavailable">Nem sikerült hozzáférni a hangrögzítőhöz</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedTitle">Engedélyezd, hogy a DuckDuckGo hozzáférést kérhessen az eszközöd hangrögzítőjéhez</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedMessage">A webhelyek csak akkor használhatják a hangrögzítőt, ha engedélyezed, hogy a DuckDuckGo hozzáférést kérhessen.</string>
+
+    <!-- Settings -->
+    <string name="duck_chat_ai_features_title">AI funkciók</string>
+    <string name="duck_chat_settings_activity_description">A DuckDuckGo AI-funkciói privátak és opcionálisak.\nAz adataidat nem használjuk fel az AI tanítására.\n<annotation type="learn_more_link">További részletek</annotation></string>
+    <string name="duck_chat_enable_duck_ai_setting">Duck.ai</string>
+    <string name="duck_chat_enable_duck_ai_setting_description">Privát csevegés harmadik féltől származó népszerű AI-modellekkel</string>
+    <string name="duck_chat_visibility_setting">Böngészési menü</string>
+    <string name="duck_chat_address_bar_visibility_setting">Címsor</string>
+    <string name="duck_chat_assist_settings_title">Keresési asszisztens beállításai</string>
+    <string name="duck_chat_assist_settings_description">Válaszd ki, milyen gyakran szeretnél mesterséges intelligenciával generált válaszokat látni a kereséseid során</string>
+    <string name="duck_ai_shortcut_settings_title">Duck.ai-gyorsparancsok</string>
+    <string name="duck_ai_shortcut_settings_description">Válaszd ki a megjelenítendő Duck.ai-gyorsparancsokat</string>
+
+    <!-- Default Toggle Position -->
+    <string name="duckAiDefaultTogglePositionTitle" instruction="&apos;Toggle&apos; refers to the UI tab switcher component (Search/Duck.ai), not the verb &apos;to toggle&apos;.">Új lap kapcsolójának pozíciója</string>
+    <string name="duckAiDefaultTogglePositionSearch">Keresés</string>
+    <string name="duckAiDefaultTogglePositionDuckAi">Duck.ai</string>
+    <string name="duckAiDefaultTogglePositionLastUsed">Utoljára használt</string>
+
+    <!-- Duck AI Voice Search Shortcut Setting -->
+    <string name="duckAiVoiceSearchVisibilitySetting">Beszédhangalapú keresés</string>
+
+    <!-- Input Screen  -->
+    <string name="input_screen_search_hint">Keresés vagy cím megadása</string>
+    <string name="input_screen_search_only_hint">Keresés</string>
+    <string name="input_screen_user_pref_without_ai">Csak keresés</string>
+    <string name="input_screen_user_pref_with_ai">Keresés és Duck.ai</string>
+    <string name="input_screen_user_pref_description">Próbáld ki azt az új lehetőséget, hogy közvetlenül a címsorban tehetsz fel kérdéseket a Duck.ai számára. <annotation type="share_feedback">Visszajelzés küldése</annotation></string>
+
+    <!-- Duck.ai Pro settings -->
+    <string name="duck_ai_paid_settings_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_description"><![CDATA[Privát csevegés a csak előfizetőknek szánt AI-modellekkel.\n<a href=\"\">További részletek</a>]]></string>
+    <string name="duck_ai_paid_settings_open_duck_ai">Duck.ai megnyitása</string>
+    <string name="duck_ai_paid_settings_learn_more_title">További részletek</string>
+
+    <!-- New Address Bar Option Bottom Sheet Dialog -->
+    <string name="newAddressBarOptionBottomSheetDialogTitle">Szeretnél könnyebben hozzáférni a privát AI-csevegéshez?</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchText">Keresés vagy cím megadása</string>
+    <string name="newAddressBarOptionBottomSheetDialogPrimaryButton">Megerősítés</string>
+    <string name="newAddressBarOptionBottomSheetDialogGhostButton">Most nem</string>
+    <string name="newAddressBarOptionBottomSheetDialogFooter">Állítsd be a Beállítások &gt; AI-funkciók menüpontban.</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchOnly">Csak keresés</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchAndDuckAi">Keresés és Duck.ai</string>
+    <string name="newAddressBarOptionBottomSheetDialogHeader">Címsorbeállítás</string>
+
+    <!-- Duck AI SERP Settings Title -->
+    <string name="duckAiSerpSettingsTitle">AI funkciók</string>
+
+    <!-- Duck AI Search Section Header -->
+    <string name="duckAiSearchSettingsSectionHeader">Keresés</string>
+
+    <!-- Duck AI Hide Generated Images Settings Option -->
+    <string name="duckAiHideAiGeneratedImagesTitle">AI által generált képek elrejtése</string>
+    <string name="duckAiHideAiGeneratedImagesDescription">Kiszűri az AI által generált képeket a képkeresési találatokból</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilitySubtitle">Válaszd ki, milyen gyakran szeretnél mesterséges intelligenciával generált válaszokat látni a kereséseid során.</string>
+    <string name="duckAiSearchAssistVisibilityNever">Soha</string>
+    <string name="duckAiSearchAssistVisibilityOnDemand">Igény esetén</string>
+    <string name="duckAiSearchAssistVisibilitySometimes">Néha</string>
+    <string name="duckAiSearchAssistVisibilityOften">Gyakran</string>
+
+    <!-- Duck AI Use Without AI Settings Option -->
+    <string name="duckAiUseWithoutAiTitle">DuckDuckGo használata AI nélkül</string>
+    <string name="duckAiUseWithoutAiDescription">Kikapcsolja a Duck.ai-t, elrejti az AI segítségével létrehozott válaszokat a keresésben, és kiszűri az ismert AI-spam-webhelyeket a képkeresési eredmények közül.</string>
+    <string name="duckAiUseWithoutAiDisabledDescription">Az AI jelenleg ki van kapcsolva a böngészőben, így a továbbiakban nem fogsz AI segítségével létrehozott válaszokat látni, és kevesebb AI által generált kép jelenik meg a képkeresési találatok között.</string>
+
+    <!-- Duck AI Section in AI Feature Screen -->
+    <string name="input_screen_user_pref_toggle_between_search_and_ai">Váltás a keresés és a Duck.ai között</string>
+    <string name="duckAiDialogHideAiGeneratedImagesTitle">AI által generált képek elrejtése</string>
+    <string name="duckAiDialogHideAiGeneratedImagesDescription">Kiszűri az ismert AI-spam-webhelyeket a képkeresési találatok közül. <annotation link="learn_more">További információk</annotation></string>
+
+    <!-- Duck AI Paid Settings -->
+    <string name="duck_ai_paid_settings_enable_in_settings">Engedélyezés az AI-funkciók beállításaiban</string>
+    <string name="duck_ai_paid_settings_manage_in_settings">Kezelés az AI-funkciók beállításaiban</string>
+    <string name="duck_ai_paid_settings_manage_secondary">A Duck.ai az AI-funkciók beállításaiban konfigurálható.</string>
+
+    <!-- Duck.ai Contextual Bottom Sheet -->
+    <string name="duckAIContextualPromptSummarize">Oldal összefoglalása</string>
+    <string name="duckAIContextualAutomaticContextTitle">Oldal tartalmának automatikus küldése</string>
+    <string name="duckAIContextualAutomaticContextMessage">Az oldal tartalmának automatikus küldése a Duck.ai részére</string>
+
+    <!-- Contextual sheet suggested prompts; native copy for PageSuggestionsCatalog.json entries, keyed by catalog id -->
+    <string name="duckAiSuggestionTranslatePageLabel" instruction="Suggested prompt chip: translate the current page">Oldal lefordítása</string>
+    <string name="duckAiSuggestionTranslatePagePrompt" instruction="Suggested prompt submitted text: translate the page. %1$s is replaced with the name of the user&apos;s language.">Fordítsd le ezt az oldalt %1$s nyelvre.</string>
+    <string name="duckAiSuggestionKeyTakeawaysLabel" instruction="Suggested prompt chip: key takeaways of an article">Melyek a legfontosabb tanulságok?</string>
+    <string name="duckAiSuggestionKeyTakeawaysPrompt" instruction="Suggested prompt submitted text: key takeaways of an article">Mik a cikk legfontosabb tanulságai?</string>
+    <string name="duckAiSuggestionExplainSimplyLabel" instruction="Suggested prompt chip: explain the content simply">Egyszerű elmagyarázás</string>
+    <string name="duckAiSuggestionExplainSimplyPrompt" instruction="Suggested prompt submitted text: explain the content simply">Magyarázd el ezt egyszerű, közérthető nyelven.</string>
+    <string name="duckAiSuggestionCounterargumentsLabel" instruction="Suggested prompt chip: counterarguments">Mik az ellenérvek?</string>
+    <string name="duckAiSuggestionCounterargumentsPrompt" instruction="Suggested prompt submitted text: counterarguments">Mik a fő ellenérvek vagy kritikák ezzel kapcsolatban?</string>
+    <string name="duckAiSuggestionRelatedArticlesLabel" instruction="Suggested prompt chip: related articles">Kapcsolódó cikkek ajánlása</string>
+    <string name="duckAiSuggestionRelatedArticlesPrompt" instruction="Suggested prompt submitted text: related articles">Ajánlj kapcsolódó cikkeket vagy témákat, amelyeket érdemes lenne ezután megnézni.</string>
+    <string name="duckAiSuggestionShoppingListLabel" instruction="Suggested prompt chip: shopping list from a recipe">Bevásárlólista generálása</string>
+    <string name="duckAiSuggestionShoppingListPrompt" instruction="Suggested prompt submitted text: shopping list from a recipe">Készíts a receptből egy bevásárlólistát, amelyen a mennyiségek is szerepelnek.</string>
+    <string name="duckAiSuggestionRecipeNutritionLabel" instruction="Suggested prompt chip: recipe nutrition">Tápérték becslése</string>
+    <string name="duckAiSuggestionRecipeNutritionPrompt" instruction="Suggested prompt submitted text: recipe nutrition">Becsüld meg ennek a receptnek a tápértékadatait.</string>
+    <string name="duckAiSuggestionScaleRecipeLabel" instruction="Suggested prompt chip: scale a recipe">Adagok módosítása</string>
+    <string name="duckAiSuggestionScaleRecipePrompt" instruction="Suggested prompt submitted text: scale a recipe">Írd át ezt a receptet más adagszámra méretezve.</string>
+    <string name="duckAiSuggestionProductProsConsLabel" instruction="Suggested prompt chip: product pros and cons">Mik az előnyök és a hátrányok?</string>
+    <string name="duckAiSuggestionProductProsConsPrompt" instruction="Suggested prompt submitted text: product pros and cons">Milyen előnyei és hátrányai vannak ennek a terméknek?</string>
+    <string name="duckAiSuggestionFindAlternativesLabel" instruction="Suggested prompt chip: product alternatives">Alternatívák keresése</string>
+    <string name="duckAiSuggestionFindAlternativesPrompt" instruction="Suggested prompt submitted text: product alternatives">Ajánlj néhány alternatívát ehhez a termékhez.</string>
+    <string name="duckAiSuggestionSummarizeVideoLabel" instruction="Suggested prompt chip: summarize a video">Videó összefoglalása</string>
+    <string name="duckAiSuggestionSummarizeVideoPrompt" instruction="Suggested prompt submitted text: summarize a video">Foglald össze ezt a videót.</string>
+    <string name="duckAiSuggestionVideoKeyPointsLabel" instruction="Suggested prompt chip: video key points">Mik a legfontosabb pontok?</string>
+    <string name="duckAiSuggestionVideoKeyPointsPrompt" instruction="Suggested prompt submitted text: video key points">Melyek a videóban érintett legfontosabb pontok?</string>
+    <string name="duckAiSuggestionTailorResumeLabel" instruction="Suggested prompt chip: tailor a resume to a job">Önéletrajz igazítása</string>
+    <string name="duckAiSuggestionTailorResumePrompt" instruction="Suggested prompt submitted text: tailor a resume to a job">Segíts hozzáigazítani az önéletrajzomat ehhez az álláshoz.</string>
+    <string name="duckAiSuggestionInterviewPrepLabel" instruction="Suggested prompt chip: interview prep">Segítség interjúra való felkészüléshez</string>
+    <string name="duckAiSuggestionInterviewPrepPrompt" instruction="Suggested prompt submitted text: interview prep">Milyen interjúkérdések merülhetnek fel ennél a munkakörnél?</string>
+    <string name="duckAiSuggestionCoverLetterLabel" instruction="Suggested prompt chip: draft a cover letter">Motivációs levél írása</string>
+    <string name="duckAiSuggestionCoverLetterPrompt" instruction="Suggested prompt submitted text: draft a cover letter">Írj egy motivációs levelet ehhez az álláshoz.</string>
+    <string name="duckAiSuggestionEventDetailsLabel" instruction="Suggested prompt chip: event details">Mik a legfontosabb részletek?</string>
+    <string name="duckAiSuggestionEventDetailsPrompt" instruction="Suggested prompt submitted text: event details">Foglald össze az esemény legfontosabb részleteit.</string>
+    <string name="duckAiSuggestionWorthWatchingLabel" instruction="Suggested prompt chip: is a movie/show worth watching">Érdemes megnézni?</string>
+    <string name="duckAiSuggestionWorthWatchingPrompt" instruction="Suggested prompt submitted text: is a movie/show worth watching">Érdemes megnézni? Mondj egy spoilermentes véleményt.</string>
+    <string name="duckAiSuggestionSimilarTitlesLabel" instruction="Suggested prompt chip: similar movies or shows">Hasonló tartalmak ajánlása</string>
+    <string name="duckAiSuggestionSimilarTitlesPrompt" instruction="Suggested prompt submitted text: similar movies or shows">Ajánlj hasonló filmeket vagy sorozatokat.</string>
+    <string name="duckAiSuggestionCastCrewLabel" instruction="Suggested prompt chip: cast and crew">Szereplők és alkotók</string>
+    <string name="duckAiSuggestionCastCrewPrompt" instruction="Suggested prompt submitted text: cast and crew">Kik a legfontosabb szereplők és alkotók, és miről ismertek még?</string>
+    <string name="duckAiSuggestionSummarizeBookLabel" instruction="Suggested prompt chip: summarize a book">Könyv összefoglalása</string>
+    <string name="duckAiSuggestionSummarizeBookPrompt" instruction="Suggested prompt submitted text: summarize a book">Foglald össze ezt a könyvet.</string>
+    <string name="duckAiSuggestionSimilarBooksLabel" instruction="Suggested prompt chip: similar books">Hasonló könyvek ajánlása</string>
+    <string name="duckAiSuggestionSimilarBooksPrompt" instruction="Suggested prompt submitted text: similar books">Ajánlj hasonló könyveket.</string>
+    <string name="duckAiSuggestionExplainPaperLabel" instruction="Suggested prompt chip: explain a research paper">Tanulmány magyarázata</string>
+    <string name="duckAiSuggestionExplainPaperPrompt" instruction="Suggested prompt submitted text: explain a research paper">Magyarázd el ezt a kutatási tanulmányt közérthetően.</string>
+    <string name="duckAiSuggestionPaperContributionsLabel" instruction="Suggested prompt chip: paper contributions">Mik a főbb eredmények?</string>
+    <string name="duckAiSuggestionPaperContributionsPrompt" instruction="Suggested prompt submitted text: paper contributions">Mik a tanulmány főbb eredményei?</string>
+    <string name="duckAiSuggestionMenuHighlightsLabel" instruction="Suggested prompt chip: restaurant menu highlights">Mit rendeljek?</string>
+    <string name="duckAiSuggestionMenuHighlightsPrompt" instruction="Suggested prompt submitted text: restaurant menu highlights">Melyek a kihagyhatatlan ételek itt?</string>
+    <string name="duckAiSuggestionPlaceHoursLabel" instruction="Suggested prompt chip: place hours and location">Mi a nyitvatartás és a cím?</string>
+    <string name="duckAiSuggestionPlaceHoursPrompt" instruction="Suggested prompt submitted text: place hours and location">Milyen a hely nyitvatartása, hol található, és mik az elérhetőségei?</string>
+    <string name="duckAiSuggestionPlaceReviewsLabel" instruction="Suggested prompt chip: place reputation">Jó ez a hely?</string>
+    <string name="duckAiSuggestionPlaceReviewsPrompt" instruction="Suggested prompt submitted text: place reputation">Jó ez a hely? Foglald össze a megítélését az értékelések és a vélemények alapján.</string>
+    <string name="duckAiSuggestionSummarizeThreadLabel" instruction="Suggested prompt chip: summarize a discussion thread">Beszélgetés összefoglalása</string>
+    <string name="duckAiSuggestionSummarizeThreadPrompt" instruction="Suggested prompt submitted text: summarize a discussion thread">Foglald össze ezt a beszélgetési szálat.</string>
+    <string name="duckAiSuggestionExplainRepoLabel" instruction="Suggested prompt chip: explain a code repository">Kódtár magyarázata</string>
+    <string name="duckAiSuggestionExplainRepoPrompt" instruction="Suggested prompt submitted text: explain a code repository">Magyarázd el, mire szolgál ez a kódtár, és hogyan használható.</string>
+    <string name="duckAiSuggestionExplainAnswerLabel" instruction="Suggested prompt chip: explain the top answer">Legjobb válasz magyarázata</string>
+    <string name="duckAiSuggestionExplainAnswerPrompt" instruction="Suggested prompt submitted text: explain the top answer">Magyarázd el egyszerűen az elfogadott választ.</string>
+    <string name="duckAiSuggestionHowtoStepsLabel" instruction="Suggested prompt chip: how-to steps">Végigvezetés a lépéseken</string>
+    <string name="duckAiSuggestionHowtoStepsPrompt" instruction="Suggested prompt submitted text: how-to steps">Bontsd le ezt világos, számozott lépésekre.</string>
+    <string name="duckAiSuggestionHowtoMaterialsLabel" instruction="Suggested prompt chip: how-to materials">Mire lesz szükségem?</string>
+    <string name="duckAiSuggestionHowtoMaterialsPrompt" instruction="Suggested prompt submitted text: how-to materials">Sorold fel, milyen eszközökre, anyagokra vagy előfeltételekre van szükségem ehhez.</string>
+    <string name="duckAiSuggestionCourseLearnLabel" instruction="Suggested prompt chip: course learning outcomes">Mit fogok megtanulni?</string>
+    <string name="duckAiSuggestionCourseLearnPrompt" instruction="Suggested prompt submitted text: course learning outcomes">Mik azok a legfontosabb dolgok, amiket megtanulok ezen a kurzuson?</string>
+    <string name="duckAiSuggestionCourseWorthLabel" instruction="Suggested prompt chip: is a course worth taking">Érdemes elvégezni?</string>
+    <string name="duckAiSuggestionCourseWorthPrompt" instruction="Suggested prompt submitted text: is a course worth taking">Az oldalon szereplő információk alapján érdemes elvégezni ezt a tanfolyamot?</string>
+    <string name="duckAiSuggestionFaqAnswerLabel" instruction="Suggested prompt chip: what an FAQ page answers">Mire ad ez választ?</string>
+    <string name="duckAiSuggestionFaqAnswerPrompt" instruction="Suggested prompt submitted text: what an FAQ page answers">Melyek a fő kérdések, amelyekre választ ad ez az oldal?</string>
+    <string name="duckAiSuggestionFaqSummaryLabel" instruction="Suggested prompt chip: summarize FAQ Q&amp;As">Kérdések és válaszok összefoglalása</string>
+    <string name="duckAiSuggestionFaqSummaryPrompt" instruction="Suggested prompt submitted text: summarize FAQ Q&amp;As">Foglald össze az oldalon szereplő kérdéseket és válaszokat.</string>
+    <string name="duckAiSuggestionReviewVerdictLabel" instruction="Suggested prompt chip: review verdict">Mi a végső vélemény?</string>
+    <string name="duckAiSuggestionReviewVerdictPrompt" instruction="Suggested prompt submitted text: review verdict">Mi az általános vélemény és értékelés erről?</string>
+    <string name="duckAiSuggestionReviewSummaryLabel" instruction="Suggested prompt chip: summarize reviews">Értékelések összefoglalása</string>
+    <string name="duckAiSuggestionReviewSummaryPrompt" instruction="Suggested prompt submitted text: summarize reviews">Foglald össze, mit mondanak az értékelések.</string>
+    <string name="duckAiSuggestionWhoIsThisLabel" instruction="Suggested prompt chip: person background">Ki ez a személy?</string>
+    <string name="duckAiSuggestionWhoIsThisPrompt" instruction="Suggested prompt submitted text: person background">Adj egy rövid áttekintést erről a személyről.</string>
+    <string name="duckAiSuggestionPersonBackgroundLabel" instruction="Suggested prompt chip: summarize a person&apos;s background">Háttér összefoglalása</string>
+    <string name="duckAiSuggestionPersonBackgroundPrompt" instruction="Suggested prompt submitted text: summarize a person&apos;s background">Foglald össze ennek a személynek a hátterét és jelentősebb munkáit.</string>
+
+    <string name="contextualSheetChatsPopupRecentSection" instruction="Section header above the list of recent Duck.ai chats in the contextual sheet overflow menu.">Legutóbbi csevegések</string>
+
+    <!-- duck.ai contextual fire button -->
+    <string name="duckAIContextualFireButtonContentDescription">Csevegés törlése</string>
+
+    <!-- Content Descriptions -->
+    <string name="duckChatFireButtonContentDescription">Adatok törlése</string>
+    <string name="duckChatBrowserMenuContentDescription">További lehetőségek</string>
+
+    <!-- Duck AI Voice Chat Shortcut Setting -->
+    <string name="duckAiVoiceChatVisibilitySetting" instruction="Voice Chat is a feature that lets users talk to Duck.ai using their voice instead of typing.">Hangcsevegés</string>
+
+    <!-- Duck.ai voice microphone foreground service notification -->
+    <string name="duckAiVoiceNotificationTitle" instruction="Title shown in the notification when Duck.ai Voice Chat is active and using the microphone.">A Duck.ai-hangcsevegés aktív</string>
+    <string name="duckAiVoiceNotificationMessage" instruction="Message shown in the notification explaining that the microphone is being used by Duck.ai.">A mikrofont a Duck.ai használja</string>
+    <string name="duckAiVoiceNotificationChannelName" instruction="Name of the Android notification channel for the Duck.ai Voice Chat foreground service.">Duck.ai-hangcsevegés</string>
+    <string name="duckAiVoiceNotificationActionOpenChat" instruction="Notification action button that opens the active Duck.ai chat.">Csevegés megnyitása</string>
+    <string name="duckAiVoiceNotificationActionEndSession" instruction="Notification action button that ends the active Duck.ai voice chat session.">Csevegés befejezése</string>
+
+    <!-- Duck AI Chat Suggestions -->
+    <string name="duckAiChatHistoryViewAllChats">Összes csevegés megtekintése</string>
+
+    <!-- Duck.ai onboarding end CTA -->
+    <string name="duckAiEndCtaTitle">Menni fog!</string>
+    <string name="duckAiEndCtaDescription"><![CDATA[A címsávban kereshetsz, webhelyeket nyithatsz meg, vagy átválthatsz a Duck.ai-ra privát MI-beszélgetéshez.<br/><br/>A Duck.ai-t bárhol használhatod, ahol látod a beszélgetés ikonját]]></string>
+    <string name="duckAiEndCtaButton">Pacsi!</string>
+
+    <!-- Native Duck.ai chat history -->
+    <string name="duck_ai_chat_history_title">Csevegések</string>
+    <string name="duck_ai_chat_history_section_pinned">Kitűzött</string>
+    <string name="duck_ai_chat_history_section_recent">Legutóbbi</string>
+    <string name="duck_ai_chat_history_untitled">Névtelen beszélgetés</string>
+    <string name="duck_ai_chat_history_empty_title">Még nincsenek csevegések</string>
+    <string name="duck_ai_chat_history_more_options">További lehetőségek</string>
+    <string name="duck_ai_chat_history_action_select">Kiválasztás</string>
+    <string name="duck_ai_chat_history_action_pin">Kitűzés</string>
+    <string name="duck_ai_chat_history_action_unpin">Kitűzés megszüntetése</string>
+    <string name="duck_ai_chat_history_action_rename">Átnevezés</string>
+    <string name="duck_ai_chat_history_action_download">Letöltés</string>
+    <string name="duck_ai_chat_history_action_delete">Törlés</string>
+    <string name="duck_ai_chat_history_search_hint">Csevegések keresése</string>
+    <string name="duck_ai_chat_history_action_search_content_description">Csevegések keresése</string>
+    <string name="duck_ai_chat_history_search_close_content_description">Keresés bezárása</string>
+    <string name="duck_ai_chat_history_search_clear_content_description">Keresés törlése</string>
+    <string name="duck_ai_chat_history_action_fire_content_description">Csevegések törlése</string>
+    <string name="duck_ai_chat_history_action_new">Új</string>
+    <string name="duck_ai_chat_history_action_download_selected_content_description">Csevegések letöltése</string>
+    <plurals name="duck_ai_chat_history_bulk_download_complete">
+        <item quantity="one" instruction="%1$d is the number of chats downloaded">%1$d csevegés letöltése befejeződött</item>
+        <item quantity="other" instruction="%1$d is the number of chats downloaded">%1$d csevegés letöltése befejeződött</item>
+    </plurals>
+    <string name="duck_ai_chat_history_action_overflow_content_description">Túlfolyó menü megnyitása</string>
+    <string name="duck_ai_chat_history_select_all">Összes kijelölése</string>
+    <string name="duck_ai_chat_history_unselect_all">Minden kijelölés megszüntetése</string>
+    <string name="duck_ai_chat_history_row_selected_content_description">Kiválasztva</string>
+    <string name="duck_ai_chat_history_row_unselected_content_description">Nincs kiválasztva</string>
+    <string name="duck_ai_chat_history_exit_select_mode_content_description">Kilépés a kiválasztási módból</string>
+    <string name="duck_ai_chat_history_rename_title">Csevegés átnevezése</string>
+    <string name="duck_ai_chat_history_rename_chat_title_hint">Csevegés címe</string>
+    <string name="duck_ai_chat_history_rename_confirm_title">Mentés</string>
+    <string name="duck_ai_chat_history_rename_confirm_content_description">Csevegés címének mentése</string>
+    <string name="duck_ai_chat_history_rename_error">Nem sikerült átnevezni a csevegést</string>
+    <string name="duck_ai_chat_history_pin_snackbar">Csevegés kitűzve</string>
+    <string name="duck_ai_chat_history_unpin_snackbar">Csevegés kitűzése megszüntetve</string>
+    <string name="duck_ai_chat_history_undo">Visszavonás</string>
+    <string name="duck_ai_chat_history_download_complete" instruction="%1$s is the saved chat filename (e.g. \&apos;My Chat.txt\&apos;).">%1$s letöltése befejeződött</string>
+    <string name="duck_ai_chat_history_download_view">Megjelenítés</string>
+    <string name="duck_ai_chat_history_download_error">Nem sikerült exportálni a csevegést</string>
+    <string name="duck_ai_chat_history_bulk_download_error">Nem sikerült exportálni a csevegéseket</string>
+
+    <string name="duckAiChatSearchDuckDuckGo">DuckDuckGo-keresés</string>
+    <string name="native_input_chat_hint">Kérdezz bármit privátban…</string>
+    <string name="native_input_chat_duck_mode_hint">Válasz…</string>
+
+    <!-- Model Picker -->
+    <string name="duckAiModelPickerLabelEverydayUse" instruction="Subline under a model in the Duck.ai model picker, describing what that model suits.">Ideális mindennapi használatra</string>
+    <string name="duckAiModelPickerLabelUsesLimitsFaster" instruction="Subline under a model in the Duck.ai model picker. &apos;Limits&apos; means the user&apos;s usage allowance, which this model consumes more quickly.">Megbízható, de hamarabb éri el a limitet</string>
+    <string name="duckAiModelPickerTryFreeTrial" instruction="Header above the locked models in the Duck.ai model picker, shown when the user can still start a free trial.">Ingyenes próba</string>
+    <string name="duckAiModelPickerSubscriberExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when unlocking them requires a paid subscription.">Csak előfizetőknek</string>
+    <string name="duckAiModelPickerProExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when they require the Pro plan specifically. &apos;Pro&apos; is the plan name and stays untranslated.">Csak a Pro csomagban</string>
+    <string name="duckAiModelPickerPlusModels">Plus</string>
+    <string name="duckAiModelPickerProModels">Pro</string>
+
+    <!-- Reasoning Mode Picker -->
+    <string name="duckChatReasoningModeContentDescription">Érvelési mód</string>
+    <string name="duckChatReasoningModeFastTitle">Gyors</string>
+    <string name="duckChatReasoningModeFastSubtitle">Gyors válaszok</string>
+    <string name="duckChatReasoningModeReasoningTitle">Érvelés</string>
+    <string name="duckChatReasoningModeReasoningSubtitle">Összetett feladatokhoz</string>
+    <string name="duckChatReasoningModeExtendedTitle">Kibővített érvelés</string>
+    <string name="duckChatReasoningModeExtendedSubtitle">Elemezési feladatokhoz</string>
+
+    <!-- Start chat icon content description -->
+    <string name="duckChatStartChatContentDescription">Beszélgetés indítása</string>
+    <string name="duckChatStopStreamingContentDescription">Generálás leállítása</string>
+
+    <!-- Image attachment -->
+    <string name="duckChatImageAttachmentRemoveContentDescription">Kép eltávolítása</string>
+
+    <!-- Image attachment limits -->
+    <string name="duckChatImageAttachmentLimitPerMessage" instruction="%1$d is the maximum number of images allowed per message.">Egyszerre csak %1$d képet csatolhatsz.</string>
+    <string name="duckChatImageAttachmentLimitPerConversation" instruction="%1$d is the maximum number of images allowed in a single conversation.">Beszélgetésenként csak %1$d képet csatolhatsz.</string>
+
+    <!-- File/image attachment menu options -->
+    <string name="attachmentTakePhoto">Fénykép készítése</string>
+    <string name="attachmentAttachPhoto">Kép hozzáadása</string>
+    <string name="attachmentAttachFile">Fájl hozzáadása</string>
+
+    <!-- File attachment -->
+    <string name="duckChatFileAttachmentRemoveContentDescription">Fájl eltávolítása</string>
+    <string name="duckChatFileAttachmentLimitPerConversation" instruction="%1$d is the maximum number of files allowed in a single conversation.">Beszélgetésenként csak %1$d fájlt csatolhatsz.</string>
+    <string name="duckChatFileAttachmentTooLarge" instruction="%1$d is the maximum file size in MB.">A fájl mérete meghaladja a maximálisan megengedett %1$d MB-ot.</string>
+    <string name="duckChatFileAttachmentTooManyPages" instruction="%1$d is the maximum number of pages per file.">Az egyik csatolt fájlnak az általunk támogatottnál több oldala van. Legfeljebb %1$d oldalas fájlokat tölts fel.</string>
+    <string name="duckChatFileAttachmentTotalSizeLimitExceeded" instruction="%1$d is the total size limit in MB.">A csatolt fájlok összmérete meghaladja a maximálisan megengedett %1$d MB-ot.</string>
+    <string name="fileCaptureBrowseDisambiguationTitle">Fájl feltöltése</string>
+
+    <!-- Options button -->
+    <string name="duckChatOptionsButtonContentDescription">Duck.ai-lehetőségek</string>
+    <string name="duckChatOptionsChipDismissContentDescription" instruction="%1$s is the name of the option being removed (e.g. Create Image).">%1$s eltávolítása</string>
+    <string name="duckChatOptionsMenuCreateImage">Kép létrehozása</string>
+    <string name="duckChatOptionsMenuCreateImageSubtitle">Szövegből képek létrehozása</string>
+    <string name="duckChatOptionsMenuWebSearch">Webes keresés</string>
+    <string name="duckChatOptionsMenuWebSearchSubtitle">Válaszok keresése az interneten</string>
+    <string name="duckChatOptionsMenuCustomizeResponses">Válaszok testreszabása</string>
+    <string name="duckChatOptionsMenuCustomizeResponsesSubtitle">Hangnem, hosszúság és működés beállítása</string>
+
+    <!-- Duck.ai header -->
+    <string name="duckChatPlusButtonContentDescription">A Duck.ai menü megnyitása</string>
+
+    <!-- Duck AI Duck.ai Section Header -->
+    <string name="duckAiDuckAiSectionHeader">Duck.ai</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilityTitle">Search Assist</string>
+    <string name="duckAiSearchAssistSettingsTitle">Search Assist</string>
+
+    <!-- Settings -->
+    <string name="duckAiSettingsTitle">Duck.ai-beállítások</string>
+
+    <!-- File/image attachment menu options -->
+
+    <!-- Editing a message already sent to Duck.ai -->
+    <string name="duck_ai_edit_prompt_title" instruction="Screen title: the user is editing a message they already sent to Duck.ai">Üzenet szerkesztése</string>
+    <string name="duck_ai_edit_prompt_lose_responses_warning" instruction="Warning shown while editing a sent message: the answer Duck.ai already gave will be discarded and answered again">A szerkesztés lecseréli a választ egy újra.</string>
+
+    <string name="duckChatContextualAskAboutPage">Kérdés az oldalról</string>
+    <string name="duckChatContextualAskAboutSearch">Folytatás a Duck.ai-ban</string>
+    <string name="duckChatContextualOpenDuckAi">Duck.ai megnyitása</string>
+
+    <!-- Suggested prompts for text selection -->
+    <string name="duckAiSuggestionSummarizeSelectionLabel">Kijelölés összefoglalása</string>
+    <string name="duckAiSuggestionSummarizeSelectionPrompt">Foglald össze ezt a kijelölést.</string>
+    <string name="duckAiSuggestionTranslateSelectionLabel">Kijelölés lefordítása</string>
+    <string name="duckAiSuggestionTranslateSelectionPrompt" instruction="%1$s is replaced with the name of the user&apos;s language.">Fordítsd le ezt a kijelölést %1$s nyelvre.</string>
+
+    <!-- Name shown for an attached text selection in the Duck.ai -->
+    <string name="duckAiTextSelectionAttachmentTitle">Szövegkijelölés</string>
+    <string name="duckAiTextSelectionLimitReached" instruction="%1$d is replaced with the maximum number of text selections.">Legfeljebb %1$d szövegkijelölést adhatsz hozzá. Távolíts el egyet, hogy újat adhass hozzá.</string>
+
+    <!-- Duck.ai text selection menu action -->
+    <string name="duckAiTextSelectionMenuItem">Duck.ai kérdezése</string>
+
+    <!-- Prefix on the Duck.ai attachment chip for a text selection -->
+    <plurals name="duckAiTextSelectionWordCount">
+        <item quantity="one" instruction="%1$d is the number of words in the selection.">%1$d szó</item>
+        <item quantity="other" instruction="%1$d is the number of words in the selection.">%1$d szó</item>
+    </plurals>
+
+    <!-- Duck.ai high-usage model footer -->
+    <string name="duckChatHighUsageModelFooterMessage" instruction="Placeholder is the selected model&apos;s short name">A(z) %1$s akár 2–5-ször gyorsabban éri el a használati limiteket, mint az alapvető modellek.</string>
+    <string name="duckChatUsageFooterDismissContentDescription">Bezárás</string>
+
+    <!-- Duck.ai usage-limit footer -->
+    <string name="duckChatUsageLimitFooterApproachingDaily" instruction="Placeholder is the percentage of the daily allowance already used">A napi limit %1$d%%-a</string>
+    <string name="duckChatUsageLimitFooterApproachingWeekly" instruction="Placeholder is the percentage of the weekly allowance already used">A heti limit %1$d%%-a</string>
+    <string name="duckChatUsageLimitFooterDailyReached">Napi limit elérve</string>
+    <string name="duckChatUsageLimitFooterWeeklyReachedFree">Heti limit elérve</string>
+    <string name="duckChatUsageLimitFooterWeeklyReached">Elérted a heti használati limitet</string>
+    <string name="duckChatUsageLimitFooterAdvancedModelsReached">Elérted a fejlett AI-modellekre vonatkozó limitet</string>
+    <string name="duckChatUsageLimitFooterCtaSwitchModel">Másik modellre váltás</string>
+    <string name="duckChatUsageLimitFooterCtaStartUsingWeeklyLimit">Heti limit felhasználásának megkezdése</string>
+    <string name="duckChatUsageLimitFooterCtaTryForFree">Próbáld ki az előfizetést ingyen</string>
+    <string name="duckChatUsageLimitFooterCtaSubscribe">Előfizetés</string>
+    <string name="duckChatUsageLimitFooterResetsIn" instruction="Placeholder is a duration such as &apos;2 days&apos; or &apos;5 hours&apos;">Visszaállítás %1$s múlva</string>
+    <plurals name="duckChatUsageLimitFooterDays">
+        <item quantity="one" instruction="%1$d is the number of whole days until the usage limit resets">%1$d nap</item>
+        <item quantity="other" instruction="%1$d is the number of whole days until the usage limit resets">%1$d nap</item>
+    </plurals>
+    <plurals name="duckChatUsageLimitFooterHours">
+        <item quantity="one" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d óra</item>
+        <item quantity="other" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d óra</item>
+    </plurals>
+    <string name="duckAIContextualPromptSummarizeDocument" instruction="Suggested prompt for Duck.ai to summarize the PDF document currently displayed in the browser">Dokumentum összefoglalása</string>
+
+    <!-- Duck.ai ToS consent submit button -->
+    <string name="duckChatSubmitAskLabel" instruction="Label of the submit button while the Duck.ai terms are not yet accepted. Required wording from legal, tapping it is how the user accepts.">Kérdezés</string>
+    <!-- Duck.ai ToS consent footer -->
+    <string name="duckChatTermsFooterMessage" instruction="Disclaimer under the Duck.ai input. ^1 is the label of the submit button, so the sentence always names the button the user taps. The two annotated phrases are tappable links to the Privacy Policy and the Terms of Service.">A DuckDuckGo anonimizálja a csevegéseidet. A(z) „^1” gombra kattintva elfogadod az <annotation type="privacy_link">adatvédelmi szabályzatunkat</annotation> és a <annotation type="terms_link">szolgáltatási feltételeinket</annotation>.</string>
+    <!-- Duck.ai tab switcher card -->
+    <string name="duckAiTabCardChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a text or image chat, as opposed to a voice chat.">Csevegés</string>
+    <string name="duckAiTabCardThinkingTitle" instruction="Header on a tab switcher card for a Duck.ai chat whose question has been sent but whose reply has not started yet. The chat title, if any, is shown below it.">Gondolkodom…</string>
+    <string name="duckAiTabCardListeningTitle" instruction="Header on a tab switcher card for a Duck.ai tab with a voice chat in progress, shown while Duck.ai is listening to the user.">Figyelek…</string>
+    <string name="duckAiTabCardVoiceChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a voice chat, as opposed to a text chat.">Hangcsevegés</string>
+    <string name="duckAiTabCardTranscriptTypeLabel" instruction="Label on a tab switcher card for a finished Duck.ai voice chat, whose preview shows the conversation transcript.">Átirat</string>
+    <!-- Duck.ai attachment privacy footer -->
+    <string name="duckChatAttachmentPrivacyFooterMessage" instruction="Disclaimer under the Duck.ai input while an image or file is attached. The annotated phrase is a tappable link to a help page.">A rendszer automatikusan átvizsgálja a fájlokat az illegális tartalmak kiszűrése érdekében. A megjelölt beszélgetéseket korlátozott ideig őrizzük meg. <annotation type="learn_more_link">További információ</annotation></string>
+    <!-- Duck.ai new chat hints -->
+    <string name="newChatHintDocuments" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens a picker to attach documents for the AI to analyze.">Fájlok elemzése</string>
+    <string name="newChatHintPhoto" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens the photo library to attach photos and ask the AI about them.">Kérdezz a fényképekről</string>
+    <string name="newChatHintImage" instruction="Tappable suggestion shown on an empty new Duck.ai chat; switches the chat to AI image generation.">Kép létrehozása</string>
+</resources>

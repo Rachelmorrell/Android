@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <activity
+            android:name=".settings.PirDevSettingsActivity"
+            android:label="@string/pirDevSettings" />
+
+        <activity
+            android:name=".settings.PirResultsActivity"
+            android:label="@string/pirDevSimpleScanHeader" />
+
+        <activity
+            android:name=".settings.PirDevScanActivity"
+            android:label="@string/pirDevScanTitle" />
+
+        <activity
+            android:name=".settings.PirDevOptOutActivity"
+            android:label="@string/pirDevOptOutTitle" />
+
+        <activity
+            android:name=".settings.PirDevWebViewActivity"
+            android:label="@string/pirDevDebugOptOutTitle" />
+
+        <activity
+            android:name=".settings.PirDevBrokerConfigActivity"
+            android:label="@string/pirDevBrokerConfigTitle" />
+
+        <activity
+            android:name=".settings.PirDevEmailActivity"
+            android:label="@string/pirDevEmailTitle" />
+
+    </application>
+</manifest>

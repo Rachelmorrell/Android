@@ -1,0 +1,161 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser
+
+import android.net.Uri
+import androidx.core.net.toUri
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.duckduckgo.app.statistics.model.Atb
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.duckduckgo.common.utils.AppUrl.ParamKey
+import com.duckduckgo.common.utils.AppUrl.ParamValue
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.device.DeviceInfo.FormFactor.PHONE
+import com.duckduckgo.common.utils.device.DeviceInfo.FormFactor.TABLET
+import com.duckduckgo.experiments.api.VariantManager
+import com.duckduckgo.referral.api.AppReferrer
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+
+@RunWith(AndroidJUnit4::class)
+class DuckDuckGoRequestRewriterTest {
+
+    private lateinit var testee: DuckDuckGoRequestRewriter
+    private val mockStatisticsStore: StatisticsDataStore = mock()
+    private val mockVariantManager: VariantManager = mock()
+    private val mockAppReferrer: AppReferrer = mock()
+    private val mockDeviceInfo: DeviceInfo = mock()
+    private lateinit var builder: Uri.Builder
+
+    @Before
+    fun before() {
+        whenever(mockVariantManager.getVariantKey()).thenReturn("")
+        whenever(mockAppReferrer.isInstalledFromEuAuction()).thenReturn(false)
+        whenever(mockDeviceInfo.formFactor()).thenReturn(PHONE)
+
+        testee = DuckDuckGoRequestRewriter(
+            DuckDuckGoUrlDetectorImpl(),
+            mockStatisticsStore,
+            mockVariantManager,
+            mockAppReferrer,
+            mockDeviceInfo,
+        )
+        builder = Uri.Builder()
+    }
+
+    @Test
+    fun whenAddingCustomParamsSourceParameterIsAdded() {
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertTrue(uri.queryParameterNames.contains(ParamKey.SOURCE))
+        assertEquals("ddg_android", uri.getQueryParameter(ParamKey.SOURCE))
+    }
+
+    @Test
+    fun whenAddingCustomParamsAndUserSourcedFromEuAuctionThenEuSourceParameterIsAdded() {
+        whenever(mockAppReferrer.isInstalledFromEuAuction()).thenReturn(true)
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertTrue(uri.queryParameterNames.contains(ParamKey.SOURCE))
+        assertEquals("ddg_androideu", uri.getQueryParameter(ParamKey.SOURCE))
+    }
+
+    @Test
+    fun whenAddingCustomParamsAndNotEuAuctionAndPhoneThenSourceParameterIsAdded() {
+        whenever(mockAppReferrer.isInstalledFromEuAuction()).thenReturn(false)
+        whenever(mockDeviceInfo.formFactor()).thenReturn(PHONE)
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertEquals(ParamValue.SOURCE, uri.getQueryParameter(ParamKey.SOURCE))
+    }
+
+    @Test
+    fun whenAddingCustomParamsAndNotEuAuctionAndTabletThenTabletSourceParameterIsAdded() {
+        whenever(mockAppReferrer.isInstalledFromEuAuction()).thenReturn(false)
+        whenever(mockDeviceInfo.formFactor()).thenReturn(TABLET)
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertEquals(ParamValue.SOURCE_TABLET, uri.getQueryParameter(ParamKey.SOURCE))
+    }
+
+    @Test
+    fun whenAddingCustomParamsIfStoreContainsAtbIsAdded() {
+        whenever(mockStatisticsStore.atb).thenReturn(Atb("v105-2ma"))
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertTrue(uri.queryParameterNames.contains(ParamKey.ATB))
+        assertEquals("v105-2ma", uri.getQueryParameter(ParamKey.ATB))
+    }
+
+    @Test
+    fun whenAddingCustomParamsIfIsStoreMissingAtbThenAtbIsNotAdded() {
+        whenever(mockStatisticsStore.atb).thenReturn(null)
+
+        testee.addCustomQueryParams(builder)
+        val uri = builder.build()
+        assertFalse(uri.queryParameterNames.contains(ParamKey.ATB))
+    }
+
+    @Test
+    fun whenSerpRemovalFeatureIsActiveThenHideParamIsAddedToSerpUrl() {
+        testee.addCustomQueryParams(builder)
+
+        val uri = builder.build()
+        assertTrue(uri.queryParameterNames.contains(ParamKey.HIDE_SERP))
+    }
+
+    @Test
+    fun whenAddingCustomParamsThenDoNotHideDuckAi() {
+        testee.addCustomQueryParams(builder)
+
+        val uri = builder.build()
+        assertFalse(uri.queryParameterNames.contains("kbg"))
+    }
+
+    @Test
+    fun whenShouldRewriteRequestAndUrlIsSerpQueryThenReturnTrue() {
+        val uri = "http://duckduckgo.com/?q=weather".toUri()
+        assertTrue(testee.shouldRewriteRequest(uri))
+    }
+
+    @Test
+    fun whenShouldRewriteRequestAndUrlIsSerpQueryWithSourceAndAtbThenReturnFalse() {
+        val uri = "http://duckduckgo.com/?q=weather&atb=test&t=test".toUri()
+        assertFalse(testee.shouldRewriteRequest(uri))
+    }
+
+    @Test
+    fun whenShouldRewriteRequestAndUrlIsADuckDuckGoStaticUrlThenReturnTrue() {
+        val uri = "http://duckduckgo.com/settings".toUri()
+        assertTrue(testee.shouldRewriteRequest(uri))
+
+        val uri2 = "http://duckduckgo.com/params".toUri()
+        assertTrue(testee.shouldRewriteRequest(uri2))
+    }
+
+    @Test
+    fun whenShouldRewriteRequestAndUrlIsDuckDuckGoEmailThenReturnFalse() {
+        val uri = "http://duckduckgo.com/email".toUri()
+        assertFalse(testee.shouldRewriteRequest(uri))
+    }
+}

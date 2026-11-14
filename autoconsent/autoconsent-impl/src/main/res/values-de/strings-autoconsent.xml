@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="autoconsentTitle">Cookie-Pop-up-Schutz</string>
+    <string name="autoconsentDescription"><![CDATA[DuckDuckGo wird versuchen, die privatesten Einstellungen zu wählen und Pop-ups für dich auszublenden.\n<a href=\"\">Mehr erfahren</a>]]></string>
+    <string name="autoconsentToggle">Lass Cookie-Pop-ups von DuckDuckGo verwalten</string>
+    <string name="autoconsentAutoManageToggle">Optionale Cookies ablehnen</string>
+    <string name="autoconsentAutoManageDescription">Wir werden versuchen, so viele Cookies wie möglich für dich abzulehnen und dann die Pop-ups zu schließen.</string>
+    <string name="autoconsentCookiePopUpPreferenceHeaderDescription"><![CDATA[DuckDuckGo kann Cookie-Pop-ups automatisch verwalten, um die Privatsphäre zu maximieren und Cookies zu minimieren, bevor du sie überhaupt siehst.<a href=\"\">Mehr erfahren</a>]]></string>
+    <string name="autoconsentPopUpsWithoutOptOutsToggle">Cookies akzeptieren, die nicht abgelehnt werden können</string>
+    <string name="autoconsentPopUpsWithoutOptOutsDescription">Falls es keine Option zum Ablehnen gibt, ersparen wir dir einen Klick, akzeptieren diese Cookies für dich und schließen die Pop-ups.</string>
+    <string name="autoconsentPromptTitle">Hast du genug von Cookie-Pop-ups?</string>
+    <string name="autoconsentPromptFootnote">Du kannst das später jederzeit in den Einstellungen anpassen.</string>
+    <string name="autoconsentPromptCpmOnMessage">Einige Cookies können nicht abgelehnt werden. Wir können diese für dich akzeptieren.</string>
+    <string name="autoconsentPromptCpmOnPrimaryButton">Cookies für mich akzeptieren</string>
+    <string name="autoconsentPromptCpmOnPrimaryButtonV2">Wenn möglich ablehnen oder für mich akzeptieren</string>
+    <string name="autoconsentPromptCpmOnSecondaryButton">Ich nehme sie selbst an</string>
+    <string name="autoconsentPromptCpmOffMessage">Wir kümmern uns für dich darum. Wir lehnen Cookies ab, wenn möglich, und akzeptieren diejenigen, die nicht abgelehnt werden können.</string>
+    <string name="autoconsentPromptCpmOffPrimaryButton">Wenn möglich ablehnen oder für mich akzeptieren</string>
+    <string name="autoconsentPromptCpmOffSecondaryButton">Ich kümmere mich selbst darum</string>
+</resources>

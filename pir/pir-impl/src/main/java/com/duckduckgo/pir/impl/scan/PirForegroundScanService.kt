@@ -1,0 +1,222 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.scan
+
+import android.app.ActivityManager
+import android.app.Notification
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+import android.os.Build
+import android.os.IBinder
+import android.os.Process
+import androidx.core.app.ServiceCompat
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.di.android.AndroidInjection
+import com.duckduckgo.di.scopes.ServiceScope
+import com.duckduckgo.pir.impl.PirFeatureDataCleaner
+import com.duckduckgo.pir.impl.R
+import com.duckduckgo.pir.impl.checker.PirEligibility
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.checker.runModeOrNull
+import com.duckduckgo.pir.impl.notifications.PirNotificationManager
+import com.duckduckgo.pir.impl.pixels.PirPixelSender
+import com.duckduckgo.pir.impl.scheduling.PirExecutionType
+import com.duckduckgo.pir.impl.scheduling.PirJobsRunner
+import com.duckduckgo.pir.impl.wideevents.PirScanWideEvent
+import com.duckduckgo.pir.impl.wideevents.PirScanWideEvent.CancellationReason
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import logcat.LogPriority
+import logcat.LogPriority.WARN
+import logcat.logcat
+import javax.inject.Inject
+
+@InjectWith(scope = ServiceScope::class)
+class PirForegroundScanService : Service(), CoroutineScope by MainScope() {
+    @Inject
+    lateinit var pirJobsRunner: PirJobsRunner
+
+    @Inject
+    lateinit var pirNotificationManager: PirNotificationManager
+
+    @Inject
+    lateinit var pirWorkHandler: PirWorkHandler
+
+    @Inject
+    lateinit var pirFeatureDataCleaner: PirFeatureDataCleaner
+
+    @Inject
+    lateinit var pirPixelSender: PirPixelSender
+
+    @Inject
+    lateinit var pirScanWideEvent: PirScanWideEvent
+
+    private var isRunInProgress = false
+
+    override fun onCreate() {
+        super.onCreate()
+        AndroidInjection.inject(this)
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
+    }
+
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
+        logcat { "PIR-SCAN: PIR service started on ${Process.myPid()} thread: ${Thread.currentThread().name}" }
+        if (intent?.action == ACTION_SHOW_SCAN_NOTIFICATION) {
+            showScanNotificationForRunInProgress(startId)
+            return START_NOT_STICKY
+        }
+
+        val executionType = intent?.getStringExtra(EXTRA_EXECUTION_TYPE)?.let { PirExecutionType.valueOf(it) }
+            ?: PirExecutionType.MANUAL_INITIAL
+        try {
+            startForegroundWithScanNotification()
+        } catch (_: Exception) {
+            logcat(LogPriority.ERROR) { "PIR-SCAN: Could not start the service as foreground!" }
+            pirPixelSender.reportManualScanStartFailed()
+            // Record a one-shot Cancelled wide event for the run that never started (no flow is open yet).
+            launch { pirScanWideEvent.onRunCancelledBeforeStart(executionType, CancellationReason.FOREGROUND_START_FAILED) }
+            // If we can't start as a foreground service, there's no point in continuing.
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        isRunInProgress = true
+        launch {
+            val eligibility = pirWorkHandler.canRunPir().firstOrNull()
+            if (eligibility is PirEligibility.Disabled) {
+                logcat { "PIR-SCAN: PIR scan not allowed to run!" }
+                val reason = CancellationReason.fromDisabledReason(eligibility.reason)
+                // Record a one-shot Cancelled wide event for the run that never started.
+                pirScanWideEvent.onRunCancelledBeforeStart(executionType, reason)
+                pirWorkHandler.cancelWork(reason)
+                pirFeatureDataCleaner.removeAllData()
+                stopSelf()
+                return@launch
+            }
+
+            val runMode = eligibility.runModeOrNull ?: run {
+                logcat { "PIR-SCAN: No eligibility emission, cannot resolve run mode!" }
+                stopSelf()
+                return@launch
+            }
+            pirJobsRunner.runEligibleJobs(this@PirForegroundScanService, executionType, runMode)
+            stopSelf()
+        }
+
+        logcat { "PIR-SCAN: START_NOT_STICKY" }
+        return START_NOT_STICKY
+    }
+
+    /**
+     * The scan notification is not shown when the run starts without the notification permission, and
+     * granting it later does not show it either, so the dashboard asks for it once the permission is granted.
+     */
+    private fun showScanNotificationForRunInProgress(startId: Int) {
+        if (!isRunInProgress) {
+            // the run finished before this arrived, which recreated the service just to deliver it
+            stopSelf(startId)
+            return
+        }
+
+        runCatching { startForegroundWithScanNotification() }
+            .onFailure { logcat(WARN) { "PIR-SCAN: Could not show the scan notification: ${it.message}" } }
+    }
+
+    private fun startForegroundWithScanNotification() {
+        val notification: Notification = pirNotificationManager.createScanStatusNotification(
+            title = getString(R.string.pirFeatureName),
+            message = getString(R.string.pirNotificationMessageInProgress),
+        )
+        ServiceCompat.startForeground(
+            this,
+            PIR_SCAN_NOTIFICATION_ID,
+            notification,
+            if (Build.VERSION.SDK_INT >= 34) {
+                FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                0
+            },
+        )
+    }
+
+    override fun onLowMemory() {
+        logcat(WARN) { "PIR-SCAN: onLowMemory called" }
+        pirPixelSender.reportManualScanLowMemory()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        logcat(WARN) { "PIR-SCAN: onTrimMemory called with level: $level" }
+    }
+
+    override fun onDestroy() {
+        logcat { "PIR-SCAN: PIR service destroyed" }
+        // an instance recreated only to show the notification ran no jobs, and the runner is shared with the scheduled worker
+        if (isRunInProgress) {
+            pirJobsRunner.stop()
+        }
+        isRunInProgress = false
+    }
+
+    companion object {
+        private const val PIR_SCAN_NOTIFICATION_ID = 8791
+        private const val EXTRA_EXECUTION_TYPE = "extra_execution_type"
+        private const val ACTION_SHOW_SCAN_NOTIFICATION = "com.duckduckgo.pir.action.SHOW_SCAN_NOTIFICATION"
+
+        fun intentFor(
+            context: Context,
+            executionType: PirExecutionType,
+        ): Intent = Intent(context, PirForegroundScanService::class.java).apply {
+            putExtra(EXTRA_EXECUTION_TYPE, executionType.name)
+        }
+
+        /** Only shows the notification of a scan that is already running, without starting another run. */
+        fun intentForShowScanNotification(context: Context): Intent = Intent(context, PirForegroundScanService::class.java).apply {
+            action = ACTION_SHOW_SCAN_NOTIFICATION
+        }
+
+        // This method was deprecated in API level 26. As of Build.VERSION_CODES.O,
+        // this method is no longer available to third party applications.
+        // For backwards compatibility, it will still return the caller's own services.
+        // So for us it's still valid because we don't need to know third party services, just ours.
+        @Suppress("DEPRECATION")
+        internal fun isServiceRunning(context: Context): Boolean {
+            val manager = kotlin.runCatching {
+                context.getSystemService(ACTIVITY_SERVICE) as ActivityManager
+            }.getOrElse {
+                return false
+            }
+
+            for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+                if (PirForegroundScanService::class.java.name == service.service.className) {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+}

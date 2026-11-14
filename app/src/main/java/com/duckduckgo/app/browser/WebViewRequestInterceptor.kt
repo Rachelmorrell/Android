@@ -21,19 +21,40 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import androidx.annotation.WorkerThread
-import com.duckduckgo.app.browser.useragent.UserAgentProvider
-import com.duckduckgo.app.global.isHttp
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControl
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControlManager
-import com.duckduckgo.app.httpsupgrade.HttpsUpgrader
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer
+import com.duckduckgo.adclick.api.AdClickManager
+import com.duckduckgo.app.browser.webview.MaliciousSiteBlockerWebViewIntegration
+import com.duckduckgo.app.browser.webview.RealMaliciousSiteBlockerWebViewIntegration.IsMaliciousViewData
+import com.duckduckgo.app.browser.webview.RealMaliciousSiteBlockerWebViewIntegration.IsMaliciousViewData.Ignored
+import com.duckduckgo.app.browser.webview.RealMaliciousSiteBlockerWebViewIntegration.IsMaliciousViewData.MaliciousSite
+import com.duckduckgo.app.browser.webview.RealMaliciousSiteBlockerWebViewIntegration.IsMaliciousViewData.Safe
+import com.duckduckgo.app.browser.webview.RealMaliciousSiteBlockerWebViewIntegration.IsMaliciousViewData.WaitForConfirmation
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.di.IsMainProcess
 import com.duckduckgo.app.privacy.db.PrivacyProtectionCountDao
-import com.duckduckgo.app.privacy.model.TrustedSites
 import com.duckduckgo.app.surrogates.ResourceSurrogates
-import com.duckduckgo.app.trackerdetection.TrackerDetector
+import com.duckduckgo.app.trackerdetection.CloakedCnameDetector
+import com.duckduckgo.app.trackerdetection.WebTrackersBlockedHistory
+import com.duckduckgo.app.trackerdetection.model.TrackerStatus
 import com.duckduckgo.app.trackerdetection.model.TrackingEvent
-import kotlinx.coroutines.Dispatchers
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.common.utils.AppUrl
+import com.duckduckgo.common.utils.DefaultDispatcherProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.isHttp
+import com.duckduckgo.httpsupgrade.api.HttpsUpgrader
+import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed
+import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.MaliciousStatus
+import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.MaliciousStatus.Malicious
+import com.duckduckgo.request.filterer.api.RequestFilterer
+import com.duckduckgo.request.interception.impl.BlocklistVerdict
+import com.duckduckgo.request.interception.impl.RequestExemptions
+import com.duckduckgo.request.interception.impl.RequestRewriteDecision
+import com.duckduckgo.tracker.detection.api.TrackerDetector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
+import logcat.logcat
 
 interface RequestInterceptor {
 
@@ -41,15 +62,26 @@ interface RequestInterceptor {
     suspend fun shouldIntercept(
         request: WebResourceRequest,
         webView: WebView,
-        documentUrl: String?,
-        webViewClientListener: WebViewClientListener?
+        documentUri: Uri?,
+        webViewClientListener: WebViewClientListener?,
     ): WebResourceResponse?
 
     @WorkerThread
     suspend fun shouldInterceptFromServiceWorker(
         request: WebResourceRequest?,
-        documentUrl: String?
+        documentUrl: Uri?,
     ): WebResourceResponse?
+
+    fun onPageStarted(url: String)
+
+    fun shouldOverrideUrlLoading(
+        webViewClientListener: WebViewClientListener?,
+        url: Uri,
+        documentUrl: Uri?,
+        isForMainFrame: Boolean,
+    ): Boolean
+
+    fun addExemptedMaliciousSite(url: Uri, feed: Feed)
 }
 
 class WebViewRequestInterceptor(
@@ -57,9 +89,38 @@ class WebViewRequestInterceptor(
     private val trackerDetector: TrackerDetector,
     private val httpsUpgrader: HttpsUpgrader,
     private val privacyProtectionCountDao: PrivacyProtectionCountDao,
-    private val globalPrivacyControl: GlobalPrivacyControl,
-    private val userAgentProvider: UserAgentProvider
+    private val adClickManager: AdClickManager,
+    private val cloakedCnameDetector: CloakedCnameDetector,
+    private val requestFilterer: RequestFilterer,
+    private val requestExemptions: RequestExemptions,
+    private val requestRewriteDecision: RequestRewriteDecision,
+    private val duckPlayer: DuckPlayer,
+    private val maliciousSiteBlockerWebViewIntegration: MaliciousSiteBlockerWebViewIntegration,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    @IsMainProcess private val isMainProcess: Boolean,
+    private val webTrackersBlockedHistory: WebTrackersBlockedHistory,
 ) : RequestInterceptor {
+
+    private var checkMaliciousAfterHttpsUpgrade = false
+
+    init {
+        if (isMainProcess) {
+            loadToMemory()
+        }
+    }
+
+    private fun loadToMemory() {
+        appCoroutineScope.launch(dispatchers.io()) {
+            checkMaliciousAfterHttpsUpgrade = androidBrowserConfigFeature.checkMaliciousAfterHttpsUpgrade().isEnabled()
+        }
+    }
+
+    override fun onPageStarted(url: String) {
+        requestFilterer.registerOnPageCreated(url)
+        maliciousSiteBlockerWebViewIntegration.onPageLoadStarted(url)
+    }
 
     /**
      * Notify the application of a resource request and allow the application to return the data.
@@ -74,107 +135,251 @@ class WebViewRequestInterceptor(
     override suspend fun shouldIntercept(
         request: WebResourceRequest,
         webView: WebView,
-        documentUrl: String?,
-        webViewClientListener: WebViewClientListener?
+        documentUri: Uri?,
+        webViewClientListener: WebViewClientListener?,
     ): WebResourceResponse? {
+        val url: Uri = request.url
+        val documentUrlString = documentUri.toString()
+        val urlString = url.toString()
 
-        val url = request.url
+        if (!checkMaliciousAfterHttpsUpgrade) {
+            maliciousSiteBlockerWebViewIntegration.shouldIntercept(request, documentUri) { isMalicious ->
+                handleConfirmationCallback(isMalicious, webViewClientListener, url, documentUri, request.isForMainFrame)
+            }.let {
+                if (shouldBlock(it, webViewClientListener, url, documentUri, request.isForMainFrame)) return WebResourceResponse(null, null, null)
+            }
+        }
+
+        if (requestFilterer.shouldFilterOutRequest(request, documentUrlString)) return WebResourceResponse(null, null, null)
+
+        adClickManager.detectAdClick(urlString, request.isForMainFrame)
 
         newUserAgent(request, webView, webViewClientListener)?.let {
-            withContext(Dispatchers.Main) {
+            withContext(dispatchers.main()) {
                 webView.settings?.userAgentString = it
-                webView.loadUrl(url.toString(), getHeaders(request))
+                webView.loadUrl(urlString, requestRewriteDecision.getHeaders(request))
             }
             return WebResourceResponse(null, null, null)
         }
+
+        if (appUrlPixel(url)) return null
 
         if (shouldUpgrade(request)) {
-            val newUri = httpsUpgrader.upgrade(url)
+            val newUri = url?.let { httpsUpgrader.upgrade(url) }
 
-            withContext(Dispatchers.Main) {
-                webView.loadUrl(newUri.toString(), getHeaders(request))
+            withContext(dispatchers.main()) {
+                // Must run before loadUrl: the cancelled http request's callbacks must see the upgrade
+                webViewClientListener?.upgradedToHttps()
+                webView.loadUrl(newUri.toString(), requestRewriteDecision.getHeaders(request))
             }
 
-            webViewClientListener?.upgradedToHttps()
-            privacyProtectionCountDao.incrementUpgradeCount()
+            appCoroutineScope.launch(dispatchers.io()) { privacyProtectionCountDao.incrementUpgradeCount() }
             return WebResourceResponse(null, null, null)
         }
 
-        if (shouldAddGcpHeaders(request) && !requestWasInTheStack(url, webView)) {
-            withContext(Dispatchers.Main) {
+        if (checkMaliciousAfterHttpsUpgrade) {
+            maliciousSiteBlockerWebViewIntegration.shouldIntercept(request, documentUri) { isMalicious ->
+                handleConfirmationCallback(isMalicious, webViewClientListener, url, documentUri, request.isForMainFrame)
+            }.let {
+                if (shouldBlock(it, webViewClientListener, url, documentUri, request.isForMainFrame)) return WebResourceResponse(null, null, null)
+            }
+        }
+
+        if (url != null) {
+            duckPlayer.intercept(request, url, webView)?.let { return it }
+        }
+
+        if (url != null && requestRewriteDecision.shouldAddGpcHeaders(request) && !requestWasInTheStack(url, webView)) {
+            withContext(dispatchers.main()) {
                 webViewClientListener?.redirectTriggeredByGpc()
-                webView.loadUrl(url.toString(), getHeaders(request))
+                webView.loadUrl(urlString, requestRewriteDecision.getHeaders(request))
             }
             return WebResourceResponse(null, null, null)
         }
 
-        if (documentUrl == null) return null
+        if (documentUri == null) return null
 
-        if (TrustedSites.isTrusted(documentUrl)) {
+        if (requestExemptions.isTrusted(documentUri)) {
             return null
         }
 
         if (url != null && url.isHttp) {
-            webViewClientListener?.pageHasHttpResources(documentUrl)
+            webViewClientListener?.pageHasHttpResources(documentUri)
         }
 
-        return getWebResourceResponse(request, documentUrl, webViewClientListener)
+        when (requestExemptions.blocklistVerdict(request.isForMainFrame, documentUri, url)) {
+            BlocklistVerdict.BLOCKED -> return WebResourceResponse(null, null, null)
+            BlocklistVerdict.EXEMPTED -> return null
+            BlocklistVerdict.NOT_LISTED -> Unit
+        }
+
+        return getWebResourceResponse(request, documentUri, webViewClientListener)
+    }
+
+    override fun shouldOverrideUrlLoading(
+        webViewClientListener: WebViewClientListener?,
+        url: Uri,
+        documentUrl: Uri?,
+        isForMainFrame: Boolean,
+    ): Boolean {
+        maliciousSiteBlockerWebViewIntegration.shouldOverrideUrlLoading(
+            url,
+            isForMainFrame,
+        ) { isMalicious ->
+            handleConfirmationCallback(isMalicious, webViewClientListener, url, documentUrl, isForMainFrame)
+        }.let {
+            return shouldBlock(it, webViewClientListener, url, documentUrl, isForMainFrame)
+        }
     }
 
     override suspend fun shouldInterceptFromServiceWorker(
         request: WebResourceRequest?,
-        documentUrl: String?
+        documentUrl: Uri?,
     ): WebResourceResponse? {
-
         if (documentUrl == null) return null
         if (request == null) return null
 
-        if (TrustedSites.isTrusted(documentUrl)) {
+        if (requestExemptions.isTrusted(documentUrl)) {
             return null
         }
 
         return getWebResourceResponse(request, documentUrl, null)
     }
 
-    private fun getWebResourceResponse(request: WebResourceRequest, documentUrl: String?, webViewClientListener: WebViewClientListener?): WebResourceResponse? {
+    private fun shouldBlock(
+        result: IsMaliciousViewData,
+        webViewClientListener: WebViewClientListener?,
+        url: Uri,
+        documentUrl: Uri?,
+        isForMainFrame: Boolean,
+    ): Boolean {
+        when (result) {
+            WaitForConfirmation, Ignored -> return false
+            is Safe -> {
+                handleSiteSafe(webViewClientListener = webViewClientListener, uri = url, isForMainFrame = result.isForMainFrame)
+                return false
+            }
+            is MaliciousSite -> {
+                handleSiteBlocked(
+                    webViewClientListener = webViewClientListener,
+                    maliciousUri = url,
+                    documentUrl = documentUrl,
+                    feed = result.feed,
+                    exempted = result.exempted,
+                    clientSideHit = result.clientSideHit,
+                    isForMainFrame = isForMainFrame,
+                )
+                return !result.exempted
+            }
+        }
+    }
+
+    private fun handleConfirmationCallback(
+        isMalicious: MaliciousStatus,
+        webViewClientListener: WebViewClientListener?,
+        url: Uri,
+        documentUrl: Uri?,
+        isForMainFrame: Boolean,
+    ) {
+        when (isMalicious) {
+            is Malicious -> {
+                /* If the site is exempted, we'll never get here, as we won't call isMalicious */
+                handleSiteBlocked(
+                    webViewClientListener = webViewClientListener,
+                    maliciousUri = url,
+                    documentUrl = documentUrl,
+                    feed = isMalicious.feed,
+                    exempted = false,
+                    clientSideHit = false,
+                    isForMainFrame = isForMainFrame,
+                )
+            }
+            is MaliciousStatus.Safe -> {
+                handleSiteSafe(webViewClientListener = webViewClientListener, uri = url, isForMainFrame = isForMainFrame)
+            }
+            is MaliciousStatus.Ignored -> { /* Do nothing */ }
+        }
+    }
+
+    private fun handleSiteBlocked(
+        webViewClientListener: WebViewClientListener?,
+        maliciousUri: Uri,
+        documentUrl: Uri?,
+        feed: Feed,
+        exempted: Boolean,
+        clientSideHit: Boolean,
+        isForMainFrame: Boolean,
+    ) {
+        webViewClientListener?.onReceivedMaliciousSiteWarning(
+            url = if (isForMainFrame || documentUrl == null) maliciousUri else documentUrl,
+            feed = feed,
+            exempted = exempted,
+            clientSideHit = clientSideHit,
+            isMainframe = isForMainFrame,
+        )
+    }
+
+    private fun handleSiteSafe(
+        webViewClientListener: WebViewClientListener?,
+        uri: Uri?,
+        isForMainFrame: Boolean,
+    ) {
+        uri?.let { webViewClientListener?.onReceivedMaliciousSiteSafe(url = it, isForMainFrame = isForMainFrame) }
+    }
+
+    override fun addExemptedMaliciousSite(url: Uri, feed: Feed) {
+        maliciousSiteBlockerWebViewIntegration.onSiteExempted(url, feed)
+    }
+
+    private fun getWebResourceResponse(
+        request: WebResourceRequest,
+        documentUrl: Uri,
+        webViewClientListener: WebViewClientListener?,
+    ): WebResourceResponse? {
         val trackingEvent = trackingEvent(request, documentUrl, webViewClientListener)
-        if (trackingEvent?.blocked == true) {
-            trackingEvent.surrogateId?.let { surrogateId ->
-                val surrogate = resourceSurrogates.get(surrogateId)
-                if (surrogate.responseAvailable) {
-                    Timber.d("Surrogate found for ${request.url}")
-                    webViewClientListener?.surrogateDetected(surrogate)
-                    return WebResourceResponse(surrogate.mimeType, "UTF-8", surrogate.jsFunction.byteInputStream())
+        if (trackingEvent?.status == TrackerStatus.BLOCKED) {
+            recordTrackerBlocked(trackingEvent)
+            return blockRequest(trackingEvent, request, webViewClientListener)
+        } else if (trackingEvent == null ||
+            trackingEvent.status == TrackerStatus.ALLOWED ||
+            trackingEvent.status == TrackerStatus.SAME_ENTITY_ALLOWED
+        ) {
+            cloakedCnameDetector.detectCnameCloakedHost(documentUrl.toString(), request.url)?.let { uncloakedHost ->
+                trackingEvent(request, documentUrl, webViewClientListener, false, uncloakedHost)?.let { cloakedTrackingEvent ->
+                    if (cloakedTrackingEvent.status == TrackerStatus.BLOCKED) {
+                        recordTrackerBlocked(cloakedTrackingEvent)
+                        return blockRequest(cloakedTrackingEvent, request, webViewClientListener)
+                    }
                 }
             }
-
-            Timber.d("Blocking request ${request.url}")
-            privacyProtectionCountDao.incrementBlockedTrackerCount()
-            return WebResourceResponse(null, null, null)
         }
-
         return null
     }
 
-    private fun getHeaders(request: WebResourceRequest): Map<String, String> {
-        return request.requestHeaders.apply {
-            putAll(globalPrivacyControl.getHeaders())
+    private fun blockRequest(
+        trackingEvent: TrackingEvent,
+        request: WebResourceRequest,
+        webViewClientListener: WebViewClientListener?,
+    ): WebResourceResponse {
+        trackingEvent.surrogateId?.let { surrogateId ->
+            val surrogate = resourceSurrogates.get(surrogateId)
+            if (surrogate.responseAvailable) {
+                logcat { "Surrogate found for ${request.url}" }
+                webViewClientListener?.surrogateDetected(surrogate)
+                return WebResourceResponse(surrogate.mimeType, "UTF-8", surrogate.jsFunction.byteInputStream())
+            }
         }
+
+        logcat { "Blocking request ${request.url}" }
+        appCoroutineScope.launch(dispatchers.io()) { privacyProtectionCountDao.incrementBlockedTrackerCount() }
+        return WebResourceResponse(null, null, null)
     }
 
-    private fun shouldAddGcpHeaders(request: WebResourceRequest): Boolean {
-        val headers = request.requestHeaders
-        return (
-            globalPrivacyControl.isGpcActive() &&
-                !headers.containsKey(GlobalPrivacyControlManager.GPC_HEADER) &&
-                request.isForMainFrame &&
-                request.method == "GET" &&
-                globalPrivacyControl.shouldAddHeaders(request.url)
-            )
-    }
-
-    private suspend fun requestWasInTheStack(url: Uri, webView: WebView): Boolean {
-        return withContext(Dispatchers.Main) {
+    private suspend fun requestWasInTheStack(
+        url: Uri,
+        webView: WebView,
+    ): Boolean {
+        return withContext(dispatchers.main()) {
             val webBackForwardList = webView.copyBackForwardList()
             webBackForwardList.currentItem?.url == url.toString()
         }
@@ -183,15 +388,15 @@ class WebViewRequestInterceptor(
     private suspend fun newUserAgent(
         request: WebResourceRequest,
         webView: WebView,
-        webViewClientListener: WebViewClientListener?
+        webViewClientListener: WebViewClientListener?,
     ): String? {
         return if (request.isForMainFrame && request.method == "GET") {
             val url = request.url ?: return null
             if (requestWasInTheStack(url, webView)) return null
-            val desktopSiteEnabled = webViewClientListener?.isDesktopSiteEnabled() == true
-            val currentAgent = withContext(Dispatchers.Main) { webView.settings?.userAgentString }
-            val newAgent = userAgentProvider.userAgent(url.toString(), desktopSiteEnabled)
-            return if (currentAgent != newAgent) {
+            val desktopSiteEnabled = webViewClientListener?.isDesktopSiteEnabled(url.toString()) == true
+            val currentAgent = withContext(dispatchers.main()) { webView.settings.userAgentString }
+            val newAgent = requestRewriteDecision.userAgent(url.toString(), desktopSiteEnabled)
+            if (currentAgent != newAgent) {
                 newAgent
             } else {
                 null
@@ -204,15 +409,33 @@ class WebViewRequestInterceptor(
     private fun shouldUpgrade(request: WebResourceRequest) =
         request.isForMainFrame && request.url != null && httpsUpgrader.shouldUpgrade(request.url)
 
-    private fun trackingEvent(request: WebResourceRequest, documentUrl: String?, webViewClientListener: WebViewClientListener?): TrackingEvent? {
-        val url = request.url.toString()
-
+    private fun trackingEvent(
+        request: WebResourceRequest,
+        documentUrl: Uri?,
+        webViewClientListener: WebViewClientListener?,
+        checkFirstParty: Boolean = true,
+        uncloakedHost: String? = null,
+    ): TrackingEvent? {
         if (request.isForMainFrame || documentUrl == null) {
             return null
         }
 
-        val trackingEvent = trackerDetector.evaluate(url, documentUrl) ?: return null
+        val trackingEvent = if (uncloakedHost != null) {
+            trackerDetector.evaluate(uncloakedHost, documentUrl, checkFirstParty, request.requestHeaders)
+        } else {
+            trackerDetector.evaluate(request.url, documentUrl, checkFirstParty, request.requestHeaders)
+        } ?: return null
         webViewClientListener?.trackerDetected(trackingEvent)
         return trackingEvent
     }
+
+    private fun recordTrackerBlocked(trackingEvent: TrackingEvent) {
+        val trackerCompany = trackingEvent.entity?.displayName ?: "Undefined"
+        appCoroutineScope.launch(dispatchers.io()) {
+            webTrackersBlockedHistory.onTrackerBlocked(trackerUrl = trackingEvent.trackerUrl, trackerCompany = trackerCompany)
+        }
+    }
+
+    private fun appUrlPixel(url: Uri?): Boolean =
+        url?.toString()?.startsWith(AppUrl.Url.PIXEL) == true
 }

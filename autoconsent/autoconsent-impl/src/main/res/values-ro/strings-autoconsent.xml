@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="autoconsentTitle">Protecție pentru ferestre pop-up aferente modulelor cookie</string>
+    <string name="autoconsentDescription"><![CDATA[DuckDuckGo va încerca să selecteze cele mai private setări disponibile și să ascundă aceste ferestre pop-up pentru tine.\n<a href=\"\">Află mai multe</a>]]></string>
+    <string name="autoconsentToggle">Lasă DuckDuckGo să se ocupe de ferestrele pop-up aferente modulelor cookie</string>
+    <string name="autoconsentAutoManageToggle">Respinge modulele cookie opționale</string>
+    <string name="autoconsentAutoManageDescription">Vom încerca să respingem cât mai multe module cookie pentru tine, apoi vom închide ferestrele pop-up.</string>
+    <string name="autoconsentCookiePopUpPreferenceHeaderDescription"><![CDATA[DuckDuckGo poate gestiona automat ferestrele pop-up aferente modulelor cookie pentru a maximiza confidențialitatea și a minimiza modulele cookie chiar înainte să le vezi.\n<a href=\"\">Află mai multe</a>]]></string>
+    <string name="autoconsentPopUpsWithoutOptOutsToggle">Acceptă modulele cookie care nu pot fi respinse</string>
+    <string name="autoconsentPopUpsWithoutOptOutsDescription">Dacă nu există o opțiune de respingere, te vom scuti de un click, vom accepta aceste module cookie pentru tine și vom închide ferestrele pop-up.</string>
+    <string name="autoconsentPromptTitle">Te-ai săturat de ferestrele pop-up cu module cookie?</string>
+    <string name="autoconsentPromptFootnote">Poți oricând să modifici ulterior din Setări.</string>
+    <string name="autoconsentPromptCpmOnMessage">Unele module cookie nu pot fi respinse. Le putem accepta pentru tine.</string>
+    <string name="autoconsentPromptCpmOnPrimaryButton">Acceptați modulele cookie pentru mine</string>
+    <string name="autoconsentPromptCpmOnPrimaryButtonV2">Respinge dacă este posibil sau acceptă pentru mine</string>
+    <string name="autoconsentPromptCpmOnSecondaryButton">Le voi accepta personal</string>
+    <string name="autoconsentPromptCpmOffMessage">Ne vom ocupa noi de ele pentru tine. Vom respinge modulele cookie când este posibil și le vom accepta pe cele care nu pot fi respinse.</string>
+    <string name="autoconsentPromptCpmOffPrimaryButton">Respingeți dacă este posibil sau acceptați pentru mine</string>
+    <string name="autoconsentPromptCpmOffSecondaryButton">Mă voi ocupa personal de ele</string>
+</resources>

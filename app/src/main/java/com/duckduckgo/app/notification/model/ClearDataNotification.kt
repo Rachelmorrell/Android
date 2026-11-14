@@ -17,39 +17,50 @@
 package com.duckduckgo.app.notification.model
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import com.duckduckgo.app.browser.R
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CANCEL
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CLEAR_DATA_LAUNCH
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.fire.AutomaticDataClearing
+import com.duckduckgo.app.firebutton.DataClearingSettingsActivity
 import com.duckduckgo.app.notification.NotificationRegistrar
 import com.duckduckgo.app.notification.db.NotificationDao
-import com.duckduckgo.app.settings.clear.ClearWhatOption
-import com.duckduckgo.app.settings.db.SettingsDataStore
-import timber.log.Timber
+import com.duckduckgo.app.pixels.AppPixelName
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
+import javax.inject.Inject
 
 class ClearDataNotification(
     private val context: Context,
     private val notificationDao: NotificationDao,
-    private val settingsDataStore: SettingsDataStore
+    private val automaticDataClearing: AutomaticDataClearing,
+    private val dispatcherProvider: DispatcherProvider,
 ) : SchedulableNotification {
 
     override val id = "com.duckduckgo.privacytips.autoclear"
-    override val launchIntent = CLEAR_DATA_LAUNCH
-    override val cancelIntent = CANCEL
 
     override suspend fun canShow(): Boolean {
-
         if (notificationDao.exists(id)) {
-            Timber.v("Notification already seen")
+            logcat(VERBOSE) { "Notification already seen" }
             return false
         }
 
-        if (settingsDataStore.automaticallyClearWhatOption != ClearWhatOption.CLEAR_NONE) {
-            Timber.v("No need for notification, user already has clear option set")
-            return false
+        return withContext(dispatcherProvider.io()) {
+            if (automaticDataClearing.isAutomaticDataClearingOptionSelected()) {
+                logcat(VERBOSE) { "No need for notification, user already has automatic data clearing option set" }
+                return@withContext false
+            }
+            return@withContext true
         }
-
-        return true
     }
 
     override suspend fun buildSpecification(): NotificationSpec {
@@ -69,5 +80,44 @@ class ClearDataSpecification(context: Context) : NotificationSpec {
     override val pixelSuffix = "cd"
     override val autoCancel = true
     override val bundle: Bundle = Bundle()
-    override val color: Int = R.color.cornflowerBlue
+    override val color: Int = context.getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorAccentBlue)
+}
+
+@ContributesIntoSet(AppScope::class)
+class ClearDataNotificationPlugin @Inject constructor(
+    private val context: Context,
+    private val schedulableNotification: ClearDataNotification,
+    private val pixel: Pixel,
+    @AppCoroutineScope private val coroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider,
+) : SchedulableNotificationPlugin {
+
+    override fun getSchedulableNotification(): SchedulableNotification {
+        return schedulableNotification
+    }
+
+    override fun onNotificationCancelled() {
+        pixel.fire(pixelName(AppPixelName.NOTIFICATION_CANCELLED.pixelName))
+    }
+
+    override fun onNotificationShown() {
+        pixel.fire(pixelName(AppPixelName.NOTIFICATION_SHOWN.pixelName))
+    }
+
+    override fun getSpecification(): NotificationSpec {
+        val deferred = coroutineScope.async(dispatcherProvider.io()) {
+            schedulableNotification.buildSpecification()
+        }
+        return runBlocking {
+            deferred.await()
+        }
+    }
+
+    override suspend fun getLaunchIntent(): Intent {
+        return DataClearingSettingsActivity.intent(context).apply {
+            putExtra(DataClearingSettingsActivity.LAUNCH_FROM_NOTIFICATION_PIXEL_NAME, pixelName(AppPixelName.NOTIFICATION_LAUNCHED.pixelName))
+        }
+    }
+
+    private fun pixelName(notificationType: String) = "${notificationType}_${getSpecification().pixelSuffix}"
 }

@@ -1,0 +1,219 @@
+/*
+ * Copyright (c) 2023 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.subscriptions.impl.ui
+
+import android.os.Bundle
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.codegen.annotations.ContributeToActivityStarter
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import com.duckduckgo.navigation.api.getActivityParams
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.RestoreSubscriptionScreenWithParams
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionsSettingsScreenWithEmptyParams
+import com.duckduckgo.subscriptions.impl.R.string
+import com.duckduckgo.subscriptions.impl.databinding.ActivityRestoreSubscriptionBinding
+import com.duckduckgo.subscriptions.impl.internal.SubscriptionsUrlProvider
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.Error
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.FinishAndGoToOnboarding
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.FinishAndGoToSubscriptionSettings
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.RestoreFromEmail
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.SubscriptionNotFound
+import com.duckduckgo.subscriptions.impl.ui.RestoreSubscriptionViewModel.Command.Success
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+
+@InjectWith(ActivityScope::class)
+@ContributeToActivityStarter(RestoreSubscriptionScreenWithParams::class)
+class RestoreSubscriptionActivity : DuckDuckGoActivity() {
+
+    @Inject
+    lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject
+    lateinit var subscriptionsUrlProvider: SubscriptionsUrlProvider
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
+    private val viewModel: RestoreSubscriptionViewModel by bindViewModel()
+    private val binding: ActivityRestoreSubscriptionBinding by viewBinding()
+
+    private var isOriginWeb = true
+    private val toolbar
+        get() = binding.includeToolbar.toolbar
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val params = intent.getActivityParams(RestoreSubscriptionScreenWithParams::class.java)
+        isOriginWeb = params?.isOriginWeb ?: true
+
+        enableTransparentEdgeToEdge()
+        setContentView(binding.root)
+        setupToolbar(toolbar)
+        configureEdgeToEdgeInsets()
+
+        viewModel.init()
+
+        viewModel.commands()
+            .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            .onEach { processCommand(it) }
+            .launchIn(lifecycleScope)
+
+        binding.title.setText(string.restoreSubscriptionTitle)
+        binding.restoreSubscriptionEmailTitle.setSecondaryText(getString(string.restoreSubscriptionEmailDescription))
+
+        // removing the click listeners from the LineListItems
+        // so that they don't trigger the selectable background animation when interacted with
+        binding.restoreSubscriptionEmailTitle.setOnClickListener(null)
+        binding.restoreSubscriptionGooglePlayTitle.setOnClickListener(null)
+
+        binding.restoreSubscriptionEmailLayout.setOnClickListener {
+            viewModel.restoreFromEmail(isOriginWeb)
+        }
+        binding.restoreSubscriptionGooglePlayLayout.setOnClickListener {
+            viewModel.restoreFromStore(isOriginWeb)
+        }
+    }
+
+    private fun configureEdgeToEdgeInsets() {
+        edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.root)
+        edgeToEdgeHandler.applyStatusBarInsets(binding.includeToolbar.appBarLayout)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.contentScrollView, drawBehindGestureNav = false)
+    }
+
+    private val startForResultRestore = registerForActivityResult(StartActivityForResult()) { result: ActivityResult ->
+        if (result.resultCode == RESULT_OK) {
+            viewModel.onSubscriptionRestoredFromEmail()
+        }
+    }
+
+    private fun goToRestore() {
+        globalActivityStarter.startForResult(
+            this,
+            SubscriptionsWebViewActivityWithParams(
+                url = subscriptionsUrlProvider.activateUrl,
+            ),
+            startForResultRestore,
+        )
+    }
+
+    private fun onPurchaseRestored() {
+        TextAlertDialogBuilder(this)
+            .setTitle(string.youAreSet)
+            .setMessage(string.purchaseRestored)
+            .setPositiveButton(string.ok)
+            .addEventListener(
+                object : TextAlertDialogBuilder.EventListener() {
+                    override fun onPositiveButtonClicked() {
+                        if (isOriginWeb) {
+                            setResult(RESULT_OK)
+                        } else {
+                            goToSubscriptionsWelcomePage()
+                        }
+                        finish()
+                    }
+                },
+            )
+            .show()
+    }
+
+    private fun goToSubscriptions() {
+        startSubscriptionsWebViewActivity(
+            url = subscriptionsUrlProvider.buyUrl,
+            origin = PURCHASE_VIEW_PLANS_ORIGIN,
+        )
+    }
+
+    private fun goToSubscriptionsWelcomePage() {
+        startSubscriptionsWebViewActivity(url = subscriptionsUrlProvider.welcomeUrl)
+    }
+
+    private fun startSubscriptionsWebViewActivity(url: String, origin: String? = null) {
+        globalActivityStarter.start(
+            context = this,
+            params = SubscriptionsWebViewActivityWithParams(url = url, origin = origin),
+        )
+    }
+
+    private fun subscriptionNotFound() {
+        TextAlertDialogBuilder(this)
+            .setTitle(string.subscriptionNotFound)
+            .setMessage(string.subscriptionNotFoundDescription)
+            .setPositiveButton(string.viewPlans)
+            .setNegativeButton(string.cancel)
+            .addEventListener(
+                object : TextAlertDialogBuilder.EventListener() {
+                    override fun onPositiveButtonClicked() {
+                        goToSubscriptions()
+                    }
+                },
+            )
+            .show()
+    }
+
+    private fun showError() {
+        TextAlertDialogBuilder(this)
+            .setTitle(string.somethingWentWrong)
+            .setMessage(string.somethingWentWrongDescription)
+            .setPositiveButton(string.ok)
+            .show()
+    }
+
+    private fun finishAndGoToOnboarding() {
+        if (isOriginWeb) {
+            setResult(RESULT_OK)
+        } else {
+            goToSubscriptionsWelcomePage()
+        }
+        finish()
+    }
+
+    private fun finishAndGoToSubscriptionSettings() {
+        if (isOriginWeb) {
+            setResult(RESULT_OK)
+        }
+        globalActivityStarter.start(this, SubscriptionsSettingsScreenWithEmptyParams)
+        finish()
+    }
+
+    private fun processCommand(command: Command) {
+        when (command) {
+            is RestoreFromEmail -> goToRestore()
+            is Success -> onPurchaseRestored()
+            is SubscriptionNotFound -> subscriptionNotFound()
+            is Error -> showError()
+            is FinishAndGoToOnboarding -> finishAndGoToOnboarding()
+            is FinishAndGoToSubscriptionSettings -> finishAndGoToSubscriptionSettings()
+        }
+    }
+
+    companion object {
+        private const val PURCHASE_VIEW_PLANS_ORIGIN = "funnel_restore_android__viewplans"
+    }
+}

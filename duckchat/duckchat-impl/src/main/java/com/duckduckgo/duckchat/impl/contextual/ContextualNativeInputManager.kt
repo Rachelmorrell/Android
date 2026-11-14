@@ -1,0 +1,345 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.contextual
+
+import android.net.Uri
+import android.webkit.ValueCallback
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.common.ui.view.gone
+import com.duckduckgo.common.ui.view.show
+import com.duckduckgo.di.scopes.FragmentScope
+import com.duckduckgo.duckchat.api.DuckAiFeatureState
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStatePublisher
+import com.duckduckgo.duckchat.impl.DuckChatInternal
+import com.duckduckgo.duckchat.impl.helper.RealDuckChatJSHelper
+import com.duckduckgo.duckchat.impl.nativeinput.footer.NativeInputFooterView
+import com.duckduckgo.duckchat.impl.ui.nativeinput.views.NativeInputLayout
+import com.duckduckgo.duckchat.impl.ui.nativeinput.views.NativeInputModeWidget
+import com.duckduckgo.js.messaging.api.JsMessaging
+import com.duckduckgo.js.messaging.api.SubscriptionEventData
+import com.duckduckgo.voice.api.VoiceSearchAvailability
+import dev.zacsweers.metro.ContributesBinding
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import org.json.JSONArray
+import org.json.JSONObject
+import javax.inject.Inject
+
+/**
+ * A prompt submitted from the unified input widget in the contextual sheet, in either the initial
+ * (INPUT) state or a running chat (WEBVIEW). Carries the widget's current model/reasoning/tool/
+ * attachment selections so the chat is submitted with everything the user configured.
+ */
+data class NativeInputPrompt(
+    val prompt: String,
+    val modelId: String?,
+    val reasoningEffort: String?,
+    val selectedTool: String?,
+    val imagesJson: JSONArray?,
+    val filesJson: JSONArray?,
+    val selectionsJson: JSONArray? = null,
+)
+
+interface ContextualNativeInputManager {
+    fun init(
+        tabId: String,
+        inputLayout: NativeInputLayout,
+        footer: NativeInputFooterView? = null,
+        jsMessaging: JsMessaging,
+        lifecycleOwner: LifecycleOwner,
+        chatIdFlow: Flow<String?>,
+        onSearchSubmitted: (String) -> Unit,
+        onCameraCaptureRequested: (ValueCallback<Array<Uri>>) -> Unit = {},
+        onFilePickerRequested: (ValueCallback<Array<Uri>>, List<String>) -> Unit = { _, _ -> },
+        // Invoked when the widget submits a prompt, in both INPUT and WEBVIEW modes. Routing every submit
+        // through the ViewModel keeps prompt-building (and page-context attachment) in one place.
+        onPromptSubmitted: (NativeInputPrompt) -> Unit = {},
+        onAskAboutPage: () -> Unit = {},
+        onPageContextRemoved: () -> Unit = {},
+        onVoiceChatRequested: () -> Unit = {},
+        onVoiceSearchRequested: () -> Unit = {},
+        onInputFocusChanged: (Boolean) -> Unit = {},
+        onInputVisibilityChanged: (Boolean) -> Unit = {},
+    )
+
+    fun onWebViewMode()
+    fun onInputMode()
+
+    /**
+     * Called when the contextual sheet is closed (e.g. STATE_HIDDEN). Reverts the per-tab
+     * [NativeInputState] back to a browser-context default so other observers (like StartChatView
+     * in the main widget) don't keep reading the DUCK_AI_CONTEXTUAL/DUCK_AI values the contextual
+     * widget wrote during its lifetime.
+     */
+    fun onContextualClosed(tabId: String)
+
+    /**
+     * Called when the contextual sheet is reopened for a tab that was previously closed. Restores the
+     * per-tab [NativeInputState] to the contextual (DUCK_AI) values that [onContextualClosed] reverted,
+     * so the widget's plugin controls (attach, model picker, tools — gated on toggleSelection == DUCK_AI)
+     * reappear. Without this the reused widget keeps the browser/search state and renders without them.
+     */
+    fun onContextualReopened(tabId: String)
+}
+
+@ContributesBinding(FragmentScope::class)
+class RealContextualNativeInputManager @Inject constructor(
+    private val duckChatInternal: DuckChatInternal,
+    private val nativeInputStatePublisher: NativeInputStatePublisher,
+    private val duckAiFeatureState: DuckAiFeatureState,
+    private val voiceSearchAvailability: VoiceSearchAvailability,
+) : ContextualNativeInputManager {
+
+    private var isNativeInputEnabled = false
+    private var isContextualNativeInputEnabled = false
+    private var inputLayout: NativeInputLayout? = null
+    private var footer: NativeInputFooterView? = null
+    private var jsMessaging: JsMessaging? = null
+    private var widget: NativeInputModeWidget? = null
+    private var lastMode: Mode? = null
+    private var onInputVisibilityChanged: (Boolean) -> Unit = {}
+    private val modelPickerEnabled = MutableStateFlow(true)
+
+    private enum class Mode { WEBVIEW, INPUT }
+
+    override fun init(
+        tabId: String,
+        inputLayout: NativeInputLayout,
+        footer: NativeInputFooterView?,
+        jsMessaging: JsMessaging,
+        lifecycleOwner: LifecycleOwner,
+        chatIdFlow: Flow<String?>,
+        onSearchSubmitted: (String) -> Unit,
+        onCameraCaptureRequested: (ValueCallback<Array<Uri>>) -> Unit,
+        onFilePickerRequested: (ValueCallback<Array<Uri>>, List<String>) -> Unit,
+        onPromptSubmitted: (NativeInputPrompt) -> Unit,
+        onAskAboutPage: () -> Unit,
+        onPageContextRemoved: () -> Unit,
+        onVoiceChatRequested: () -> Unit,
+        onVoiceSearchRequested: () -> Unit,
+        onInputFocusChanged: (Boolean) -> Unit,
+        onInputVisibilityChanged: (Boolean) -> Unit,
+    ) {
+        this.inputLayout = inputLayout
+        this.footer = footer
+        this.jsMessaging = jsMessaging
+        val widget = inputLayout.widget
+        this.widget = widget
+        this.onInputVisibilityChanged = onInputVisibilityChanged
+
+        setupWidget(
+            tabId, widget, chatIdFlow, onSearchSubmitted,
+            onCameraCaptureRequested, onFilePickerRequested,
+            onPromptSubmitted, onAskAboutPage, onPageContextRemoved,
+            onVoiceChatRequested, onVoiceSearchRequested, onInputFocusChanged,
+        )
+        observeNativeInputSetting(lifecycleOwner)
+        observeVoiceChatEntry(widget, lifecycleOwner)
+        observeVoiceSearchEntry(widget, lifecycleOwner)
+    }
+
+    override fun onContextualClosed(tabId: String) {
+        if (tabId.isBlank()) return
+        val browser = NativeInputState.InputContext.BROWSER
+        nativeInputStatePublisher.update(tabId) {
+            it.copy(
+                inputContext = browser,
+                toggleSelection = NativeInputState.defaultToggleFor(browser),
+            )
+        }
+    }
+
+    override fun onContextualReopened(tabId: String) {
+        if (tabId.isBlank()) return
+        val contextual = NativeInputState.InputContext.DUCK_AI_CONTEXTUAL
+        nativeInputStatePublisher.update(tabId) {
+            it.copy(
+                inputContext = contextual,
+                toggleSelection = NativeInputState.defaultToggleFor(contextual),
+            )
+        }
+    }
+
+    override fun onWebViewMode() {
+        lastMode = Mode.WEBVIEW
+        if (isNativeInputEnabled) {
+            setInputVisible(true)
+            // WEBVIEW mode means a chat is in progress.
+            // Hide the picker so the user can't change models mid-chat.
+            modelPickerEnabled.value = false
+        } else {
+            setInputVisible(false)
+        }
+    }
+
+    override fun onInputMode() {
+        lastMode = Mode.INPUT
+        if (isContextualNativeInputEnabled) {
+            // The unified input widget is the composer for the initial sheet.
+            setInputVisible(true)
+            // INPUT mode is a new chat: restore the picker so the user can pick a model before starting.
+            modelPickerEnabled.value = true
+        } else {
+            // contextualNativeInput off: the legacy EditText composer is shown instead, so keep the card hidden.
+            setInputVisible(false)
+        }
+    }
+
+    private fun setInputVisible(visible: Boolean) {
+        if (visible) {
+            inputLayout?.show()
+        } else {
+            inputLayout?.gone()
+        }
+        footer?.setSurfaceVisible(visible)
+        onInputVisibilityChanged(visible)
+    }
+
+    private fun setupWidget(
+        tabId: String,
+        widget: NativeInputModeWidget,
+        chatIdFlow: Flow<String?>,
+        onSearchSubmitted: (String) -> Unit,
+        onCameraCaptureRequested: (ValueCallback<Array<Uri>>) -> Unit,
+        onFilePickerRequested: (ValueCallback<Array<Uri>>, List<String>) -> Unit,
+        onPromptSubmitted: (NativeInputPrompt) -> Unit,
+        onAskAboutPage: () -> Unit,
+        onPageContextRemoved: () -> Unit,
+        onVoiceChatRequested: () -> Unit,
+        onVoiceSearchRequested: () -> Unit,
+        onInputFocusChanged: (Boolean) -> Unit,
+    ) {
+        widget.configureContextual(tabId)
+        widget.bindTextSelections(tabId, textSelection = null)
+        widget.bindChatIdSource(chatIdFlow)
+        widget.bindModelPickerEnabledSource(modelPickerEnabled)
+        widget.onStopTapped = ::sendStopEvent
+        widget.onInputFocusChanged = { focused ->
+            sendInputFocusedEvent(focused)
+            onInputFocusChanged(focused)
+        }
+        widget.onVoiceChatClick = onVoiceChatRequested
+        widget.onVoiceSearchClick = onVoiceSearchRequested
+        widget.bindAttachmentCallbacks(
+            onCameraCaptureRequested = onCameraCaptureRequested,
+            onFilePickerRequested = onFilePickerRequested,
+        )
+        widget.setContextualAttachmentActions(
+            onAskAboutPage = onAskAboutPage,
+            onPageContextRemoved = onPageContextRemoved,
+        )
+        widget.bindInputEvents(
+            onSearchTextChanged = { },
+            onSearchSubmitted = { query ->
+                onSearchSubmitted(query)
+            },
+            onChatSubmitted = { prompt ->
+                val imagesJson = widget.getImageAttachmentsJson()
+                val filesJson = widget.getFileAttachmentsJson()
+                val selectionsJson = widget.getTextSelectionsJson()
+                val modelId = widget.getSelectedModelId()
+                val reasoningEffort = widget.getResolvedReasoningEffort()
+                val selectedTool = widget.getSelectedTool()
+                widget.clearAttachments()
+                // Both the initial submit (INPUT) and follow-ups in a running chat (WEBVIEW) go through the
+                // ViewModel so the prompt is built in one place (generateContextPrompt). That single path is
+                // what attaches any page context the user added from the "+" menu; the previous WEBVIEW
+                // shortcut built its own JS event and silently dropped that context. onPromptSent starts a
+                // new chat from INPUT and appends to the active chat from WEBVIEW — the web page decides
+                // which, based on its own state, not on the native caller.
+                widget.onPromptSubmitted()
+                onPromptSubmitted(
+                    NativeInputPrompt(prompt, modelId, reasoningEffort, selectedTool, imagesJson, filesJson, selectionsJson),
+                )
+                widget.clearSelectedTool()
+                widget.text = ""
+            },
+        )
+    }
+
+    private fun observeNativeInputSetting(lifecycleOwner: LifecycleOwner) {
+        isContextualNativeInputEnabled = duckChatInternal.isContextualNativeInputEnabled()
+        duckChatInternal.observeNativeChatInputEnabled()
+            .onEach { isEnabled ->
+                isNativeInputEnabled = isEnabled
+                when (lastMode) {
+                    Mode.WEBVIEW -> onWebViewMode()
+                    Mode.INPUT -> onInputMode()
+                    null -> {}
+                }
+            }
+            .launchIn(lifecycleOwner.lifecycleScope)
+    }
+
+    private fun observeVoiceChatEntry(
+        widget: NativeInputModeWidget,
+        lifecycleOwner: LifecycleOwner,
+    ) {
+        duckAiFeatureState.showVoiceChatEntry
+            .onEach { widget.setVoiceChatAvailable(it) }
+            .launchIn(lifecycleOwner.lifecycleScope)
+    }
+
+    private fun observeVoiceSearchEntry(
+        widget: NativeInputModeWidget,
+        lifecycleOwner: LifecycleOwner,
+    ) {
+        combine(
+            voiceSearchAvailability.observeVoiceSearchAvailability(),
+            duckAiFeatureState.showVoiceSearchToggle,
+        ) { deviceAvailable, duckAiEntryEnabled ->
+            deviceAvailable && duckAiEntryEnabled
+        }
+            .onEach { widget.setVoiceSearchAvailable(it) }
+            .launchIn(lifecycleOwner.lifecycleScope)
+    }
+
+    private fun sendStartUsingWeeklyLimitEvent() {
+        jsMessaging?.sendSubscriptionEvent(
+            SubscriptionEventData(
+                featureName = RealDuckChatJSHelper.DUCK_CHAT_FEATURE_NAME,
+                subscriptionName = "submitStartUsingWeeklyLimitAction",
+                params = JSONObject().put("platform", "android"),
+            ),
+        )
+    }
+
+    private fun sendInputFocusedEvent(focused: Boolean) {
+        jsMessaging?.sendSubscriptionEvent(
+            SubscriptionEventData(
+                featureName = RealDuckChatJSHelper.DUCK_CHAT_FEATURE_NAME,
+                subscriptionName = "submitNativeInputFocused",
+                params = JSONObject().put("focused", focused),
+            ),
+        )
+    }
+
+    private fun sendStopEvent() {
+        jsMessaging?.sendSubscriptionEvent(
+            SubscriptionEventData(
+                featureName = RealDuckChatJSHelper.DUCK_CHAT_FEATURE_NAME,
+                subscriptionName = "submitPromptInterruption",
+                params = JSONObject("{}"),
+            ),
+        )
+    }
+}

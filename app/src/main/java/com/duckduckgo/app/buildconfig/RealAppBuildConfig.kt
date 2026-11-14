@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.buildconfig
+
+import android.content.Context
+import android.os.Build
+import com.duckduckgo.app.browser.BuildConfig
+import com.duckduckgo.app.install.ReinstallDetector
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.appbuildconfig.api.BuildFlavor
+import com.duckduckgo.appbuildconfig.api.isInternalBuild
+import com.duckduckgo.devicemigration.api.DeviceMigration
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.experiments.api.VariantManager
+import dev.zacsweers.metro.ContributesBinding
+import java.lang.IllegalStateException
+import java.util.*
+import javax.inject.Inject
+
+@ContributesBinding(AppScope::class)
+class RealAppBuildConfig @Inject constructor(
+    private val variantManager: Lazy<VariantManager>, // break any possible DI dependency cycle
+    private val reinstallDetector: Lazy<ReinstallDetector>, // break any possible DI dependency cycle
+    private val deviceMigration: Lazy<DeviceMigration>, // break any possible DI dependency cycle
+    private val context: Context,
+) : AppBuildConfig {
+    override val isDebug: Boolean = BuildConfig.DEBUG
+    override val applicationId: String = BuildConfig.APPLICATION_ID
+    override val buildType: String = BuildConfig.BUILD_TYPE
+    override val versionCode: Int = BuildConfig.VERSION_CODE
+    override val versionName: String = BuildConfig.VERSION_NAME
+    override val flavor: BuildFlavor
+        get() = when (BuildConfig.FLAVOR) {
+            "internal" -> BuildFlavor.INTERNAL
+            "fdroid" -> BuildFlavor.FDROID
+            "play" -> BuildFlavor.PLAY
+            else -> throw IllegalStateException("Unknown app flavor")
+        }
+    override val sdkInt: Int = Build.VERSION.SDK_INT
+    override val manufacturer: String = Build.MANUFACTURER
+    override val model: String = Build.MODEL
+    override val isTest by lazy {
+        try {
+            Class.forName("org.junit.Test")
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    override val isPerformanceTest: Boolean = BuildConfig.IS_PERFORMANCE_TEST
+
+    override val isDefaultVariantForced: Boolean = BuildConfig.FORCE_DEFAULT_VARIANT
+
+    override val deviceLocale: Locale
+        get() = Locale.getDefault()
+
+    override val variantName: String?
+        get() = variantManager.value.getVariantKey()
+
+    override suspend fun isAppReinstall(): Boolean = reinstallDetector.value.isAppReinstall()
+
+    override fun isNewInstall(): Boolean {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val isFreshPackage = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
+        return isFreshPackage && (deviceMigration.value.sourceDeviceIsNewInstall() ?: true)
+    }
+
+    override val buildDateTimeMillis: Long
+        get() = BuildConfig.BUILD_DATE_MILLIS
+
+    override val canSkipOnboarding: Boolean
+        get() = BuildConfig.CAN_SKIP_ONBOARDING || isInternalBuild()
+}

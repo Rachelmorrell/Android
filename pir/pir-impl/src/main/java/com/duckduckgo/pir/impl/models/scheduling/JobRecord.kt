@@ -1,0 +1,163 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.models.scheduling
+
+/**
+ * This class represents a  record for Job that PIR could execute.
+ * This will be used to keep track of the current Job's status and other relevant information that could help us determine
+ * when a Job should be executed / re-executed again.
+ *
+ * @property brokerName A unique ID representing the broker linked to this record.
+ * @property userProfileId A unique ID representing the ProfileQuery linked to this record.
+ */
+sealed class JobRecord(
+    open val brokerName: String,
+    open val userProfileId: Long,
+) {
+    /**
+     * This class represents a job record for opt-out jobs.
+     * This contains all information necessary to tell us when the opt-out job should be executed.
+     *
+     * @property extractedProfileId A unique ID representing the ExtractedProfile linked
+     * to this record.
+     * @property status current status of the Job
+     * @property attemptCount Total number of attempts made to run this job
+     * @property lastOptOutAttemptDateInMillis Date (in milliseconds) of the last time the
+     * opt-out job has been completed.
+     * @property optOutRequestedDateInMillis Date (in milliseconds) when the opt-out request
+     * was successfully requested. For brokers requiring email confirmation this is set when
+     * confirmation completes; for other brokers it equals the form-submission moment.
+     * Overwritten every time the opt-out is re-requested.
+     * @property optOutFirstRequestedDateInMillis Date (in milliseconds) of the first time the opt-out
+     * was successfully requested. Set once and never overwritten on re-requests. Null if the opt-out
+     * has never been successfully requested.
+     * @property optOutFormSubmittedDateInMillis Date (in milliseconds) of the first successful
+     * form submission to the broker. Set once and never overwritten on retries. Null for
+     * records created before this field was introduced and for child brokers (which do not run
+     * their own form submission).
+     * @property optOutRemovedDateInMillis Date (in milliseconds) when the record was confirmed
+     * to be removed from the broker.
+     * @property deprecated Whether this job record is deprecated and should not be processed anymore (in most cases).
+     * It can still be processed until opt-out is confirmed in case of deprecated [ProfileQuery].
+     */
+    data class OptOutJobRecord(
+        override val brokerName: String,
+        override val userProfileId: Long,
+        val extractedProfileId: Long,
+        val status: OptOutJobStatus = OptOutJobStatus.NOT_EXECUTED,
+        val attemptCount: Int = 0,
+        val lastOptOutAttemptDateInMillis: Long = 0L,
+        val optOutRequestedDateInMillis: Long = 0L,
+        val optOutFirstRequestedDateInMillis: Long? = null,
+        val optOutFormSubmittedDateInMillis: Long? = null,
+        val optOutRemovedDateInMillis: Long = 0L,
+        val deprecated: Boolean = false,
+        val dateCreatedInMillis: Long = 0L,
+        val confirmation7dayReportSentDateMs: Long = 0L,
+        val confirmation14dayReportSentDateMs: Long = 0L,
+        val confirmation21dayReportSentDateMs: Long = 0L,
+        val confirmation42dayReportSentDateMs: Long = 0L,
+    ) : JobRecord(brokerName, userProfileId) {
+        enum class OptOutJobStatus {
+            /** Opt-out has not been executed yet and should be executed when possible */
+            NOT_EXECUTED,
+
+            /** The opt out job has successfully sent a request for removal. */
+            REQUESTED,
+
+            /** The profile has been successfully removed. */
+            REMOVED,
+
+            /** The opt out job has failed to send a request for removal. */
+            ERROR,
+
+            /** The job is waiting for email confirmation to complete before we can move it to [REQUESTED]. */
+            PENDING_EMAIL_CONFIRMATION,
+
+            /** The profile was removed from the dashboard by the user. */
+            REMOVED_BY_USER,
+        }
+    }
+
+    /**
+     * This class represents a job record for scan jobs.
+     * This contains all information necessary to tell us when the scan job should be executed.
+     *
+     * @property status current status of the Job
+     * @property lastScanDateInMillis Date (in milliseconds) of the last time the
+     * scan job has been completed.
+     * @property deprecated Whether this job record is deprecated and should not be processed anymore (in most cases).
+     * It can still be processed if needed to confirm opt-out in case of deprecated [ProfileQuery].
+     */
+    data class ScanJobRecord(
+        override val brokerName: String,
+        override val userProfileId: Long,
+        val status: ScanJobStatus = ScanJobStatus.NOT_EXECUTED,
+        val lastScanDateInMillis: Long = 0L,
+        val deprecated: Boolean = false,
+        val dateCreatedInMillis: Long = 0L,
+    ) : JobRecord(brokerName, userProfileId) {
+        /**
+         * Whether this broker has already been scanned successfully for this profile query. Scanning the
+         * same pair again is a maintenance scan, which only a user who can also run opt-outs gets.
+         */
+        val hasTerminalResult: Boolean
+            get() = status == ScanJobStatus.NO_MATCH_FOUND || status == ScanJobStatus.MATCHES_FOUND
+
+        enum class ScanJobStatus {
+            /** Scan has not been executed yet and should be executed when possible */
+            NOT_EXECUTED,
+
+            /** Scan is completed and no extractedProfiles found */
+            NO_MATCH_FOUND,
+
+            /** Scan is completed and extractedProfiles were found */
+            MATCHES_FOUND,
+
+            /** Error encountered during the last scan job run */
+            ERROR,
+        }
+    }
+
+    data class EmailConfirmationJobRecord(
+        override val brokerName: String,
+        override val userProfileId: Long,
+        val extractedProfileId: Long,
+        val emailData: EmailData,
+        val linkFetchData: LinkFetchData = LinkFetchData(),
+        val jobAttemptData: JobAttemptData = JobAttemptData(),
+        val dateCreatedInMillis: Long = 0L,
+        val deprecated: Boolean = false,
+    ) : JobRecord(brokerName, userProfileId) {
+        data class EmailData(
+            val email: String,
+            val attemptId: String,
+        )
+
+        data class LinkFetchData(
+            val emailConfirmationLink: String = "",
+            val linkFetchAttemptCount: Int = 0,
+            val lastLinkFetchDateInMillis: Long = 0L,
+        )
+
+        data class JobAttemptData(
+            val jobAttemptCount: Int = 0,
+            val lastJobAttemptDateInMillis: Long = 0L,
+            val lastJobAttemptActionId: String = "",
+        )
+    }
+}

@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.onboarding.orchestrator
+
+import com.duckduckgo.app.onboarding.store.AppStage
+import com.duckduckgo.app.onboarding.store.UserStageStore
+import com.duckduckgo.app.onboarding.ui.OnboardingSkipper
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
+import com.duckduckgo.onboarding.api.LinearOnboardingState
+import com.duckduckgo.onboarding.api.LinearOnboardingState.Completed
+import com.duckduckgo.onboarding.api.LinearOnboardingState.Skipped
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import javax.inject.Inject
+
+/**
+ * Builds and starts the linear onboarding plan via [NewUserOnboardingPlanProvider].
+ *
+ * Terminal callbacks bind the orchestrator's lifecycle to [AppStage]: the orchestrator awaits
+ * them before emitting [Completed] / [Skipped], so the [AppStage] write is visible to any listener
+ * that routes off the terminal state.
+ */
+@SingleIn(AppScope::class)
+class NewUserOnboardingPlanBootstrapper @Inject constructor(
+    private val orchestrator: LinearOnboardingOrchestrator,
+    private val planProvider: NewUserOnboardingPlanProvider,
+    private val userStageStore: UserStageStore,
+    private val onboardingSkipper: OnboardingSkipper,
+) {
+
+    private val mutex = Mutex()
+
+    /**
+     * Starts the orchestrator-driven onboarding plan and returns the resulting [LinearOnboardingState].
+     * The caller is responsible for only invoking this for a new user.
+     *
+     * A new-user run already in progress is returned as-is without building a plan: [NewUserOnboardingPlanProvider.buildRootPlan]
+     * is side-effecting (it resets per-run state and enrols experiments), and the orchestrator would discard the plan
+     * anyway. This is reachable whenever the launch screen runs again while the process is alive.
+     *
+     * Another flow's run in progress (such as the device migration plan) throws [IllegalStateException] instead, before
+     * any plan is built: the orchestrator cannot start this plan until that run ends, and handing back the other run
+     * would let the caller treat it as new-user onboarding.
+     */
+    suspend fun startNewUserOnboardingPlan(): LinearOnboardingState.InProgress = mutex.withLock {
+        val inProgress = orchestrator.state.value as? LinearOnboardingState.InProgress
+        if (inProgress != null) {
+            check(inProgress.rootPlanId == NewUserOnboardingPlanProvider.ROOT_PLAN_ID) {
+                "Cannot start new user onboarding while ${inProgress.rootPlanId} is in progress"
+            }
+            return@withLock inProgress
+        }
+
+        orchestrator.startPlan(
+            planProvider.buildRootPlan(
+                onCompleted = { userStageStore.stageCompleted(AppStage.NEW) },
+                onSkipped = { onboardingSkipper.markOnboardingAsCompleted() },
+            ),
+        )
+        requireNotNull(orchestrator.state.value as? LinearOnboardingState.InProgress) {
+            "New user onboarding plan needs to have at least one valid step"
+        }
+    }
+}

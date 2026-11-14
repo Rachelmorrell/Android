@@ -20,7 +20,10 @@ import android.content.Context
 import android.util.AttributeSet
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
-class ScrollAwareRefreshLayout(context: Context, attrs: AttributeSet?) : SwipeRefreshLayout(context, attrs) {
+class ScrollAwareRefreshLayout(
+    context: Context,
+    attrs: AttributeSet?,
+) : SwipeRefreshLayout(context, attrs) {
 
     private var canChildScrollUpCallback: (() -> Boolean)? = null
 
@@ -34,5 +37,9 @@ class ScrollAwareRefreshLayout(context: Context, attrs: AttributeSet?) : SwipeRe
 
     fun setCanChildScrollUpCallback(callback: () -> Boolean) {
         canChildScrollUpCallback = callback
+    }
+
+    fun removeCanChildScrollUpCallback() {
+        canChildScrollUpCallback = null
     }
 }

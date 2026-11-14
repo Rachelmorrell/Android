@@ -1,0 +1,489 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.ui.nativeinput.views
+
+import android.content.Context
+import android.text.TextUtils
+import android.util.AttributeSet
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.ScrollView
+import androidx.annotation.DrawableRes
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.view.doOnLayout
+import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.menu.applyMenuRadiusClipping
+import com.duckduckgo.common.ui.view.PopupMenuItemView
+import com.duckduckgo.common.ui.view.divider.HorizontalDivider
+import com.duckduckgo.common.ui.view.text.DaxTextView
+import com.duckduckgo.common.utils.ViewViewModelFactory
+import com.duckduckgo.di.android.support.AndroidSupportInjection
+import com.duckduckgo.di.scopes.ViewScope
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState.InputContext
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStateProvider
+import com.duckduckgo.duckchat.impl.DuckChatConstants.DUCK_AI_FEATURE_PAGE
+import com.duckduckgo.duckchat.impl.R
+import com.duckduckgo.duckchat.impl.models.AIChatModel
+import com.duckduckgo.duckchat.impl.models.ModelState
+import com.duckduckgo.duckchat.impl.nativeinput.NativeInputHost
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionPurchase
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionUpgrade
+import com.google.android.material.chip.Chip
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+
+interface ModelPicker {
+
+    fun setHost(host: NativeInputHost)
+
+    /** True if a model was picked during the current recovery window (set synchronously on tap). */
+    fun hasPendingRecoverySelection(): Boolean
+}
+
+@InjectWith(ViewScope::class)
+class ModelPickerView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0,
+) : FrameLayout(context, attrs, defStyle), ModelPicker, CompactableControl {
+
+    @Inject lateinit var viewModelFactory: ViewViewModelFactory
+
+    @Inject lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject lateinit var nativeInputStateProvider: NativeInputStateProvider
+
+    private val viewModel by lazy {
+        ViewModelProvider(findViewTreeViewModelStoreOwner()!!, viewModelFactory)[ModelPickerViewModel::class.java]
+    }
+    private val chip: Chip by lazy { findViewById(R.id.modelPickerChip) }
+    private var stateJob: Job? = null
+    private var chipLabelJob: Job? = null
+    private var inputContextJob: Job? = null
+    private var commandJob: Job? = null
+    private var modelChangeJob: Job? = null
+    private var showPickerJob: Job? = null
+    private var popupWindow: PopupWindow? = null
+    private var lastNativeInputState: NativeInputState? = null
+    private var compactLevel = AdaptiveBottomRowLayout.LEVEL_FULL
+    private var chipLabelText: String? = null
+    private var chipChrome: Float? = null
+    private var chipIconJob: Job? = null
+    private val chipSize = resources.getDimension(R.dimen.nativeInputButtonSize)
+    private val defaultPaddings by lazy {
+        ChipPaddings(
+            textStart = chip.textStartPadding,
+            textEnd = chip.textEndPadding,
+            chipStart = chip.chipStartPadding,
+            chipEnd = chip.chipEndPadding,
+            iconEnd = chip.iconEndPadding,
+            closeIconStart = chip.closeIconStartPadding,
+            closeIconEnd = chip.closeIconEndPadding,
+            closeIconSize = chip.closeIconSize,
+        )
+    }
+
+    // Mirrors the input context from the per-tab native input state so currentSurface() can be
+    // read synchronously from popup callbacks. Updated by observeInputContext().
+    private var lastInputContext: InputContext = InputContext.BROWSER
+    private lateinit var host: NativeInputHost
+
+    init {
+        inflate(context, R.layout.view_model_picker, this)
+    }
+
+    var isEditMode: Boolean = false
+
+    override fun setHost(host: NativeInputHost) {
+        this.host = host
+    }
+
+    private fun updateVisibility() {
+        val enabled = lastNativeInputState?.let { it.modelPickerEnabled || it.modelChangeMode } ?: false
+        val show = shouldShowModelPicker(
+            nativeInputState = lastNativeInputState,
+            pickerEnabled = enabled,
+            hasModels = viewModel.state.value.models.isNotEmpty(),
+            isEditMode = isEditMode,
+        )
+        isVisible = show
+        (parent as? View)?.isVisible = show
+    }
+
+    override fun onAttachedToWindow() {
+        AndroidSupportInjection.inject(this)
+        super.onAttachedToWindow()
+
+        chip.setOnClickListener { showMenu() }
+        chip.setOnCloseIconClickListener { showMenu() }
+
+        observeState()
+        observeInputContext()
+    }
+
+    private fun observeInputContext() {
+        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        inputContextJob?.cancel()
+        inputContextJob = nativeInputStateProvider.state
+            .onEach { state ->
+                if (shouldFetchModels(previous = lastNativeInputState, current = state)) viewModel.fetchModels()
+                lastInputContext = state.inputContext
+                lastNativeInputState = state
+                updateVisibility()
+            }
+            .launchIn(scope)
+    }
+
+    private fun observeState() {
+        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        stateJob?.cancel()
+        stateJob = viewModel.state
+            .onEach { updateVisibility() }
+            .launchIn(scope)
+
+        chipLabelJob?.cancel()
+        chipLabelJob = viewModel.chipLabel
+            .onEach { label ->
+                chipLabelText = label ?: chipLabelText
+                applyCompactLevel()
+            }
+            .launchIn(scope)
+
+        chipIconJob?.cancel()
+        chipIconJob = viewModel.chipIconRes
+            .onEach { iconRes -> chip.setChipIconResource(iconRes) }
+            .launchIn(scope)
+
+        commandJob?.cancel()
+        commandJob = viewModel.commands
+            .onEach { processCommand(it) }
+            .launchIn(scope)
+
+        modelChangeJob?.cancel()
+        modelChangeJob = viewModel.modelChanges
+            .onEach { change ->
+                when (change) {
+                    is PickerModelChange.ChangeModel -> {
+                        host?.changeModelSubmitted(change.modelId)
+                        dismissPopup()
+                    }
+                }
+            }
+            .launchIn(scope)
+
+        // FE recovery: open on every event (not on a modelChangeMode transition) so a repeated tap
+        // re-opens after a dismissal. Filter to this widget's tab; the event carries the tabId.
+        showPickerJob?.cancel()
+        showPickerJob = viewModel.showPickerEvents
+            .onEach { tabId ->
+                if (tabId == host.tabId()) {
+                    host.requestInputFocus()
+                    openPicker()
+                }
+            }
+            .launchIn(scope)
+    }
+
+    override fun setCompactLevel(level: Int) {
+        if (compactLevel == level) return
+        compactLevel = level
+        applyCompactLevel()
+    }
+
+    // Collapsed, the pill is the provider icon and still opens the same menu. The chip keeps reserving room for its
+    // text and close icon unless their paddings are zeroed, which leaves blank space beside the icon.
+    private fun applyCompactLevel() {
+        val defaults = defaultPaddings
+        val iconOnly = compactLevel >= AdaptiveBottomRowLayout.LEVEL_MODEL_ICON
+        chip.text = if (iconOnly) "" else chipLabelText.orEmpty()
+        chip.isChipIconVisible = iconOnly
+        chip.isCloseIconVisible = !iconOnly
+        chip.textStartPadding = if (iconOnly) 0f else defaults.textStart
+        chip.textEndPadding = if (iconOnly) 0f else defaults.textEnd
+        // A square the size of the other bottom-row buttons, with the icon centred in it.
+        val sidePadding = ((chipSize - chip.chipIconSize) / 2f).coerceAtLeast(0f)
+        chip.chipStartPadding = if (iconOnly) sidePadding else defaults.chipStart
+        chip.chipEndPadding = if (iconOnly) sidePadding else defaults.chipEnd
+        chip.updateLayoutParams { width = if (iconOnly) chipSize.toInt() else ViewGroup.LayoutParams.WRAP_CONTENT }
+        chip.iconEndPadding = if (iconOnly) 0f else defaults.iconEnd
+        chip.closeIconStartPadding = if (iconOnly) 0f else defaults.closeIconStart
+        chip.closeIconEndPadding = if (iconOnly) 0f else defaults.closeIconEnd
+        chip.contentDescription = chipLabelText
+    }
+
+    private data class ChipPaddings(
+        val textStart: Float,
+        val textEnd: Float,
+        val chipStart: Float,
+        val chipEnd: Float,
+        val iconEnd: Float,
+        val closeIconStart: Float,
+        val closeIconEnd: Float,
+        val closeIconSize: Float,
+    )
+
+    // Sized for the longest model name, so picking a different model never changes how the row is laid out.
+    override fun worstCaseWidth(level: Int): Int {
+        val margin = resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_1)
+        if (level >= AdaptiveBottomRowLayout.LEVEL_MODEL_ICON) return chipSize.toInt() + margin
+        val defaults = defaultPaddings
+        val longestName = if (isAttachedToWindow) viewModel.state.value.models.maxOfOrNull { it.shortName }.orEmpty() else ""
+        val textWidth = chip.paint.measureText(longestName.ifEmpty { chipLabelText.orEmpty() })
+        val closeIconWidth = defaults.closeIconStart + defaults.closeIconSize + defaults.closeIconEnd
+        val estimatedChrome = defaults.chipStart + defaults.textStart + defaults.textEnd + closeIconWidth + defaults.chipEnd
+        return ((chipChrome ?: estimatedChrome) + textWidth).toInt() + margin
+    }
+
+    // Once the chip has shown its text, the real width around the label is known, which is more exact than the paddings.
+    override fun onLayout(
+        changed: Boolean,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
+        super.onLayout(changed, left, top, right, bottom)
+        val label = chip.text?.toString().orEmpty()
+        if (compactLevel == AdaptiveBottomRowLayout.LEVEL_FULL && label.isNotEmpty() && chip.width > 0) {
+            chipChrome = chip.width - chip.paint.measureText(label)
+        }
+    }
+
+    override fun hasPendingRecoverySelection(): Boolean = viewModel.hasPendingRecoverySelection()
+
+    // FE recovery "Switch Model": the picker chip lives in the bottom row, only laid out while the input
+    // is focused. On an ongoing chat opened from history the input is unfocused so the chip is GONE and
+    // doOnLayout would never fire, so the host is asked to focus first (see observeShowPickerEvents).
+    private fun openPicker() {
+        if (!isAttachedToWindow) return
+        chip.doOnLayout { if (isAttachedToWindow) showMenu() }
+    }
+
+    private fun processCommand(command: UpsellCommand) {
+        when (command) {
+            is UpsellCommand.LaunchPurchase ->
+                globalActivityStarter.start(context, SubscriptionPurchase(origin = command.origin, featurePage = DUCK_AI_FEATURE_PAGE))
+            is UpsellCommand.LaunchUpgrade ->
+                globalActivityStarter.start(context, SubscriptionUpgrade(origin = command.origin))
+        }
+    }
+
+    private fun currentSurface(): PickerSurface =
+        when (lastInputContext) {
+            InputContext.DUCK_AI, InputContext.DUCK_AI_CONTEXTUAL -> PickerSurface.MODEL_PICKER_DUCK_AI_TAB
+            InputContext.BROWSER -> PickerSurface.MODEL_PICKER_ADDRESS_BAR
+        }
+
+    private fun showMenu() {
+        if (popupWindow?.isShowing == true) return
+        val state = viewModel.state.value
+        if (state.models.isEmpty()) return
+
+        viewModel.menuShowing = true
+        viewModel.onPickerShown(currentSurface())
+        host?.modelMenuShown()
+        showPopupWindow(state)
+    }
+
+    private fun showPopupWindow(state: ModelState) {
+        val container = buildMenuContainer()
+        val popup = createPopupWindow(container)
+
+        container.populateMenu(state, popup)
+        popupWindow = popup
+
+        showAtPosition(popup)
+    }
+
+    private fun buildMenuContainer(): LinearLayout {
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        return container
+    }
+
+    private fun createPopupWindow(container: LinearLayout): PopupWindow {
+        return PopupWindow(
+            ScrollView(context).apply {
+                addView(container)
+                setBackgroundResource(com.duckduckgo.mobile.android.R.drawable.popup_menu_bg)
+                applyMenuRadiusClipping()
+                isVerticalScrollBarEnabled = false
+            },
+            resources.getDimensionPixelSize(R.dimen.nativeInputMenuWidth),
+            LayoutParams.WRAP_CONTENT,
+            false,
+        ).apply {
+            elevation = resources.getDimension(R.dimen.modelPickerMenuElevation)
+            isOutsideTouchable = true
+            setOnDismissListener { onPopupDismissed() }
+        }
+    }
+
+    private fun showAtPosition(popup: PopupWindow) {
+        val loc = IntArray(2).also { chip.getLocationOnScreen(it) }
+        val x = resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_4)
+        val y = resources.displayMetrics.heightPixels - loc[1] + resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_1)
+        popup.showAtLocation(rootView, Gravity.BOTTOM or Gravity.END, x, y)
+    }
+
+    private fun onPopupDismissed() {
+        viewModel.menuShowing = false
+        popupWindow = null
+        host?.modelMenuDismissed(viewModel.hasPendingRecoverySelection())
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        stateJob?.cancel()
+        stateJob = null
+        chipLabelJob?.cancel()
+        chipLabelJob = null
+        inputContextJob?.cancel()
+        inputContextJob = null
+        commandJob?.cancel()
+        commandJob = null
+        modelChangeJob?.cancel()
+        modelChangeJob = null
+        showPickerJob?.cancel()
+        showPickerJob = null
+        lastNativeInputState = null
+        dismissPopup()
+    }
+
+    private fun dismissPopup() {
+        popupWindow?.let {
+            it.setOnDismissListener(null)
+            if (it.isShowing) it.dismiss()
+        }
+        popupWindow = null
+        viewModel.menuShowing = false
+    }
+
+    private fun LinearLayout.populateMenu(state: ModelState, popup: PopupWindow) {
+        val selectedId = viewModel.selectedModelIdForMenu()
+        val updatedPickers = viewModel.updatedPickersEnabled()
+        viewModel.buildSections(state).forEachIndexed { index, section ->
+            if (index > 0) addDivider()
+            section.headerRes?.let { addSectionHeader(context.getString(it)) }
+            for (model in section.models) {
+                if (updatedPickers) {
+                    addPickerRow(model, selected = model.id == selectedId, gated = section.gated, popup)
+                } else {
+                    addModelItem(model, selected = model.id == selectedId, popup)
+                }
+            }
+        }
+    }
+
+    private fun LinearLayout.addPickerRow(
+        model: AIChatModel,
+        selected: Boolean,
+        gated: Boolean,
+        popup: PopupWindow,
+    ) {
+        val item = pickerMenuItem(
+            parent = this,
+            title = model.displayName,
+            leadingIconRes = viewModel.getIconResForModel(model),
+            subtitle = viewModel.subtitleResFor(model)?.let { context.getString(it) },
+            selected = selected,
+            showsFollowUpEllipsis = gated,
+        ) {
+            viewModel.onModelTapped(model, currentSurface())
+            popup.dismiss()
+        }
+        addView(item)
+    }
+
+    private fun LinearLayout.addModelItem(model: AIChatModel, selected: Boolean, popup: PopupWindow) {
+        val item = PopupMenuItemView(context).apply {
+            setPrimaryText(model.displayName)
+            setLeadingIcon(viewModel.getIconResForModel(model))
+            if (selected) setTrailingIconResource(com.duckduckgo.mobile.android.R.drawable.ic_check_24)
+            configureTrailingIcon()
+            setOnClickListener {
+                viewModel.onModelTapped(model, currentSurface())
+                popup.dismiss()
+            }
+            layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+        }
+        addView(item)
+    }
+
+    private fun PopupMenuItemView.setLeadingIcon(@DrawableRes iconRes: Int) {
+        val label = findViewById<DaxTextView>(com.duckduckgo.mobile.android.R.id.label) ?: return
+        label.maxLines = 1
+        label.isSingleLine = true
+        label.ellipsize = TextUtils.TruncateAt.END
+        label.setPaddingRelative(label.paddingStart, label.paddingTop, 0, label.paddingBottom)
+        val drawable = AppCompatResources.getDrawable(context, iconRes)
+        label.setCompoundDrawablesRelativeWithIntrinsicBounds(drawable, null, null, null)
+        label.compoundDrawablePadding = resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_2)
+    }
+
+    private fun PopupMenuItemView.configureTrailingIcon() {
+        val trailingIcon = findViewById<ImageView>(com.duckduckgo.mobile.android.R.id.trailingIcon) ?: return
+        trailingIcon.updateLayoutParams<MarginLayoutParams> {
+            marginEnd = resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_3)
+        }
+    }
+
+    private fun LinearLayout.addSectionHeader(title: String) {
+        val header = LayoutInflater.from(context).inflate(R.layout.view_model_picker_section_header, this, false) as DaxTextView
+        header.text = title
+        addView(header)
+    }
+
+    private fun LinearLayout.addDivider() {
+        addView(HorizontalDivider(context))
+    }
+}
+
+/**
+ * The model picker follows the same visibility rule as the other plugin controls: derived purely
+ * from [NativeInputState] plus its own enabled/model-availability flags, so it is unit-testable
+ * without Robolectric.
+ */
+internal fun shouldShowModelPicker(
+    nativeInputState: NativeInputState?,
+    pickerEnabled: Boolean,
+    hasModels: Boolean,
+    isEditMode: Boolean,
+): Boolean = pickerEnabled && hasModels && nativeInputState?.shouldShowPluginControls(isEditing = isEditMode) == true
+
+internal fun shouldFetchModels(
+    previous: NativeInputState?,
+    current: NativeInputState,
+): Boolean = current.toggleSelection == NativeInputState.ToggleSelection.DUCK_AI &&
+    previous?.toggleSelection != NativeInputState.ToggleSelection.DUCK_AI

@@ -16,39 +16,37 @@
 
 package com.duckduckgo.app.surrogates.api
 
-import com.duckduckgo.app.global.api.isCached
 import com.duckduckgo.app.surrogates.ResourceSurrogateLoader
 import com.duckduckgo.app.surrogates.store.ResourceSurrogateDataStore
+import com.duckduckgo.common.utils.extensions.isCached
 import io.reactivex.Completable
-import timber.log.Timber
+import logcat.logcat
 import java.io.IOException
 import javax.inject.Inject
 
 class ResourceSurrogateListDownloader @Inject constructor(
     private val service: ResourceSurrogateListService,
     private val surrogatesDataStore: ResourceSurrogateDataStore,
-    private val resourceSurrogateLoader: ResourceSurrogateLoader
+    private val resourceSurrogateLoader: ResourceSurrogateLoader,
 ) {
 
     fun downloadList(): Completable {
-
         return Completable.fromAction {
-
-            Timber.d("Downloading Google Analytics Surrogates data")
+            logcat { "Downloading Google Analytics Surrogates data" }
 
             val call = service.surrogates()
             val response = call.execute()
 
-            Timber.d("Response received, success=${response.isSuccessful}")
+            logcat { "Response received, success=${response.isSuccessful}" }
 
             if (response.isCached && surrogatesDataStore.hasData()) {
-                Timber.d("Surrogates data already cached and stored")
+                logcat { "Surrogates data already cached and stored" }
                 return@fromAction
             }
 
             if (response.isSuccessful) {
                 val bodyBytes = response.body()!!.bytes()
-                Timber.d("Updating surrogates data store with new data")
+                logcat { "Updating surrogates data store with new data" }
                 persistData(bodyBytes)
                 resourceSurrogateLoader.loadData()
             } else {

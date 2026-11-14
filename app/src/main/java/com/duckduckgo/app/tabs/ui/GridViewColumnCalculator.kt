@@ -17,18 +17,20 @@
 package com.duckduckgo.app.tabs.ui
 
 import android.content.Context
-import com.duckduckgo.mobile.android.ui.view.toDp
-import com.duckduckgo.mobile.android.ui.view.toDp
-import com.duckduckgo.mobile.android.ui.view.toPx
+import com.duckduckgo.common.ui.view.toDp
+import com.duckduckgo.common.ui.view.toPx
 import kotlin.math.min
 
 class GridViewColumnCalculator(val context: Context) {
 
-    fun calculateNumberOfColumns(columnWidthDp: Int, maxColumns: Int): Int {
+    fun calculateNumberOfColumns(
+        columnWidthDp: Int,
+        maxColumns: Int,
+    ): Int {
         val displayMetrics = context.resources.displayMetrics
         val screenWidthDp = displayMetrics.widthPixels.toDp()
         val numberOfColumns = screenWidthDp / columnWidthDp
-        return min(maxColumns, numberOfColumns)
+        return min(maxColumns, numberOfColumns).coerceAtLeast(1)
     }
 
     /**
@@ -37,7 +39,10 @@ class GridViewColumnCalculator(val context: Context) {
      *
      * @return start/end padding in pixels
      */
-    fun calculateSidePadding(columnWidthDp: Int, numOfColumns: Int): Int {
+    fun calculateSidePadding(
+        columnWidthDp: Int,
+        numOfColumns: Int,
+    ): Int {
         val displayMetrics = context.resources.displayMetrics
         val screenWidthDp = displayMetrics.widthPixels.toDp()
         val columnsWidth = columnWidthDp * numOfColumns

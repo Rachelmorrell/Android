@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2020 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/rounded_top_corners_bottom_sheet_background"
+>
+
+    <ImageView
+        android:id="@+id/closeButton"
+        android:src="@drawable/ic_close_24"
+        android:layout_marginTop="@dimen/keyline_4"
+        android:layout_marginEnd="@dimen/keyline_4"
+        android:layout_marginBottom="@dimen/keyline_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?selectableItemBackground"
+        android:contentDescription="@string/atp_close_button_content_description"
+        android:layout_gravity="end"
+    />
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/alwaysOnIllustration"
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:importantForAccessibility="no"
+        app:lottie_loop="true"
+        app:lottie_imageAssetsFolder="images"
+        app:lottie_rawRes="@raw/always_on"
+        app:lottie_autoPlay="true"
+    />
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/keyline_6"
+        android:paddingEnd="@dimen/keyline_6"
+        android:paddingBottom="@dimen/keyline_6"
+    >
+        <com.duckduckgo.common.ui.view.text.DaxTextView
+            android:id="@+id/alwaysOnModalHeading"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="@dimen/keyline_5"
+            android:gravity="center"
+            app:typography="h2"
+            android:text="@string/atp_AlwaysOnModalHeading"
+        />
+
+        <com.duckduckgo.common.ui.view.text.DaxTextView
+            android:id="@+id/alwaysOnModalDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="@dimen/keyline_5"
+            android:gravity="center"
+            app:typography="body1"
+            android:text="@string/atp_AlwaysOnModalBody"
+        />
+
+        <com.duckduckgo.common.ui.view.button.DaxButtonPrimary
+            android:id="@+id/goToSettingsButton"
+            app:daxButtonSize="large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/keyline_5"
+            android:text="@string/atp_PromoteAlwaysOnDialogSettings"
+        />
+
+        <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+            android:id="@+id/notNowButton"
+            app:daxButtonSize="large"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/keyline_1"
+            android:text="@string/atp_PromoteAlwaysOnDialogNotNow"
+        />
+    </LinearLayout>
+</LinearLayout>

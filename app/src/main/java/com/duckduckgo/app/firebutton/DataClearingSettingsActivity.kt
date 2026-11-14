@@ -1,0 +1,179 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.firebutton
+
+import android.app.ActivityOptions
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.CompoundButton
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.browser.databinding.ActivityDataClearingSettingsBinding
+import com.duckduckgo.app.fire.fireproofwebsite.ui.FireproofWebsitesActivity
+import com.duckduckgo.app.firebutton.DataClearingSettingsViewModel.Command
+import com.duckduckgo.app.settings.clear.FireAnimation
+import com.duckduckgo.app.settings.clear.displayLabelResId
+import com.duckduckgo.codegen.annotations.ContributeToActivityStarter
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.dataclearing.api.fire.FireDialogProvider
+import com.duckduckgo.dataclearing.api.fire.FireDialogProvider.FireDialogOrigin.Settings
+import com.duckduckgo.di.scopes.ActivityScope
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@InjectWith(ActivityScope::class)
+@ContributeToActivityStarter(DataClearingSettingsScreenNoParams::class)
+class DataClearingSettingsActivity : DuckDuckGoActivity() {
+
+    @Inject
+    lateinit var fireDialogProvider: FireDialogProvider
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
+    private val viewModel: DataClearingSettingsViewModel by bindViewModel()
+    private val binding: ActivityDataClearingSettingsBinding by viewBinding()
+
+    private val clearDuckAiDataToggleListener =
+        CompoundButton.OnCheckedChangeListener { _, isChecked ->
+            viewModel.onClearDuckAiDataToggled(isChecked)
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        enableTransparentEdgeToEdge()
+
+        setContentView(binding.root)
+        setupToolbar(binding.includeToolbar.toolbar)
+        configureEdgeToEdgeInsets()
+        supportActionBar?.setTitle(R.string.dataClearingActivityTitle)
+
+        configureUiEventHandlers()
+        observeViewModel()
+
+        intent?.getStringExtra(LAUNCH_FROM_NOTIFICATION_PIXEL_NAME)?.let {
+            viewModel.onLaunchedFromNotification(it)
+        }
+    }
+
+    private fun configureEdgeToEdgeInsets() {
+        edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.root)
+        edgeToEdgeHandler.applyStatusBarInsets(binding.includeToolbar.appBarLayout)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.contentScrollView, drawBehindGestureNav = true)
+    }
+
+    private fun configureUiEventHandlers() {
+        with(binding) {
+            fireproofWebsites.setClickListener { viewModel.onFireproofWebsitesClicked() }
+            automaticDataClearingSetting.setClickListener { viewModel.onAutomaticDataClearingClicked() }
+            selectedFireAnimationSetting.setClickListener { viewModel.userRequestedToChangeFireAnimation() }
+            clearDuckAiDataSetting.setOnCheckedChangeListener(clearDuckAiDataToggleListener)
+            clearDataAction.setClickListener { viewModel.onClearDataActionClicked() }
+        }
+    }
+
+    private fun observeViewModel() {
+        viewModel.viewState
+            .flowWithLifecycle(lifecycle, Lifecycle.State.RESUMED)
+            .onEach { viewState ->
+                viewState.let {
+                    updateAutomaticClearingStatus(it.automaticallyClearingEnabled)
+                    updateSelectedFireAnimation(it.selectedFireAnimation)
+                    updateClearDuckAiDataSetting(it.clearDuckAiData, it.showClearDuckAiDataSetting)
+                    updateFireproofWebsitesCount(it.fireproofWebsitesCount)
+                }
+            }.launchIn(lifecycleScope)
+
+        viewModel.commands
+            .flowWithLifecycle(lifecycle, Lifecycle.State.CREATED)
+            .onEach { processCommand(it) }
+            .launchIn(lifecycleScope)
+    }
+
+    private fun updateAutomaticClearingStatus(enabled: Boolean) {
+        val statusText = if (enabled) {
+            getString(R.string.dataClearingAutomaticClearingOn)
+        } else {
+            getString(R.string.dataClearingAutomaticClearingOff)
+        }
+        binding.automaticDataClearingSetting.setSecondaryText(statusText)
+    }
+
+    private fun updateSelectedFireAnimation(fireAnimation: FireAnimation) {
+        binding.selectedFireAnimationSetting.setSecondaryText(getString(fireAnimation.displayLabelResId()))
+    }
+
+    private fun updateClearDuckAiDataSetting(
+        enabled: Boolean,
+        isVisible: Boolean,
+    ) {
+        binding.clearDuckAiDataSetting.quietlySetIsChecked(enabled, clearDuckAiDataToggleListener)
+        binding.clearDuckAiDataSetting.visibility = if (isVisible) View.VISIBLE else View.GONE
+    }
+
+    private fun updateFireproofWebsitesCount(count: Int) {
+        val subtitle = resources.getQuantityString(R.plurals.dataClearingExcludedSites, count, count)
+        binding.fireproofWebsites.setSecondaryText(subtitle)
+    }
+
+    private fun processCommand(it: Command) {
+        when (it) {
+            is Command.LaunchFireproofWebsites -> launchFireproofWebsites()
+            is Command.LaunchFireAnimationSettings -> launchBrandDesignFireAnimationSelector(
+                it.animation,
+                viewModel::onFireAnimationSelected,
+            )
+            is Command.LaunchFireDialog -> launchFireDialog()
+            is Command.LaunchAutomaticDataClearingSettings -> launchAutomaticDataClearingSettings()
+        }
+    }
+
+    private fun launchFireproofWebsites() {
+        val options = ActivityOptions.makeSceneTransitionAnimation(this).toBundle()
+        startActivity(FireproofWebsitesActivity.intent(this), options)
+    }
+
+    private fun launchFireDialog() {
+        lifecycleScope.launch {
+            val dialog = fireDialogProvider.createFireDialog(Settings)
+            dialog.show(supportFragmentManager)
+        }
+    }
+
+    private fun launchAutomaticDataClearingSettings() {
+        val options = ActivityOptions.makeSceneTransitionAnimation(this).toBundle()
+        startActivity(AutomaticDataClearingSettingsActivity.intent(this), options)
+    }
+
+    companion object {
+        const val LAUNCH_FROM_NOTIFICATION_PIXEL_NAME = "LAUNCH_FROM_NOTIFICATION_PIXEL_NAME"
+
+        fun intent(context: Context): Intent {
+            return Intent(context, DataClearingSettingsActivity::class.java)
+        }
+    }
+}

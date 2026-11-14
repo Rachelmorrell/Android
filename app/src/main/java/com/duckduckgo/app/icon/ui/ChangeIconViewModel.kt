@@ -18,27 +18,32 @@ package com.duckduckgo.app.icon.ui
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.duckduckgo.app.global.SingleLiveEvent
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
 import com.duckduckgo.app.icon.api.AppIcon
 import com.duckduckgo.app.icon.api.IconModifier
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.ActivityScope
 import javax.inject.Inject
-import javax.inject.Provider
 
+@ContributesViewModel(ActivityScope::class)
 class ChangeIconViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val appIconModifier: IconModifier,
-    private val pixel: Pixel
+    private val pixel: Pixel,
 ) : ViewModel() {
 
-    data class IconViewData(val appIcon: AppIcon, val selected: Boolean) {
+    data class IconViewData(
+        val appIcon: AppIcon,
+        val selected: Boolean,
+    ) {
         companion object {
-            fun from(appIcon: AppIcon, selectedAppIcon: AppIcon): IconViewData {
+            fun from(
+                appIcon: AppIcon,
+                selectedAppIcon: AppIcon,
+            ): IconViewData {
                 return if (appIcon.componentName == selectedAppIcon.componentName) {
                     IconViewData(appIcon, true)
                 } else {
@@ -49,11 +54,11 @@ class ChangeIconViewModel @Inject constructor(
     }
 
     data class ViewState(
-        val appIcons: List<IconViewData>
+        val appIcons: List<IconViewData>,
     )
 
     sealed class Command {
-        object IconChanged : Command()
+        data object IconChanged : Command()
         data class ShowConfirmationDialog(val viewData: IconViewData) : Command()
     }
 
@@ -76,21 +81,5 @@ class ChangeIconViewModel @Inject constructor(
         settingsDataStore.appIconChanged = true
         appIconModifier.changeIcon(previousIcon, viewData.appIcon)
         command.value = Command.IconChanged
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class ChangeIconViewModelFactory @Inject constructor(
-    private val settingsDataStore: Provider<SettingsDataStore>,
-    private val appIconModifier: Provider<IconModifier>,
-    private val pixel: Provider<Pixel>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(ChangeIconViewModel::class.java) -> (ChangeIconViewModel(settingsDataStore.get(), appIconModifier.get(), pixel.get()) as T)
-                else -> null
-            }
-        }
     }
 }

@@ -1,0 +1,145 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.subscriptions.impl.onboarding
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.MenuItem
+import androidx.activity.OnBackPressedCallback
+import androidx.fragment.app.commit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.browser.api.ui.BrowserScreens.SettingsScreenNoParams
+import com.duckduckgo.codegen.annotations.ContributeToActivityStarter
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import com.duckduckgo.subscriptions.api.SubscriptionOnboardingController
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionOnboardingScreenWithEmptyParams
+import com.duckduckgo.subscriptions.impl.databinding.ActivitySubscriptionOnboardingBinding
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingViewModel.Command
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingViewModel.ToolbarState
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+
+@InjectWith(ActivityScope::class)
+@ContributeToActivityStarter(SubscriptionOnboardingScreenWithEmptyParams::class, screenName = "subscriptions.onboarding")
+class SubscriptionOnboardingActivity : DuckDuckGoActivity() {
+
+    @Inject
+    lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject
+    lateinit var controller: SubscriptionOnboardingController
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
+    private val viewModel: SubscriptionOnboardingViewModel by bindViewModel()
+    private val binding: ActivitySubscriptionOnboardingBinding by viewBinding()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        enableTransparentEdgeToEdge()
+
+        setContentView(binding.root)
+        setupToolbar(binding.includeToolbar.toolbar)
+
+        val surfaceColor = getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorSurface)
+        binding.includeToolbar.appBarLayout.setBackgroundColor(surfaceColor)
+        binding.includeToolbar.toolbar.setBackgroundColor(surfaceColor)
+
+        edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.root)
+        edgeToEdgeHandler.applyStatusBarInsets(binding.includeToolbar.appBarLayout, installScrim = false)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.subscriptionOnboardingContainer, drawBehindGestureNav = false)
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    controller.onBack()
+                }
+            },
+        )
+
+        viewModel.commands
+            .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            .onEach { processCommand(it) }
+            .launchIn(lifecycleScope)
+
+        viewModel.toolbarState
+            .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            .onEach { renderToolbar(it) }
+            .launchIn(lifecycleScope)
+
+        viewModel.start()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == android.R.id.home) {
+            onBackPressedDispatcher.onBackPressed()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun processCommand(command: Command) {
+        when (command) {
+            is Command.ShowStep -> showStep(command)
+            is Command.RunHandoff -> {
+                command.action()
+                finish()
+            }
+            is Command.FinishToSettings -> finishToSettings()
+        }
+    }
+
+    private fun renderToolbar(state: ToolbarState) {
+        if (state.showNavigationIcon) {
+            val navIcon = if (state.canGoBack) {
+                com.duckduckgo.mobile.android.R.drawable.ic_arrow_left_24
+            } else {
+                com.duckduckgo.mobile.android.R.drawable.ic_close_24
+            }
+            binding.includeToolbar.toolbar.setNavigationIcon(navIcon)
+        } else {
+            binding.includeToolbar.toolbar.navigationIcon = null
+        }
+        supportActionBar?.title = state.titleResId?.let { getString(it) } ?: ""
+    }
+
+    private fun showStep(command: Command.ShowStep) {
+        supportFragmentManager.commit {
+            replace(binding.subscriptionOnboardingContainer.id, command.stepPlugin.createFragment(), command.stepPlugin.stepId)
+        }
+    }
+
+    private fun finishToSettings() {
+        globalActivityStarter.startIntent(this, SettingsScreenNoParams)?.let { intent ->
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            startActivity(intent)
+        }
+        finish()
+    }
+}

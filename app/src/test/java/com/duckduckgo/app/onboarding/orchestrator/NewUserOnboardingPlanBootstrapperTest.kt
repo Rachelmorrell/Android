@@ -1,0 +1,235 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.onboarding.orchestrator
+
+import com.duckduckgo.app.onboarding.store.AppStage
+import com.duckduckgo.app.onboarding.store.UserStageStore
+import com.duckduckgo.app.onboarding.ui.OnboardingSkipper
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.onboarding.api.LinearOnboardingEvent
+import com.duckduckgo.onboarding.api.LinearOnboardingHost
+import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
+import com.duckduckgo.onboarding.api.LinearOnboardingPlan
+import com.duckduckgo.onboarding.api.LinearOnboardingState
+import com.duckduckgo.onboarding.api.LinearOnboardingState.Completed
+import com.duckduckgo.onboarding.api.LinearOnboardingState.InProgress
+import com.duckduckgo.onboarding.api.LinearOnboardingState.NotStarted
+import com.duckduckgo.onboarding.api.LinearOnboardingState.Skipped
+import com.duckduckgo.onboarding.api.LinearOnboardingStep
+import com.duckduckgo.onboarding.api.LinearOnboardingTransition
+import com.duckduckgo.onboarding.impl.LinearOnboardingOrchestratorImpl
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+class NewUserOnboardingPlanBootstrapperTest {
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private val planProvider: NewUserOnboardingPlanProvider = mock()
+    private val userStageStore: UserStageStore = mock()
+    private val onboardingSkipper: OnboardingSkipper = mock()
+    private val fakeOrchestrator = FakeOrchestrator()
+
+    private class FakeOrchestrator : LinearOnboardingOrchestrator {
+        val stateFlow = MutableStateFlow<LinearOnboardingState>(NotStarted)
+        override val state: StateFlow<LinearOnboardingState> = stateFlow
+        var startedPlan: LinearOnboardingPlan? = null
+
+        // Real orchestrator lands on InProgress for a well-formed plan; a misconfigured plan with no
+        // eligible steps leaves it in a non-InProgress state. Toggle to exercise both branches.
+        var startResultsInProgress = true
+
+        override suspend fun startPlan(plan: LinearOnboardingPlan) {
+            startedPlan = plan
+            stateFlow.value = if (startResultsInProgress) {
+                InProgress(rootPlanId = plan.id, currentPlan = plan, currentStepIndex = 0)
+            } else {
+                Completed(rootPlanId = plan.id)
+            }
+        }
+        override suspend fun onEvent(event: LinearOnboardingEvent) = Unit
+    }
+
+    private lateinit var testee: NewUserOnboardingPlanBootstrapper
+
+    @Before
+    fun setup() {
+        runBlocking { whenever(planProvider.buildRootPlan(any(), any())).thenReturn(LinearOnboardingPlan(id = "test_plan", steps = emptyList())) }
+        testee = NewUserOnboardingPlanBootstrapper(
+            orchestrator = fakeOrchestrator,
+            planProvider = planProvider,
+            userStageStore = userStageStore,
+            onboardingSkipper = onboardingSkipper,
+        )
+    }
+
+    @Test
+    fun `when plan starts in progress then returns the InProgress state`() = runTest {
+        fakeOrchestrator.startResultsInProgress = true
+
+        val result = testee.startNewUserOnboardingPlan()
+
+        assertTrue(result is InProgress)
+        assertTrue(fakeOrchestrator.startedPlan != null)
+    }
+
+    @Test
+    fun `when plan does not start in progress then throws`() = runTest {
+        // A misconfigured plan with no eligible steps leaves the orchestrator in a non-InProgress state.
+        fakeOrchestrator.startResultsInProgress = false
+
+        val exception = runCatching { testee.startNewUserOnboardingPlan() }.exceptionOrNull()
+
+        assertTrue(exception is IllegalArgumentException)
+    }
+
+    @Test
+    fun `when a run is already in progress then returns it without building a plan`() = runTest {
+        val plan = LinearOnboardingPlan(id = NewUserOnboardingPlanProvider.ROOT_PLAN_ID, steps = emptyList())
+        val running = InProgress(rootPlanId = plan.id, currentPlan = plan, currentStepIndex = 0)
+        fakeOrchestrator.stateFlow.value = running
+
+        val result = testee.startNewUserOnboardingPlan()
+
+        assertEquals(running, result)
+        assertNull(fakeOrchestrator.startedPlan)
+        verify(planProvider, never()).buildRootPlan(any(), any())
+    }
+
+    @Test
+    fun `when another flow's run is in progress then it is not passed off as the new user plan and no plan is built`() = runTest {
+        val plan = LinearOnboardingPlan(id = DeviceMigrationPlanProvider.MIGRATION_PLAN_ID, steps = emptyList())
+        fakeOrchestrator.stateFlow.value = InProgress(rootPlanId = plan.id, currentPlan = plan, currentStepIndex = 0)
+
+        val exception = runCatching { testee.startNewUserOnboardingPlan() }.exceptionOrNull()
+
+        assertTrue(exception is IllegalStateException)
+        assertNull(fakeOrchestrator.startedPlan)
+        verify(planProvider, never()).buildRootPlan(any(), any())
+    }
+
+    @Test
+    fun `when terminal callbacks supplied then they write to stage store and skipper`() = runTest {
+        val captor = argumentCaptor<suspend () -> Unit>()
+        whenever(planProvider.buildRootPlan(captor.capture(), captor.capture()))
+            .thenReturn(LinearOnboardingPlan(id = "test_plan", steps = emptyList()))
+
+        testee.startNewUserOnboardingPlan()
+
+        captor.firstValue.invoke()
+        captor.secondValue.invoke()
+        verify(userStageStore).stageCompleted(AppStage.NEW)
+        verify(onboardingSkipper).markOnboardingAsCompleted()
+    }
+
+    @Test
+    fun `when orchestrator completes bootstrapper plan then terminal stage write runs before Completed`() = runTest {
+        val orchestrator = LinearOnboardingOrchestratorImpl()
+        var callbackState: LinearOnboardingState? = null
+        var terminalStage = AppStage.NEW
+        whenever(userStageStore.stageCompleted(AppStage.NEW)).thenAnswer {
+            callbackState = orchestrator.state.value
+            terminalStage = AppStage.DAX_ONBOARDING
+            terminalStage
+        }
+        lateinit var onCompleted: suspend () -> Unit
+        lateinit var onSkipped: suspend () -> Unit
+        whenever(planProvider.buildRootPlan(any(), any())).thenAnswer { invocation ->
+            onCompleted = invocation.getArgument<suspend () -> Unit>(0)
+            onSkipped = invocation.getArgument<suspend () -> Unit>(1)
+            planWith { LinearOnboardingTransition.Advance }.copy(
+                onCompleted = { onCompleted() },
+                onSkipped = { onSkipped() },
+            )
+        }
+        val bootstrapper = NewUserOnboardingPlanBootstrapper(
+            orchestrator = orchestrator,
+            planProvider = planProvider,
+            userStageStore = userStageStore,
+            onboardingSkipper = onboardingSkipper,
+        )
+
+        bootstrapper.startNewUserOnboardingPlan()
+        orchestrator.onEvent(NewUserOnboardingEvent.ContinueClicked)
+
+        verify(userStageStore).stageCompleted(AppStage.NEW)
+        assertTrue(callbackState is InProgress)
+        assertEquals(AppStage.DAX_ONBOARDING, terminalStage)
+        assertTrue(orchestrator.state.value is Completed)
+    }
+
+    @Test
+    fun `when orchestrator skips bootstrapper plan then onboarding is marked completed before Skipped`() = runTest {
+        val orchestrator = LinearOnboardingOrchestratorImpl()
+        var callbackState: LinearOnboardingState? = null
+        whenever(onboardingSkipper.markOnboardingAsCompleted()).thenAnswer {
+            callbackState = orchestrator.state.value
+            Unit
+        }
+        lateinit var onCompleted: suspend () -> Unit
+        lateinit var onSkipped: suspend () -> Unit
+        whenever(planProvider.buildRootPlan(any(), any())).thenAnswer { invocation ->
+            onCompleted = invocation.getArgument<suspend () -> Unit>(0)
+            onSkipped = invocation.getArgument<suspend () -> Unit>(1)
+            planWith { LinearOnboardingTransition.AbortPlan }.copy(
+                onCompleted = { onCompleted() },
+                onSkipped = { onSkipped() },
+            )
+        }
+        val bootstrapper = NewUserOnboardingPlanBootstrapper(
+            orchestrator = orchestrator,
+            planProvider = planProvider,
+            userStageStore = userStageStore,
+            onboardingSkipper = onboardingSkipper,
+        )
+
+        bootstrapper.startNewUserOnboardingPlan()
+        orchestrator.onEvent(NewUserOnboardingEvent.ContinueClicked)
+
+        verify(onboardingSkipper).markOnboardingAsCompleted()
+        assertTrue(callbackState is InProgress)
+        assertTrue(orchestrator.state.value is Skipped)
+    }
+
+    private fun planWith(transition: suspend (LinearOnboardingEvent) -> LinearOnboardingTransition): LinearOnboardingPlan =
+        LinearOnboardingPlan(
+            id = "test_plan",
+            steps = listOf(
+                object : LinearOnboardingStep {
+                    override val id = "step"
+                    override val host = LinearOnboardingHost.OnboardingActivity
+                    override val precondition: suspend () -> Boolean = { true }
+                    override val transition: suspend (LinearOnboardingEvent) -> LinearOnboardingTransition = transition
+                },
+            ),
+        )
+}

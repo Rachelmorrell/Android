@@ -19,13 +19,17 @@ package com.duckduckgo.app.widget.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import androidx.lifecycle.Observer
 import com.duckduckgo.app.browser.databinding.ActivityAddWidgetInstructionsBinding
-import com.duckduckgo.app.global.DuckDuckGoActivity
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.Close
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.ShowHome
-import com.duckduckgo.mobile.android.ui.viewbinding.viewBinding
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import javax.inject.Inject
 
+@InjectWith(ActivityScope::class)
 class AddWidgetInstructionsActivity : DuckDuckGoActivity() {
 
     private val binding: ActivityAddWidgetInstructionsBinding by viewBinding()
@@ -35,9 +39,15 @@ class AddWidgetInstructionsActivity : DuckDuckGoActivity() {
     private val instructionsButtons
         get() = binding.includeAddWidgetInstructionButtons
 
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableTransparentEdgeToEdge()
         setContentView(binding.root)
+        edgeToEdgeHandler.applyStatusBarAndHorizontalInsets(binding.addWidgetInstructionsContent)
+        edgeToEdgeHandler.applyNavigationBarInsets(instructionsButtons.root, drawBehindGestureNav = false)
         configureListeners()
         configureCommandObserver()
     }
@@ -52,18 +62,16 @@ class AddWidgetInstructionsActivity : DuckDuckGoActivity() {
     }
 
     private fun configureCommandObserver() {
-        viewModel.command.observe(
-            this,
-            Observer {
-                when (it) {
-                    ShowHome -> showHome()
-                    Close -> close()
-                }
+        viewModel.command.observe(this) {
+            when (it) {
+                ShowHome -> showHome()
+                Close -> close()
             }
-        )
+        }
     }
 
     override fun onBackPressed() {
+        super.onBackPressed()
         viewModel.onClosePressed()
     }
 

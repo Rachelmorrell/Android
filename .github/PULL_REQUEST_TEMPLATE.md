@@ -1,20 +1,16 @@
-<!--
-Note: This checklist is a reminder of our shared engineering expectations. Feel free to change it, although assigning a GitHub reviewer and the items in bold are required.
--->
-
 Task/Issue URL: 
-Tech Design URL: 
-CC: 
+Tech Design URL (if applicable): 
+API Proposals URL(s) (if applicable):
 
-**Description**:
+### Description
 
+### Steps to test this PR
 
-**Steps to test this PR**:
-1. 
-1. 
+_Feature 1_
+- [ ]
+- [ ]
 
-
----
-###### Internal references:
-[Software Engineering Expectations](https://app.asana.com/0/59792373528535/199064865822552)
-[Technical Design Template](https://app.asana.com/0/59792373528535/184709971311943)
+### UI changes
+| Before  | After |
+| ------ | ----- |
+!(Upload before screenshot)|(Upload after screenshot)|

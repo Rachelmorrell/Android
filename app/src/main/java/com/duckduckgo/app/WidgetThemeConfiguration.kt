@@ -17,6 +17,7 @@
 package com.duckduckgo.app
 
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
@@ -24,13 +25,30 @@ import android.os.Bundle
 import android.view.View
 import com.duckduckgo.app.browser.R
 import com.duckduckgo.app.browser.databinding.ActivityWidgetConfigurationBinding
-import com.duckduckgo.app.global.DuckDuckGoActivity
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.widget.SearchAndFavoritesWidget
 import com.duckduckgo.widget.WidgetPreferences
 import com.duckduckgo.widget.WidgetTheme
 import javax.inject.Inject
+import com.duckduckgo.mobile.android.R as CommonR
 
+internal fun resolveWidgetConfigurationBackgroundAttr(isPictogramsEnabled: Boolean): Int =
+    if (isPictogramsEnabled) CommonR.attr.daxColorSurfaceTertiary else CommonR.attr.daxColorSurface
+
+internal fun resolveWidgetConfigurationPreview(
+    roundedPreview: Int,
+    legacyPreview: Int,
+    isAddressBarRebrandEnabled: Boolean,
+): Int = if (isAddressBarRebrandEnabled) roundedPreview else legacyPreview
+
+@InjectWith(ActivityScope::class)
 class WidgetThemeConfiguration : DuckDuckGoActivity() {
 
     @Inject
@@ -39,12 +57,29 @@ class WidgetThemeConfiguration : DuckDuckGoActivity() {
     @Inject
     lateinit var pixel: Pixel
 
+    @Inject
+    lateinit var appBuildConfig: AppBuildConfig
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
+    @Suppress("NewApi") // we use appBuildConfig
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val binding = ActivityWidgetConfigurationBinding.inflate(layoutInflater)
+        enableTransparentEdgeToEdge()
         setContentView(binding.root)
+        binding.widgetConfigPanel.setBackgroundColor(
+            getColorFromAttr(
+                resolveWidgetConfigurationBackgroundAttr(
+                    isPictogramsEnabled = appBrandDesignUpdateToggles.pictograms().isEnabled(),
+                ),
+            ),
+        )
+        edgeToEdgeHandler.applyStatusBarAndHorizontalInsets(binding.root)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.widgetConfigPanel, drawBehindGestureNav = false)
         val extras = intent.extras
         extras?.let {
             appWidgetId = it.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -58,16 +93,39 @@ class WidgetThemeConfiguration : DuckDuckGoActivity() {
             finish()
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val isAddressBarRebrandEnabled = appBrandDesignUpdateToggles.addressBar().isEnabled()
+        fun setWidgetPreview(roundedPreview: Int, legacyPreview: Int) {
+            binding.widgetConfigPreview.setImageResource(
+                resolveWidgetConfigurationPreview(
+                    roundedPreview = roundedPreview,
+                    legacyPreview = legacyPreview,
+                    isAddressBarRebrandEnabled = isAddressBarRebrandEnabled,
+                ),
+            )
+        }
+
+        if (appBuildConfig.sdkInt >= Build.VERSION_CODES.Q) {
             binding.widgetConfigThemeSystem.visibility = View.VISIBLE
             binding.widgetConfigThemeSystem.isChecked = true
+            setWidgetPreview(
+                R.drawable.image_preview_search_favorites_widget_daynight,
+                R.drawable.image_preview_search_favorites_widget_legacy_daynight,
+            )
         } else {
             binding.widgetConfigThemeSystem.visibility = View.GONE
             val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
             if (currentNightMode == Configuration.UI_MODE_NIGHT_YES) {
                 binding.widgetConfigThemeDark.isChecked = true
+                setWidgetPreview(
+                    R.drawable.image_preview_search_favorites_widget_dark,
+                    R.drawable.image_preview_search_favorites_widget_legacy_dark,
+                )
             } else {
                 binding.widgetConfigThemeLight.isChecked = true
+                setWidgetPreview(
+                    R.drawable.image_preview_search_favorites_widget_light,
+                    R.drawable.image_preview_search_favorites_widget_legacy_light,
+                )
             }
         }
 
@@ -76,16 +134,28 @@ class WidgetThemeConfiguration : DuckDuckGoActivity() {
                 R.id.widgetConfigThemeSystem -> {
                     val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
                     if (currentNightMode == Configuration.UI_MODE_NIGHT_YES) {
-                        binding.widgetConfigPreview.setImageResource(R.drawable.search_favorites_widget_dark_preview)
+                        setWidgetPreview(
+                            R.drawable.image_preview_search_favorites_widget_dark,
+                            R.drawable.image_preview_search_favorites_widget_legacy_dark,
+                        )
                     } else {
-                        binding.widgetConfigPreview.setImageResource(R.drawable.search_favorites_widget_preview)
+                        setWidgetPreview(
+                            R.drawable.image_preview_search_favorites_widget_light,
+                            R.drawable.image_preview_search_favorites_widget_legacy_light,
+                        )
                     }
                 }
                 R.id.widgetConfigThemeLight -> {
-                    binding.widgetConfigPreview.setImageResource(R.drawable.search_favorites_widget_preview)
+                    setWidgetPreview(
+                        R.drawable.image_preview_search_favorites_widget_light,
+                        R.drawable.image_preview_search_favorites_widget_legacy_light,
+                    )
                 }
                 R.id.widgetConfigThemeDark -> {
-                    binding.widgetConfigPreview.setImageResource(R.drawable.search_favorites_widget_dark_preview)
+                    setWidgetPreview(
+                        R.drawable.image_preview_search_favorites_widget_dark,
+                        R.drawable.image_preview_search_favorites_widget_legacy_dark,
+                    )
                 }
             }
         }
@@ -109,10 +179,16 @@ class WidgetThemeConfiguration : DuckDuckGoActivity() {
         pixel.fire(AppPixelName.FAVORITE_WIDGET_CONFIGURATION_SHOWN)
     }
 
-    private fun storeAndSubmitConfiguration(widgetId: Int, selectedTheme: WidgetTheme) {
+    private fun storeAndSubmitConfiguration(
+        widgetId: Int,
+        selectedTheme: WidgetTheme,
+    ) {
         widgetPrefs.saveWidgetSelectedTheme(widgetId, selectedTheme.toString())
         pixelSelectedTheme(selectedTheme)
-        val widgetUpdateIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+
+        val widgetUpdateIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+            component = ComponentName(this@WidgetThemeConfiguration, SearchAndFavoritesWidget::class.java)
+        }
         val widgetsToUpdate = IntArray(1).also { it[0] = widgetId }
         widgetUpdateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetsToUpdate)
         sendBroadcast(widgetUpdateIntent)

@@ -18,21 +18,19 @@ package com.duckduckgo.app.widget.ui
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
-import com.duckduckgo.app.InstantSchedulersRule
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.Close
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.ShowHome
-import com.nhaarman.mockitokotlin2.lastValue
-import com.nhaarman.mockitokotlin2.verify
+import com.duckduckgo.common.test.InstantSchedulersRule
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.Captor
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.verify
 
 class AddWidgetInstructionsViewModelTest {
 
@@ -49,12 +47,11 @@ class AddWidgetInstructionsViewModelTest {
     @Mock
     private lateinit var mockCommandObserver: Observer<Command>
 
-    @Captor
-    private lateinit var commandCaptor: ArgumentCaptor<Command>
+    private val commandCaptor = argumentCaptor<Command>()
 
     @Before
     fun before() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         testee = AddWidgetInstructionsViewModel()
         testee.command.observeForever(mockCommandObserver)
     }

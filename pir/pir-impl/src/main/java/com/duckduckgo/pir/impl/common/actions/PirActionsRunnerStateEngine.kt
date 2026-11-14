@@ -1,0 +1,226 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.common.actions
+
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep
+import com.duckduckgo.pir.impl.common.PirJob.RunType
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.pixels.PirStage
+import com.duckduckgo.pir.impl.scripts.models.BrokerAction
+import com.duckduckgo.pir.impl.scripts.models.PirError
+import com.duckduckgo.pir.impl.scripts.models.PirScriptRequestData
+import com.duckduckgo.pir.impl.scripts.models.PirSuccessResponse
+import com.duckduckgo.pir.impl.scripts.models.PirSuccessResponse.GetCaptchaInfoResponse.ResponseData
+import com.duckduckgo.pir.impl.store.PirRepository.GeneratedEmailData
+import kotlinx.coroutines.flow.Flow
+
+interface PirActionsRunnerStateEngine {
+    /**
+     * Flow that emits effects that should be handled outside of this engine
+     */
+    val sideEffect: Flow<SideEffect>
+
+    /**
+     * This method dispatches new events to the engine.
+     * By default, this happens in the IO dispatcher
+     */
+    fun dispatch(event: Event)
+
+    /**
+     * Cancels this engine's event collection. Dispatching after close is a no-op.
+     * An engine is single-use: one broker step per engine.
+     */
+    fun close()
+
+    /**
+     * Model representing the running state of the engine
+     */
+    data class State(
+        val runType: RunType,
+        val brokerStep: BrokerStep,
+        val profileQuery: ProfileQuery,
+        val currentActionIndex: Int = 0,
+        val brokerStepStartTime: Long = -1L,
+        val transactionID: String = "",
+        val pendingUrl: String? = null,
+        val preseeding: Boolean = false,
+        val actionRetryCount: Int = 0,
+        val generatedEmailData: GeneratedEmailData? = null,
+        val emailExtractedData: Map<String, String> = emptyMap(),
+        val attemptId: String = "",
+        val stageStatus: PirStageStatus,
+    )
+
+    data class PirStageStatus(
+        val currentStage: PirStage,
+        val stageStartMs: Long,
+    )
+
+    /**
+     * This model represents the events that the engine can handle and update the running state accordingly.
+     */
+    sealed class Event {
+        data object Idle : Event()
+
+        data object Started : Event()
+
+        data object PreSeedCookies : Event()
+
+        data class LoadUrlComplete(
+            val url: String,
+        ) : Event()
+
+        data class LoadUrlFailed(
+            val url: String,
+        ) : Event()
+
+        data class EmailReceived(
+            val generatedEmailData: GeneratedEmailData,
+        ) : Event()
+
+        data object ExecuteBrokerStep : Event()
+
+        data class ExecuteBrokerStepAction(
+            val actionRequestData: PirScriptRequestData,
+        ) : Event()
+
+        data class BrokerStepCompleted(
+            val needsEmailConfirmation: Boolean,
+            val stepStatus: StepStatus,
+        ) : Event() {
+            sealed class StepStatus {
+                data object Success : StepStatus()
+                data class Failure(
+                    val error: PirError,
+                ) : StepStatus()
+            }
+        }
+
+        data class ErrorReceived(
+            val error: PirError,
+        ) : Event()
+
+        data class JsActionSuccess(
+            val pirSuccessResponse: PirSuccessResponse,
+        ) : Event()
+
+        data class BrokerActionFailed(
+            val error: PirError,
+            val allowRetry: Boolean,
+        ) : Event()
+
+        data class RetryAwaitCaptchaSolution(
+            val actionId: String,
+            val brokerName: String,
+            val transactionID: String,
+            val attempt: Int = 0,
+        ) : Event()
+
+        data class CaptchaInfoReceived(
+            val transactionID: String,
+        ) : Event()
+
+        data class RetryGetCaptchaSolution(
+            val actionId: String,
+            val responseData: ResponseData?,
+        ) : Event()
+
+        data class ConditionExpectationSucceeded(
+            val conditionActions: List<BrokerAction>,
+        ) : Event()
+
+        data class EmailDataReceived(
+            val emailExtractedData: Map<String, String>,
+        ) : Event()
+
+        data class RetryAwaitEmailData(
+            val actionId: String,
+            val brokerName: String,
+            val emailAddress: String,
+            val attemptId: String,
+            val extractFields: List<String>,
+            val pollingIntervalSeconds: Int,
+            val maxTimeoutSeconds: Int,
+            val attempt: Int,
+        ) : Event()
+    }
+
+    /**
+     * This model represents effects that should happen outside the engine.
+     * Any work that could take more than a second to evaluate or requires to be on the main thread shouuld be a side effect.
+     */
+    sealed class SideEffect {
+        data object None : SideEffect()
+
+        data object CompleteExecution : SideEffect()
+
+        data class PushJsAction(
+            override val actionId: String,
+            val action: BrokerAction,
+            val pushDelay: Long = 0L,
+            val requestParamsData: PirScriptRequestData,
+        ) : SideEffect(),
+            BrokerActionSideEffect
+
+        data class GetEmailForProfile(
+            override val actionId: String,
+            val brokerName: String,
+        ) : SideEffect(),
+            BrokerActionSideEffect
+
+        data class GetCaptchaSolution(
+            override val actionId: String,
+            val responseData: ResponseData?,
+            val isRetry: Boolean,
+        ) : SideEffect(),
+            BrokerActionSideEffect
+
+        data class AwaitCaptchaSolution(
+            override val actionId: String,
+            val brokerName: String,
+            val transactionID: String,
+            val pollingIntervalSeconds: Int = 5,
+            val retries: Int = 50,
+            val attempt: Int = 0,
+        ) : SideEffect(),
+            BrokerActionSideEffect
+
+        data class AwaitEmailData(
+            override val actionId: String,
+            val brokerName: String,
+            val emailAddress: String,
+            val attemptId: String,
+            val extractFields: List<String>,
+            val pollingIntervalSeconds: Int,
+            val maxTimeoutSeconds: Int = 60,
+            val attempt: Int = 0,
+        ) : SideEffect(),
+            BrokerActionSideEffect
+
+        data class LoadUrl(
+            val url: String,
+        ) : SideEffect()
+
+        data class EvaluateJs(
+            val callback: String,
+        ) : SideEffect()
+    }
+
+    interface BrokerActionSideEffect {
+        val actionId: String
+    }
+}

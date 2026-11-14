@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="duck_chat_title">Duck.ai</string>
+    <string name="duck_chat_download_finished_action_name">Openen</string>
+    <string name="duck_chat_cannot_open_file_error_message">Kan bestand niet openen. Kijk of er een compatibele app is.</string>
+
+    <!-- Uploading an image from the camera or choosing to use existing image -->
+    <string name="imageCaptureCameraUnavailable">Kan geen toegang krijgen tot de camera</string>
+    <string name="imageCaptureCameraGalleryDisambiguationTitle">Upload een afbeelding</string>
+    <string name="imageCaptureCameraGalleryDisambiguationGalleryOption">Bestand kiezen</string>
+    <string name="imageCaptureCameraGalleryDisambiguationCameraOption">Foto maken</string>
+    <string name="imageCaptureCameraPermissionDeniedTitle">DuckDuckGo toestaan om toegang tot de camera op dit apparaat te vragen</string>
+    <string name="imageCaptureCameraPermissionDeniedMessage">Sites kunnen je camera alleen gebruiken als je DuckDuckGo toestaat om toegang te vragen.</string>
+    <string name="imageCaptureCameraPermissionDeniedPositiveButton">Open Instellingen</string>
+    <string name="imageCaptureCameraPermissionDeniedNegativeButton">Annuleren</string>
+
+    <!-- Content capture for upload -->
+    <string name="audioCaptureSoundRecorderUnavailable">Kan geen toegang krijgen tot de geluidsrecorder</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedTitle">DuckDuckGo toestaan om toegang tot de geluidsrecorder op dit apparaat te vragen</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedMessage">Sites kunnen de geluidsrecorder alleen gebruiken als je DuckDuckGo toestaat om toegang te vragen.</string>
+
+    <!-- Settings -->
+    <string name="duck_chat_ai_features_title">AI-functies</string>
+    <string name="duck_chat_settings_activity_description">DuckDuckGo AI-functies zijn privé en optioneel.\nJe gegevens worden niet gebruikt om AI te trainen.\n<annotation type="learn_more_link">Meer informatie</annotation></string>
+    <string name="duck_chat_enable_duck_ai_setting">Duck.ai</string>
+    <string name="duck_chat_enable_duck_ai_setting_description">Chat privé met populaire AI-modellen van derden</string>
+    <string name="duck_chat_visibility_setting">Browsermenu</string>
+    <string name="duck_chat_address_bar_visibility_setting">Adresbalk</string>
+    <string name="duck_chat_assist_settings_title">Instellingen voor zoek Assist</string>
+    <string name="duck_chat_assist_settings_description">Kies hoe vaak antwoorden op basis van AI in je zoekresultaten moeten worden weergegeven</string>
+    <string name="duck_ai_shortcut_settings_title">Duck.ai-snelkoppelingen</string>
+    <string name="duck_ai_shortcut_settings_description">Kies welke Duck.ai-snelkoppelingen je wilt weergeven</string>
+
+    <!-- Default Toggle Position -->
+    <string name="duckAiDefaultTogglePositionTitle" instruction="&apos;Toggle&apos; refers to the UI tab switcher component (Search/Duck.ai), not the verb &apos;to toggle&apos;.">Positie nieuw tabblad wisselen</string>
+    <string name="duckAiDefaultTogglePositionSearch">Zoeken</string>
+    <string name="duckAiDefaultTogglePositionDuckAi">Duck.ai</string>
+    <string name="duckAiDefaultTogglePositionLastUsed">Laatst gebruikt</string>
+
+    <!-- Duck AI Voice Search Shortcut Setting -->
+    <string name="duckAiVoiceSearchVisibilitySetting">Zoeken via spraak</string>
+
+    <!-- Input Screen  -->
+    <string name="input_screen_search_hint">Zoek of voer een adres in</string>
+    <string name="input_screen_search_only_hint">Zoeken</string>
+    <string name="input_screen_user_pref_without_ai">Alleen zoeken</string>
+    <string name="input_screen_user_pref_with_ai">Zoeken en Duck.ai</string>
+    <string name="input_screen_user_pref_description">Probeer de nieuwe optie om direct een vraag te stellen aan Duck.ai vanuit de adresbalk. <annotation type="share_feedback">Feedback delen</annotation></string>
+
+    <!-- Duck.ai Pro settings -->
+    <string name="duck_ai_paid_settings_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_description"><![CDATA[Chat privé met AI-modellen die exclusief voor abonnees zijn.\n<a href=\"\">Meer informatie</a>]]></string>
+    <string name="duck_ai_paid_settings_open_duck_ai">Duck.ai openen</string>
+    <string name="duck_ai_paid_settings_learn_more_title">Meer informatie</string>
+
+    <!-- New Address Bar Option Bottom Sheet Dialog -->
+    <string name="newAddressBarOptionBottomSheetDialogTitle">Wil je eenvoudiger toegang\ntot privé AI-chat?</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchText">Zoek of voer een adres in</string>
+    <string name="newAddressBarOptionBottomSheetDialogPrimaryButton">Bevestigen</string>
+    <string name="newAddressBarOptionBottomSheetDialogGhostButton">Niet nu</string>
+    <string name="newAddressBarOptionBottomSheetDialogFooter">Aanpassen in Instellingen &gt; AI-functies</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchOnly">Alleen zoeken</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchAndDuckAi">Zoeken en Duck.ai</string>
+    <string name="newAddressBarOptionBottomSheetDialogHeader">Optie voor adresbalk</string>
+
+    <!-- Duck AI SERP Settings Title -->
+    <string name="duckAiSerpSettingsTitle">AI-functies</string>
+
+    <!-- Duck AI Search Section Header -->
+    <string name="duckAiSearchSettingsSectionHeader">Zoeken</string>
+
+    <!-- Duck AI Hide Generated Images Settings Option -->
+    <string name="duckAiHideAiGeneratedImagesTitle">Verberg AI-gegenereerde afbeeldingen.</string>
+    <string name="duckAiHideAiGeneratedImagesDescription">Filtert AI-gegenereerde afbeeldingen uit de zoekresultaten van afbeeldingen.</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilitySubtitle">Kies hoe vaak antwoorden op basis van AI in je zoekresultaten moeten worden weergegeven.</string>
+    <string name="duckAiSearchAssistVisibilityNever">Nooit</string>
+    <string name="duckAiSearchAssistVisibilityOnDemand">Op aanvraag</string>
+    <string name="duckAiSearchAssistVisibilitySometimes">Soms</string>
+    <string name="duckAiSearchAssistVisibilityOften">Vaak</string>
+
+    <!-- Duck AI Use Without AI Settings Option -->
+    <string name="duckAiUseWithoutAiTitle">DuckDuckGo zonder AI gebruiken</string>
+    <string name="duckAiUseWithoutAiDescription">Hiermee schakel je Duck.ai uit, verberg je antwoorden op basis van AI in zoekresultaten en filter je bekende AI-spamsites in zoekresultaten voor afbeeldingen.</string>
+    <string name="duckAiUseWithoutAiDisabledDescription">AI is momenteel uitgeschakeld in de browser, dus je ziet geen antwoorden op basis van AI meer en minder door AI gegenereerde afbeeldingen in de zoekresultaten voor afbeeldingen.</string>
+
+    <!-- Duck AI Section in AI Feature Screen -->
+    <string name="input_screen_user_pref_toggle_between_search_and_ai">Schakelen tussen zoeken en Duck.ai</string>
+    <string name="duckAiDialogHideAiGeneratedImagesTitle">Door AI gegenereerde afbeeldingen verbergen</string>
+    <string name="duckAiDialogHideAiGeneratedImagesDescription">Hiermee filter je bekende AI-spamsites uit de zoekresultaten voor afbeeldingen. <annotation link="learn_more">Meer informatie</annotation></string>
+
+    <!-- Duck AI Paid Settings -->
+    <string name="duck_ai_paid_settings_enable_in_settings">Inschakelen in de instellingen voor AI-functies</string>
+    <string name="duck_ai_paid_settings_manage_in_settings">Beheren in de instellingen voor AI-functies</string>
+    <string name="duck_ai_paid_settings_manage_secondary">Configureer Duck.ai in de instellingen voor AI-functies.</string>
+
+    <!-- Duck.ai Contextual Bottom Sheet -->
+    <string name="duckAIContextualPromptSummarize">Deze pagina samenvatten</string>
+    <string name="duckAIContextualAutomaticContextTitle">Pagina-inhoud automatisch verzenden</string>
+    <string name="duckAIContextualAutomaticContextMessage">Pagina-inhoud automatisch naar Duck.ai verzenden</string>
+
+    <!-- Contextual sheet suggested prompts; native copy for PageSuggestionsCatalog.json entries, keyed by catalog id -->
+    <string name="duckAiSuggestionTranslatePageLabel" instruction="Suggested prompt chip: translate the current page">Vertaal deze pagina</string>
+    <string name="duckAiSuggestionTranslatePagePrompt" instruction="Suggested prompt submitted text: translate the page. %1$s is replaced with the name of the user&apos;s language.">Vertaal deze pagina naar %1$s.</string>
+    <string name="duckAiSuggestionKeyTakeawaysLabel" instruction="Suggested prompt chip: key takeaways of an article">Wat zijn de belangrijkste punten?</string>
+    <string name="duckAiSuggestionKeyTakeawaysPrompt" instruction="Suggested prompt submitted text: key takeaways of an article">Wat zijn de belangrijkste punten uit dit artikel?</string>
+    <string name="duckAiSuggestionExplainSimplyLabel" instruction="Suggested prompt chip: explain the content simply">Leg dit eenvoudig uit</string>
+    <string name="duckAiSuggestionExplainSimplyPrompt" instruction="Suggested prompt submitted text: explain the content simply">Leg dit uit in eenvoudige, gewone taal.</string>
+    <string name="duckAiSuggestionCounterargumentsLabel" instruction="Suggested prompt chip: counterarguments">Wat zijn de tegenargumenten?</string>
+    <string name="duckAiSuggestionCounterargumentsPrompt" instruction="Suggested prompt submitted text: counterarguments">Wat zijn de belangrijkste tegenargumenten of kritiekpunten hierop?</string>
+    <string name="duckAiSuggestionRelatedArticlesLabel" instruction="Suggested prompt chip: related articles">Gerelateerde artikelen voorstellen om verder te lezen</string>
+    <string name="duckAiSuggestionRelatedArticlesPrompt" instruction="Suggested prompt submitted text: related articles">Stel gerelateerde artikelen of onderwerpen voor die de moeite waard zijn om verder te lezen.</string>
+    <string name="duckAiSuggestionShoppingListLabel" instruction="Suggested prompt chip: shopping list from a recipe">Een boodschappenlijst genereren</string>
+    <string name="duckAiSuggestionShoppingListPrompt" instruction="Suggested prompt submitted text: shopping list from a recipe">Maak een boodschappenlijst met de juiste hoeveelheden om dit recept te maken.</string>
+    <string name="duckAiSuggestionRecipeNutritionLabel" instruction="Suggested prompt chip: recipe nutrition">De voedingswaarde inschatten</string>
+    <string name="duckAiSuggestionRecipeNutritionPrompt" instruction="Suggested prompt submitted text: recipe nutrition">Schat de voedingsinformatie voor dit recept in.</string>
+    <string name="duckAiSuggestionScaleRecipeLabel" instruction="Suggested prompt chip: scale a recipe">Aanpassen voor een ander aantal porties</string>
+    <string name="duckAiSuggestionScaleRecipePrompt" instruction="Suggested prompt submitted text: scale a recipe">Pas dit recept aan voor een ander aantal porties.</string>
+    <string name="duckAiSuggestionProductProsConsLabel" instruction="Suggested prompt chip: product pros and cons">Wat zijn de voor- en nadelen?</string>
+    <string name="duckAiSuggestionProductProsConsPrompt" instruction="Suggested prompt submitted text: product pros and cons">Wat zijn de voor- en nadelen van dit product?</string>
+    <string name="duckAiSuggestionFindAlternativesLabel" instruction="Suggested prompt chip: product alternatives">Alternatieven zoeken</string>
+    <string name="duckAiSuggestionFindAlternativesPrompt" instruction="Suggested prompt submitted text: product alternatives">Stel een aantal alternatieven voor dit product voor.</string>
+    <string name="duckAiSuggestionSummarizeVideoLabel" instruction="Suggested prompt chip: summarize a video">Deze video samenvatten</string>
+    <string name="duckAiSuggestionSummarizeVideoPrompt" instruction="Suggested prompt submitted text: summarize a video">Vat deze video samen.</string>
+    <string name="duckAiSuggestionVideoKeyPointsLabel" instruction="Suggested prompt chip: video key points">Wat zijn de belangrijkste punten?</string>
+    <string name="duckAiSuggestionVideoKeyPointsPrompt" instruction="Suggested prompt submitted text: video key points">Wat zijn de belangrijkste punten die in deze video aan bod komen?</string>
+    <string name="duckAiSuggestionTailorResumeLabel" instruction="Suggested prompt chip: tailor a resume to a job">Mijn cv aanpassen</string>
+    <string name="duckAiSuggestionTailorResumePrompt" instruction="Suggested prompt submitted text: tailor a resume to a job">Help me mijn cv af te stemmen op deze vacature.</string>
+    <string name="duckAiSuggestionInterviewPrepLabel" instruction="Suggested prompt chip: interview prep">Help me met de voorbereiding op het sollicitatiegesprek</string>
+    <string name="duckAiSuggestionInterviewPrepPrompt" instruction="Suggested prompt submitted text: interview prep">Welke sollicitatievragen kan ik voor deze vacature verwachten?</string>
+    <string name="duckAiSuggestionCoverLetterLabel" instruction="Suggested prompt chip: draft a cover letter">Een sollicitatiebrief opstellen</string>
+    <string name="duckAiSuggestionCoverLetterPrompt" instruction="Suggested prompt submitted text: draft a cover letter">Stel een sollicitatiebrief op voor deze baan.</string>
+    <string name="duckAiSuggestionEventDetailsLabel" instruction="Suggested prompt chip: event details">Wat zijn de belangrijkste details?</string>
+    <string name="duckAiSuggestionEventDetailsPrompt" instruction="Suggested prompt submitted text: event details">Vat de belangrijkste details van dit evenement samen.</string>
+    <string name="duckAiSuggestionWorthWatchingLabel" instruction="Suggested prompt chip: is a movie/show worth watching">Is dit de moeite waard?</string>
+    <string name="duckAiSuggestionWorthWatchingPrompt" instruction="Suggested prompt submitted text: is a movie/show worth watching">Is dit de moeite waard? Geef me een mening zonder spoilers.</string>
+    <string name="duckAiSuggestionSimilarTitlesLabel" instruction="Suggested prompt chip: similar movies or shows">Beveel vergelijkbare titels aan</string>
+    <string name="duckAiSuggestionSimilarTitlesPrompt" instruction="Suggested prompt submitted text: similar movies or shows">Beveel soortgelijke films of series aan.</string>
+    <string name="duckAiSuggestionCastCrewLabel" instruction="Suggested prompt chip: cast and crew">Cast en crew</string>
+    <string name="duckAiSuggestionCastCrewPrompt" instruction="Suggested prompt submitted text: cast and crew">Wie zijn de belangrijkste leden in de cast en crew, en waar staan ze nog meer om bekend?</string>
+    <string name="duckAiSuggestionSummarizeBookLabel" instruction="Suggested prompt chip: summarize a book">Dit boek samenvatten</string>
+    <string name="duckAiSuggestionSummarizeBookPrompt" instruction="Suggested prompt submitted text: summarize a book">Vat dit boek samen.</string>
+    <string name="duckAiSuggestionSimilarBooksLabel" instruction="Suggested prompt chip: similar books">Vergelijkbare boeken aanbevelen</string>
+    <string name="duckAiSuggestionSimilarBooksPrompt" instruction="Suggested prompt submitted text: similar books">Beveel vergelijkbare boeken aan.</string>
+    <string name="duckAiSuggestionExplainPaperLabel" instruction="Suggested prompt chip: explain a research paper">Dit artikel nader uitleggen</string>
+    <string name="duckAiSuggestionExplainPaperPrompt" instruction="Suggested prompt submitted text: explain a research paper">Leg dit onderzoeksartikel uit in eenvoudige taal.</string>
+    <string name="duckAiSuggestionPaperContributionsLabel" instruction="Suggested prompt chip: paper contributions">Wat zijn de belangrijkste bijdragen?</string>
+    <string name="duckAiSuggestionPaperContributionsPrompt" instruction="Suggested prompt submitted text: paper contributions">Wat zijn de belangrijkste bijdragen van dit artikel?</string>
+    <string name="duckAiSuggestionMenuHighlightsLabel" instruction="Suggested prompt chip: restaurant menu highlights">Wat moet ik bestellen?</string>
+    <string name="duckAiSuggestionMenuHighlightsPrompt" instruction="Suggested prompt submitted text: restaurant menu highlights">Wat zijn de gerechten die hier aangeraden worden?</string>
+    <string name="duckAiSuggestionPlaceHoursLabel" instruction="Suggested prompt chip: place hours and location">Wat zijn de openingstijden en locatie?</string>
+    <string name="duckAiSuggestionPlaceHoursPrompt" instruction="Suggested prompt submitted text: place hours and location">Wat zijn de openingstijden, locatie en contactgegevens van deze plek?</string>
+    <string name="duckAiSuggestionPlaceReviewsLabel" instruction="Suggested prompt chip: place reputation">Is dit een goede plek?</string>
+    <string name="duckAiSuggestionPlaceReviewsPrompt" instruction="Suggested prompt submitted text: place reputation">Is dit een goede plek? Vat de reputatie samen op basis van beoordelingen en ratings.</string>
+    <string name="duckAiSuggestionSummarizeThreadLabel" instruction="Suggested prompt chip: summarize a discussion thread">Deze discussie samenvatten</string>
+    <string name="duckAiSuggestionSummarizeThreadPrompt" instruction="Suggested prompt submitted text: summarize a discussion thread">Vat deze discussiethread samen.</string>
+    <string name="duckAiSuggestionExplainRepoLabel" instruction="Suggested prompt chip: explain a code repository">Leg deze repo uit</string>
+    <string name="duckAiSuggestionExplainRepoPrompt" instruction="Suggested prompt submitted text: explain a code repository">Leg uit wat deze repository doet en hoe je deze gebruikt.</string>
+    <string name="duckAiSuggestionExplainAnswerLabel" instruction="Suggested prompt chip: explain the top answer">Geef uitleg voor het beste antwoord</string>
+    <string name="duckAiSuggestionExplainAnswerPrompt" instruction="Suggested prompt submitted text: explain the top answer">Leg het geaccepteerde antwoord in eenvoudige bewoordingen uit.</string>
+    <string name="duckAiSuggestionHowtoStepsLabel" instruction="Suggested prompt chip: how-to steps">Help me door de stappen</string>
+    <string name="duckAiSuggestionHowtoStepsPrompt" instruction="Suggested prompt submitted text: how-to steps">Deel dit op in duidelijke, genummerde stappen.</string>
+    <string name="duckAiSuggestionHowtoMaterialsLabel" instruction="Suggested prompt chip: how-to materials">Wat heb ik nodig?</string>
+    <string name="duckAiSuggestionHowtoMaterialsPrompt" instruction="Suggested prompt submitted text: how-to materials">Maak een lijst van het gereedschap, de materialen en andere dingen die ik hiervoor nodig heb.</string>
+    <string name="duckAiSuggestionCourseLearnLabel" instruction="Suggested prompt chip: course learning outcomes">Wat ga ik leren?</string>
+    <string name="duckAiSuggestionCourseLearnPrompt" instruction="Suggested prompt submitted text: course learning outcomes">Wat zijn de belangrijkste dingen die ik in deze cursus kan leren?</string>
+    <string name="duckAiSuggestionCourseWorthLabel" instruction="Suggested prompt chip: is a course worth taking">Is het de moeite waard?</string>
+    <string name="duckAiSuggestionCourseWorthPrompt" instruction="Suggested prompt submitted text: is a course worth taking">Is deze cursus aan de hand van deze pagina de moeite waard?</string>
+    <string name="duckAiSuggestionFaqAnswerLabel" instruction="Suggested prompt chip: what an FAQ page answers">Welke vragen worden hier beantwoord?</string>
+    <string name="duckAiSuggestionFaqAnswerPrompt" instruction="Suggested prompt submitted text: what an FAQ page answers">Wat zijn de belangrijkste vragen die deze pagina beantwoordt?</string>
+    <string name="duckAiSuggestionFaqSummaryLabel" instruction="Suggested prompt chip: summarize FAQ Q&amp;As">De Q&amp;A\'s samenvatten</string>
+    <string name="duckAiSuggestionFaqSummaryPrompt" instruction="Suggested prompt submitted text: summarize FAQ Q&amp;As">Vat de vragen en antwoorden op deze pagina samen.</string>
+    <string name="duckAiSuggestionReviewVerdictLabel" instruction="Suggested prompt chip: review verdict">Wat is het oordeel?</string>
+    <string name="duckAiSuggestionReviewVerdictPrompt" instruction="Suggested prompt submitted text: review verdict">Wat is hiervan de beoordeling en de conclusie?</string>
+    <string name="duckAiSuggestionReviewSummaryLabel" instruction="Suggested prompt chip: summarize reviews">De beoordelingen samenvatten</string>
+    <string name="duckAiSuggestionReviewSummaryPrompt" instruction="Suggested prompt submitted text: summarize reviews">Vat samen wat er in de beoordelingen staat.</string>
+    <string name="duckAiSuggestionWhoIsThisLabel" instruction="Suggested prompt chip: person background">Wie is deze persoon?</string>
+    <string name="duckAiSuggestionWhoIsThisPrompt" instruction="Suggested prompt submitted text: person background">Geef me korte achtergrondinformatie over deze persoon.</string>
+    <string name="duckAiSuggestionPersonBackgroundLabel" instruction="Suggested prompt chip: summarize a person&apos;s background">Hun achtergrond samenvatten</string>
+    <string name="duckAiSuggestionPersonBackgroundPrompt" instruction="Suggested prompt submitted text: summarize a person&apos;s background">Geef een samenvatting van de achtergrond en het belangrijkste werk van deze persoon.</string>
+
+    <string name="contextualSheetChatsPopupRecentSection" instruction="Section header above the list of recent Duck.ai chats in the contextual sheet overflow menu.">Recente chats</string>
+
+    <!-- duck.ai contextual fire button -->
+    <string name="duckAIContextualFireButtonContentDescription">Chat wissen</string>
+
+    <!-- Content Descriptions -->
+    <string name="duckChatFireButtonContentDescription">Gegevens wissen</string>
+    <string name="duckChatBrowserMenuContentDescription">Meer opties</string>
+
+    <!-- Duck AI Voice Chat Shortcut Setting -->
+    <string name="duckAiVoiceChatVisibilitySetting" instruction="Voice Chat is a feature that lets users talk to Duck.ai using their voice instead of typing.">Voicechat</string>
+
+    <!-- Duck.ai voice microphone foreground service notification -->
+    <string name="duckAiVoiceNotificationTitle" instruction="Title shown in the notification when Duck.ai Voice Chat is active and using the microphone.">Duck.ai voicechat actief</string>
+    <string name="duckAiVoiceNotificationMessage" instruction="Message shown in the notification explaining that the microphone is being used by Duck.ai.">Microfoon wordt gebruikt door Duck.ai</string>
+    <string name="duckAiVoiceNotificationChannelName" instruction="Name of the Android notification channel for the Duck.ai Voice Chat foreground service.">Duck.ai-spraakchat</string>
+    <string name="duckAiVoiceNotificationActionOpenChat" instruction="Notification action button that opens the active Duck.ai chat.">Chat openen</string>
+    <string name="duckAiVoiceNotificationActionEndSession" instruction="Notification action button that ends the active Duck.ai voice chat session.">Chat beëindigen</string>
+
+    <!-- Duck AI Chat Suggestions -->
+    <string name="duckAiChatHistoryViewAllChats">Alle chats weergeven</string>
+
+    <!-- Duck.ai onboarding end CTA -->
+    <string name="duckAiEndCtaTitle">Je kunt het!</string>
+    <string name="duckAiEndCtaDescription"><![CDATA[Gebruik de adresbalk om websites te zoeken en te bezoeken, of schakel over naar Duck.ai voor een privé-chat met AI.<br/><br/>Je kunt Duck.ai gebruiken vanaf elke plek waar je het chatpictogram ziet.]]></string>
+    <string name="duckAiEndCtaButton">High five!</string>
+
+    <!-- Native Duck.ai chat history -->
+    <string name="duck_ai_chat_history_title">Chats</string>
+    <string name="duck_ai_chat_history_section_pinned">Vastgezet</string>
+    <string name="duck_ai_chat_history_section_recent">Recent</string>
+    <string name="duck_ai_chat_history_untitled">Chat zonder titel</string>
+    <string name="duck_ai_chat_history_empty_title">Nog geen chats</string>
+    <string name="duck_ai_chat_history_more_options">Meer opties</string>
+    <string name="duck_ai_chat_history_action_select">Selecteren</string>
+    <string name="duck_ai_chat_history_action_pin">Pin</string>
+    <string name="duck_ai_chat_history_action_unpin">Pin verwijderen</string>
+    <string name="duck_ai_chat_history_action_rename">Naam wijzigen</string>
+    <string name="duck_ai_chat_history_action_download">Downloaden</string>
+    <string name="duck_ai_chat_history_action_delete">Verwijderen</string>
+    <string name="duck_ai_chat_history_search_hint">Chats zoeken</string>
+    <string name="duck_ai_chat_history_action_search_content_description">Chats zoeken</string>
+    <string name="duck_ai_chat_history_search_close_content_description">Zoeken sluiten</string>
+    <string name="duck_ai_chat_history_search_clear_content_description">Zoeken wissen</string>
+    <string name="duck_ai_chat_history_action_fire_content_description">Chats verwijderen</string>
+    <string name="duck_ai_chat_history_action_new">Nieuw</string>
+    <string name="duck_ai_chat_history_action_download_selected_content_description">Chats downloaden</string>
+    <plurals name="duck_ai_chat_history_bulk_download_complete">
+        <item quantity="one" instruction="%1$d is the number of chats downloaded">Download voltooid voor %1$d chat</item>
+        <item quantity="other" instruction="%1$d is the number of chats downloaded">Download voltooid voor %1$d chats</item>
+    </plurals>
+    <string name="duck_ai_chat_history_action_overflow_content_description">Overloopmenu openen</string>
+    <string name="duck_ai_chat_history_select_all">Alles selecteren</string>
+    <string name="duck_ai_chat_history_unselect_all">Alles deselecteren</string>
+    <string name="duck_ai_chat_history_row_selected_content_description">Geselecteerd</string>
+    <string name="duck_ai_chat_history_row_unselected_content_description">Niet geselecteerd</string>
+    <string name="duck_ai_chat_history_exit_select_mode_content_description">De selectiemodus verlaten</string>
+    <string name="duck_ai_chat_history_rename_title">Naam van chat wijzigen</string>
+    <string name="duck_ai_chat_history_rename_chat_title_hint">Chattitel</string>
+    <string name="duck_ai_chat_history_rename_confirm_title">Opslaan</string>
+    <string name="duck_ai_chat_history_rename_confirm_content_description">Titel van chat opslaan</string>
+    <string name="duck_ai_chat_history_rename_error">Kon naam van chat niet wijzigen</string>
+    <string name="duck_ai_chat_history_pin_snackbar">Chat vastgetzet</string>
+    <string name="duck_ai_chat_history_unpin_snackbar">Chat losgemaakt</string>
+    <string name="duck_ai_chat_history_undo">Ongedaan maken</string>
+    <string name="duck_ai_chat_history_download_complete" instruction="%1$s is the saved chat filename (e.g. \&apos;My Chat.txt\&apos;).">Downloaden voltooid voor %1$s</string>
+    <string name="duck_ai_chat_history_download_view">Tonen</string>
+    <string name="duck_ai_chat_history_download_error">Kan chat niet exporteren</string>
+    <string name="duck_ai_chat_history_bulk_download_error">Kan chats niet exporteren</string>
+
+    <string name="duckAiChatSearchDuckDuckGo">Zoek in DuckDuckGo</string>
+    <string name="native_input_chat_hint">Vraag iets privé…</string>
+    <string name="native_input_chat_duck_mode_hint">Antwoord…</string>
+
+    <!-- Model Picker -->
+    <string name="duckAiModelPickerLabelEverydayUse" instruction="Subline under a model in the Duck.ai model picker, describing what that model suits.">Ideaal voor dagelijks gebruik</string>
+    <string name="duckAiModelPickerLabelUsesLimitsFaster" instruction="Subline under a model in the Duck.ai model picker. &apos;Limits&apos; means the user&apos;s usage allowance, which this model consumes more quickly.">Solide, maar bereikt limieten sneller</string>
+    <string name="duckAiModelPickerTryFreeTrial" instruction="Header above the locked models in the Duck.ai model picker, shown when the user can still start a free trial.">Probeer gratis</string>
+    <string name="duckAiModelPickerSubscriberExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when unlocking them requires a paid subscription.">Alleen voor abonnees</string>
+    <string name="duckAiModelPickerProExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when they require the Pro plan specifically. &apos;Pro&apos; is the plan name and stays untranslated.">Exclusief voor Pro</string>
+    <string name="duckAiModelPickerPlusModels">Plus</string>
+    <string name="duckAiModelPickerProModels">Pro</string>
+
+    <!-- Reasoning Mode Picker -->
+    <string name="duckChatReasoningModeContentDescription">Redeneringsmodus</string>
+    <string name="duckChatReasoningModeFastTitle">Snel</string>
+    <string name="duckChatReasoningModeFastSubtitle">Antwoordt snel</string>
+    <string name="duckChatReasoningModeReasoningTitle">Redenering</string>
+    <string name="duckChatReasoningModeReasoningSubtitle">Voor complexe taken</string>
+    <string name="duckChatReasoningModeExtendedTitle">Uitgebreide redenering</string>
+    <string name="duckChatReasoningModeExtendedSubtitle">Voor analytische taken</string>
+
+    <!-- Start chat icon content description -->
+    <string name="duckChatStartChatContentDescription">Chat starten</string>
+    <string name="duckChatStopStreamingContentDescription">Antwoorden stoppen</string>
+
+    <!-- Image attachment -->
+    <string name="duckChatImageAttachmentRemoveContentDescription">Afbeelding verwijderen</string>
+
+    <!-- Image attachment limits -->
+    <string name="duckChatImageAttachmentLimitPerMessage" instruction="%1$d is the maximum number of images allowed per message.">Je kunt slechts %1$d afbeeldingen tegelijk bijvoegen.</string>
+    <string name="duckChatImageAttachmentLimitPerConversation" instruction="%1$d is the maximum number of images allowed in a single conversation.">Je kunt slechts %1$d afbeeldingen per gesprek bijvoegen.</string>
+
+    <!-- File/image attachment menu options -->
+    <string name="attachmentTakePhoto">Foto maken</string>
+    <string name="attachmentAttachPhoto">Afbeelding toevoegen</string>
+    <string name="attachmentAttachFile">Bestand toevoegen</string>
+
+    <!-- File attachment -->
+    <string name="duckChatFileAttachmentRemoveContentDescription">Bestand verwijderen</string>
+    <string name="duckChatFileAttachmentLimitPerConversation" instruction="%1$d is the maximum number of files allowed in a single conversation.">Je kunt slechts %1$d bestanden per gesprek bijvoegen.</string>
+    <string name="duckChatFileAttachmentTooLarge" instruction="%1$d is the maximum file size in MB.">Het bestand overschrijdt de maximale grootte van %1$d MB.</string>
+    <string name="duckChatFileAttachmentTooManyPages" instruction="%1$d is the maximum number of pages per file.">Een van de bijgevoegde bestanden bevat meer pagina\'s dan we ondersteunen. Upload bestanden met %1$d pagina\'s of minder.</string>
+    <string name="duckChatFileAttachmentTotalSizeLimitExceeded" instruction="%1$d is the total size limit in MB.">De bijgevoegde bestanden overschrijden de maximale totale grootte van %1$d MB.</string>
+    <string name="fileCaptureBrowseDisambiguationTitle">Bestand uploaden</string>
+
+    <!-- Options button -->
+    <string name="duckChatOptionsButtonContentDescription">Opties Duck.ai</string>
+    <string name="duckChatOptionsChipDismissContentDescription" instruction="%1$s is the name of the option being removed (e.g. Create Image).">%1$s verwijderen</string>
+    <string name="duckChatOptionsMenuCreateImage">Afbeelding maken</string>
+    <string name="duckChatOptionsMenuCreateImageSubtitle">Tekst omzetten in afbeeldingen</string>
+    <string name="duckChatOptionsMenuWebSearch">Zoeken op het web</string>
+    <string name="duckChatOptionsMenuWebSearchSubtitle">Antwoorden van internet</string>
+    <string name="duckChatOptionsMenuCustomizeResponses">Antwoorden aanpassen</string>
+    <string name="duckChatOptionsMenuCustomizeResponsesSubtitle">Stel toon, lengte en gedrag in</string>
+
+    <!-- Duck.ai header -->
+    <string name="duckChatPlusButtonContentDescription">Menu Duck.ai openen</string>
+
+    <!-- Duck AI Duck.ai Section Header -->
+    <string name="duckAiDuckAiSectionHeader">Duck.ai</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilityTitle">Search Assist</string>
+    <string name="duckAiSearchAssistSettingsTitle">Search Assist</string>
+
+    <!-- Settings -->
+    <string name="duckAiSettingsTitle">Instellingen Duck.ai</string>
+
+    <!-- File/image attachment menu options -->
+
+    <!-- Editing a message already sent to Duck.ai -->
+    <string name="duck_ai_edit_prompt_title" instruction="Screen title: the user is editing a message they already sent to Duck.ai">Bericht bewerken</string>
+    <string name="duck_ai_edit_prompt_lose_responses_warning" instruction="Warning shown while editing a sent message: the answer Duck.ai already gave will be discarded and answered again">Bewerken vervangt het antwoord door een nieuw antwoord.</string>
+
+    <string name="duckChatContextualAskAboutPage">Stel een vraag over de pagina</string>
+    <string name="duckChatContextualAskAboutSearch">Doorgaan in Duck.ai</string>
+    <string name="duckChatContextualOpenDuckAi">Duck.ai openen</string>
+
+    <!-- Suggested prompts for text selection -->
+    <string name="duckAiSuggestionSummarizeSelectionLabel">Deze selectie samenvatten</string>
+    <string name="duckAiSuggestionSummarizeSelectionPrompt">Vat deze selectie samen.</string>
+    <string name="duckAiSuggestionTranslateSelectionLabel">Vertaal deze selectie</string>
+    <string name="duckAiSuggestionTranslateSelectionPrompt" instruction="%1$s is replaced with the name of the user&apos;s language.">Vertaal deze selectie naar %1$s.</string>
+
+    <!-- Name shown for an attached text selection in the Duck.ai -->
+    <string name="duckAiTextSelectionAttachmentTitle">Tekstselectie</string>
+    <string name="duckAiTextSelectionLimitReached" instruction="%1$d is replaced with the maximum number of text selections.">Je kunt tot %1$d tekstselecties toevoegen. Verwijder er een om een andere toe te voegen.</string>
+
+    <!-- Duck.ai text selection menu action -->
+    <string name="duckAiTextSelectionMenuItem">Vraag stellen aan Duck.ai</string>
+
+    <!-- Prefix on the Duck.ai attachment chip for a text selection -->
+    <plurals name="duckAiTextSelectionWordCount">
+        <item quantity="one" instruction="%1$d is the number of words in the selection.">%1$d woord</item>
+        <item quantity="other" instruction="%1$d is the number of words in the selection.">%1$d woorden</item>
+    </plurals>
+
+    <!-- Duck.ai high-usage model footer -->
+    <string name="duckChatHighUsageModelFooterMessage" instruction="Placeholder is the selected model&apos;s short name">%1$s verbruikt limieten tot 2-5x sneller dan basismodellen.</string>
+    <string name="duckChatUsageFooterDismissContentDescription">Negeren</string>
+
+    <!-- Duck.ai usage-limit footer -->
+    <string name="duckChatUsageLimitFooterApproachingDaily" instruction="Placeholder is the percentage of the daily allowance already used">%1$d%% van de dagelijkse limiet</string>
+    <string name="duckChatUsageLimitFooterApproachingWeekly" instruction="Placeholder is the percentage of the weekly allowance already used">%1$d%% van de wekelijkse limiet</string>
+    <string name="duckChatUsageLimitFooterDailyReached">Dagelijkse limiet bereikt</string>
+    <string name="duckChatUsageLimitFooterWeeklyReachedFree">Wekelijkse limiet bereikt</string>
+    <string name="duckChatUsageLimitFooterWeeklyReached">Wekelijkse gebruikslimiet bereikt</string>
+    <string name="duckChatUsageLimitFooterAdvancedModelsReached">Limiet voor geavanceerde AI-modellen bereikt</string>
+    <string name="duckChatUsageLimitFooterCtaSwitchModel">Wisselen van model</string>
+    <string name="duckChatUsageLimitFooterCtaStartUsingWeeklyLimit">Weeklimiet gebruiken</string>
+    <string name="duckChatUsageLimitFooterCtaTryForFree">Probeer het abonnement gratis</string>
+    <string name="duckChatUsageLimitFooterCtaSubscribe">Abonneer</string>
+    <string name="duckChatUsageLimitFooterResetsIn" instruction="Placeholder is a duration such as &apos;2 days&apos; or &apos;5 hours&apos;">Reset over %1$s</string>
+    <plurals name="duckChatUsageLimitFooterDays">
+        <item quantity="one" instruction="%1$d is the number of whole days until the usage limit resets">%1$d dag</item>
+        <item quantity="other" instruction="%1$d is the number of whole days until the usage limit resets">%1$d dagen</item>
+    </plurals>
+    <plurals name="duckChatUsageLimitFooterHours">
+        <item quantity="one" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d uur</item>
+        <item quantity="other" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d uur</item>
+    </plurals>
+    <string name="duckAIContextualPromptSummarizeDocument" instruction="Suggested prompt for Duck.ai to summarize the PDF document currently displayed in the browser">Dit document samenvatten</string>
+
+    <!-- Duck.ai ToS consent submit button -->
+    <string name="duckChatSubmitAskLabel" instruction="Label of the submit button while the Duck.ai terms are not yet accepted. Required wording from legal, tapping it is how the user accepts.">Vragen</string>
+    <!-- Duck.ai ToS consent footer -->
+    <string name="duckChatTermsFooterMessage" instruction="Disclaimer under the Duck.ai input. ^1 is the label of the submit button, so the sentence always names the button the user taps. The two annotated phrases are tappable links to the Privacy Policy and the Terms of Service.">DuckDuckGo maakt je chats anoniem. Door op \'^1\' te klikken, ga je akkoord met ons <annotation type="privacy_link">privacybeleid</annotation> en onze <annotation type="terms_link">servicevoorwaarden</annotation>.</string>
+    <!-- Duck.ai tab switcher card -->
+    <string name="duckAiTabCardChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a text or image chat, as opposed to a voice chat.">Praten</string>
+    <string name="duckAiTabCardThinkingTitle" instruction="Header on a tab switcher card for a Duck.ai chat whose question has been sent but whose reply has not started yet. The chat title, if any, is shown below it.">Nadenken…</string>
+    <string name="duckAiTabCardListeningTitle" instruction="Header on a tab switcher card for a Duck.ai tab with a voice chat in progress, shown while Duck.ai is listening to the user.">Luisteren…</string>
+    <string name="duckAiTabCardVoiceChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a voice chat, as opposed to a text chat.">Voicechat</string>
+    <string name="duckAiTabCardTranscriptTypeLabel" instruction="Label on a tab switcher card for a finished Duck.ai voice chat, whose preview shows the conversation transcript.">Transcript</string>
+    <!-- Duck.ai attachment privacy footer -->
+    <string name="duckChatAttachmentPrivacyFooterMessage" instruction="Disclaimer under the Duck.ai input while an image or file is attached. The annotated phrase is a tappable link to a help page.">Bestanden worden automatisch gescand op illegale inhoud. Gemarkeerde chats hebben een beperkte gegevensbewaring. <annotation type="learn_more_link">Meer informatie</annotation></string>
+    <!-- Duck.ai new chat hints -->
+    <string name="newChatHintDocuments" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens a picker to attach documents for the AI to analyze.">Bestanden analyseren</string>
+    <string name="newChatHintPhoto" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens the photo library to attach photos and ask the AI about them.">Stel een vraag over foto\'s</string>
+    <string name="newChatHintImage" instruction="Tappable suggestion shown on an empty new Duck.ai chat; switches the chat to AI image generation.">Afbeelding maken</string>
+</resources>

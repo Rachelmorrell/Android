@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2026 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="showExperimentalBrowserMenu">Experimental Browser Menu</string>
+
+    <!-- Inactivity timeout -->
+    <string name="afterInactivityOptionTitle">After Inactivity</string>
+    <string name="afterInactivityTimeoutTitle">Inactivity Timer</string>
+    <string name="afterInactivityScreenDescription">Choose what you see when you return to DuckDuckGo after inactivity</string>
+    <string name="afterInactivityOptionMessage" instruction="'%1$s' is a placeholder and will be replaced with the number of minutes, e.g. 'after 5 minutes of inactivity'">Choose what you see when you return after %1$s minutes of inactivity.</string>
+    <string name="afterInactivityTimeoutAlways">Always</string>
+    <string name="afterInactivityTimeout1Minute">1 minute</string>
+    <string name="afterInactivityTimeoutXMinutes" instruction="'%1$d' is a placeholder and will be replaced with the number of minutes, e.g. '5 minutes'">%1$d minutes</string>
+    <string name="afterInactivityTimeout1Hour">1 hour</string>
+    <string name="afterInactivityTimeoutXHours" instruction="'%1$d' is a placeholder and will be replaced with the number of hours, e.g. '2 hours'">%1$d hours</string>
+    <string name="returnToLastTabShortcutSettingTitle">\'Return to\' Shortcut</string>
+    <string name="returnToLastTabShortcutSettingSubtitle">Displays a link to return to the last used tab when you launch the app after inactivity.</string>
+</resources>

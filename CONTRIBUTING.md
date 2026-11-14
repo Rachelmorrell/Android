@@ -4,6 +4,9 @@ Thank you for taking the time to contribute to DuckDuckGo! :sparkles:
 
 We are pleased to open up the project to you - our community. How can you contribute?
 
+## Internal contributors
+If you're an internal contributor please read the [contributions.md](.claude/docs/contributions.md) "API Proposals" and "Tech Design" sections. Any change in the `api` should be accompanied by an API Proposal. Any change that is more complex and involves multiple components should be accompanied by a Tech Design.
+
 ## Improve translations
 We are introducing support for additional languages and would like your help in improving the translations. Please see [improving translations](TRANSLATIONS.md) for how you can help us.
 
@@ -29,16 +32,14 @@ After our team has investigated each issue, we will label them as:
 * Won't fix: issue will be closed without a fix
 
 ## Contribute Code
-
-We welcome pull requests aimed at fixing bugs and security issues.
-
-If you have a great idea or a feature request that can help improving our browser, start by opening a [Discussion](https://github.com/duckduckgo/Android/discussions). Discussions is the right place to have an open conversation about an idea with our devs and maintainers. Proposals that fit our product direction and timeline will be added to our backlog and labelled accordingly.
-
-We have also labeled tasks you can help with as [help wanted](https://github.com/duckduckgo/Android/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22). Those tasks a great places to start contributing to DuckDuckGo and we'll support you through the process.
+We're always open to contributions from the community! There are different approaches depending on how you wish to contribute:
+* **For bug fixes**, please feel free to open an issue to initiate a discussion before submitting any pull requests. If there's already an associated issue created, please add it to the description. Someone from the team will review your issue/change within a few days.
+* Refactoring, product changes and other features won't be considered and therefore the Pull Request will be closed.
+* If you're looking for a bug to work on, see the [Help Wanted](https://github.com/duckduckgo/Android/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) tag for a list of open issues.
 
 ### Style Guide
 
-We care about clean code. Refer to our [style guide](styleguide/STYLEGUIDE.md).
+Refer to our [style guide](STYLEGUIDE.md).
 
 ### Commit Messages
 
@@ -46,9 +47,9 @@ See Chris Beams' guide to writing good commit messages https://chris.beams.io/po
 
 ### Why is a build failing?
 
-Bitrise as a our CI environment, [all builds can be seen here](https://app.bitrise.io/app/dc22e377b9a9ccbf#/builds).
-We use [Spotless](https://github.com/diffplug/spotless) as a code formatter, and every build in Bitrise will trigger a check for several rules.
-If your PR is failing because of that, please make sure that you have our [style guide](styleguide/STYLEGUIDE.md) imported and the code formatted.
+GitHub Actions is our CI environment, [all builds can be seen here](https://github.com/duckduckgo/Android/actions).
+We use [Spotless](https://github.com/diffplug/spotless) as a code formatter, and every build in GitHub Actions will trigger a check for several rules.
+If your PR is failing because of that, please make sure that you follow our [style guide](STYLEGUIDE.md) and the code is formatted.
 You can also trigger an automatic code formatting of the code by executing:
 
 ```

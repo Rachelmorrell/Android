@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources>
+    <!-- sync dev settings -->
+    <string name="syncSettingsTitle">Sync Dev Settings</string>
+    <string name="syncSettingsSubtitle">Sync Dev Internal Test</string>
+
+    <!-- Internal Setting -->
+    <string name="sync_internal_activity_label">Sync Setup Internal</string>
+    <string name="sync_v2_pairing_debug_activity_label">V2 Pairing Debug</string>
+    <string name="sync_promotion_debug_activity_label">Sync Promo Dev Screen</string>
+    <string name="sync_internal_environment_header">Environment Settings</string>
+    <string name="sync_internal_environment_title">Use Dev Environment?</string>
+    <string name="sync_internal_environment_subtitle_prod">https://sync.duckduckgo.com</string>
+    <string name="sync_internal_environment_subtitle_dev">https://sync-staging.duckduckgo.com</string>
+    <string name="sync_internal_account_header">Account Settings</string>
+    <string name="sync_internal_device_header">Device Settings</string>
+    <string name="sync_internal_recovery_code">Recovery code</string>
+    <string name="sync_internal_recovery_code_cta">Copy Recovery code</string>
+    <string name="sync_internal_favicons_prompt_cta">Reset Favicons Prompt</string>
+    <string name="sync_internal_check_linking_code_cta">Check linking code</string>
+    <string name="userIdSectionHeader">User ID</string>
+    <string name="deviceIdSectionHeader">Device Id</string>
+    <string name="deviceNameSectionHeader">Device Name</string>
+    <string name="sync_internal_promotions_header">Sync Promotions</string>
+    <string name="sync_internal_promotions_open_dev_screen">Open Promo Dev Screen</string>
+    <string name="sync_internal_promotions_reset_all_data">Reset All Promo Data</string>
+
+    <string name="sync_internal_launch_recover_data_screen">Launch Recover Data Screen</string>
+    <string name="sync_internal_block_store_write_recovery_code">Save account recovery code &amp; device ID to Block Store</string>
+
+    <!-- Block Store -->
+    <string name="sync_internal_block_store_header">Persistent Storage / Block Store</string>
+    <string name="sync_internal_block_store_current_value_label">Current stored value (SyncRecovery key)</string>
+    <string name="sync_internal_block_store_recovery_code_hint">Recovery code</string>
+    <string name="sync_internal_block_store_device_id_hint">Device ID (optional, 8–64 chars)</string>
+    <string name="sync_internal_block_store_write">Write</string>
+    <string name="sync_internal_block_store_clear">Clear</string>
+</resources>

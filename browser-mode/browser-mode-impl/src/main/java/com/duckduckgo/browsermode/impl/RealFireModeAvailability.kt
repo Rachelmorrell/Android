@@ -1,0 +1,76 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.browsermode.impl
+
+import androidx.lifecycle.LifecycleOwner
+import androidx.webkit.WebViewFeature
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.browsermode.api.FireModeAvailability
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import logcat.LogPriority.ERROR
+import logcat.asLog
+import logcat.logcat
+import javax.inject.Inject
+
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class, binding = binding<FireModeAvailability>())
+@ContributesIntoSet(AppScope::class, binding = binding<MainProcessLifecycleObserver>())
+class RealFireModeAvailability @Inject constructor(
+    private val dispatchers: DispatcherProvider,
+    @param:AppCoroutineScope private val appScope: CoroutineScope,
+) : FireModeAvailability, MainProcessLifecycleObserver {
+
+    @Volatile
+    private var cachedAvailability: Boolean? = null
+
+    override fun onCreate(owner: LifecycleOwner) {
+        appScope.launch(dispatchers.io()) { computeAndCache() }
+    }
+
+    override fun isAvailable(): Boolean = cachedAvailability ?: computeAndCache()
+
+    private fun computeAndCache(): Boolean {
+        cachedAvailability?.let { return it }
+        val value = isMultiProfileSupported() && isDeleteBrowsingDataSupported()
+        cachedAvailability = value
+        return value
+    }
+
+    private fun isMultiProfileSupported(): Boolean {
+        return runCatching { WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) }
+            .getOrElse { exception ->
+                logcat(ERROR) { "Failed to check MULTI_PROFILE WebView support: ${exception.asLog()}" }
+                false
+            }
+    }
+
+    private fun isDeleteBrowsingDataSupported(): Boolean {
+        return runCatching { WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) }
+            .getOrElse { exception ->
+                logcat(ERROR) { "Failed to check DELETE_BROWSING_DATA WebView support: ${exception.asLog()}" }
+                false
+            }
+    }
+}

@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@file:SuppressLint("NoImplImportsInAppModule")
+
+package com.duckduckgo.app.di
+
+import android.annotation.SuppressLint
+import com.duckduckgo.adclick.api.AdClickManager
+import com.duckduckgo.app.browser.favicon.FaviconManager
+import com.duckduckgo.app.browser.session.WebViewSessionStorage
+import com.duckduckgo.app.browser.tabpreview.WebViewPreviewPersister
+import com.duckduckgo.app.fire.store.TabVisitedSitesRepository
+import com.duckduckgo.app.global.model.SiteFactory
+import com.duckduckgo.app.tabs.TabManagerFeatureFlags
+import com.duckduckgo.app.tabs.db.TabsDao
+import com.duckduckgo.app.tabs.model.DuckAiTabSessionRepository
+import com.duckduckgo.app.tabs.model.PageTitleFetcher
+import com.duckduckgo.app.tabs.model.TabAtomicOperations
+import com.duckduckgo.app.tabs.model.TabDataRepository
+import com.duckduckgo.app.tabs.model.TabRepository
+import com.duckduckgo.app.tabs.store.TabSwitcherDataStore
+import com.duckduckgo.browsermode.api.FireMode
+import com.duckduckgo.browsermode.api.RegularMode
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.duckchat.api.DuckAiPageContextLifecycle
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStatePublisher
+import com.duckduckgo.duckchat.impl.store.DuckChatContextualDataStore
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.Binds
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CoroutineScope
+
+@ContributesTo(AppScope::class)
+@BindingContainer
+abstract class TabRepositoryModule {
+
+    @Binds
+    @RegularMode
+    abstract fun bindRegularTabRepository(@RegularMode impl: TabDataRepository): TabRepository
+
+    @Binds
+    @FireMode
+    abstract fun bindFireTabRepository(@FireMode impl: TabDataRepository): TabRepository
+
+    @Binds
+    abstract fun bindTabAtomicOperations(@RegularMode impl: TabDataRepository): TabAtomicOperations
+
+    companion object {
+
+        @Provides
+        @SingleIn(AppScope::class)
+        @RegularMode
+        fun provideRegularTabRepository(
+            @RegularMode tabsDao: TabsDao,
+            siteFactory: SiteFactory,
+            webViewPreviewPersister: WebViewPreviewPersister,
+            faviconManager: FaviconManager,
+            tabSwitcherDataStore: TabSwitcherDataStore,
+            timeProvider: CurrentTimeProvider,
+            @AppCoroutineScope appCoroutineScope: CoroutineScope,
+            dispatchers: DispatcherProvider,
+            adClickManager: AdClickManager,
+            webViewSessionStorage: WebViewSessionStorage,
+            tabManagerFeatureFlags: TabManagerFeatureFlags,
+            duckChatContextualDataStore: DuckChatContextualDataStore,
+            tabVisitedSitesRepository: TabVisitedSitesRepository,
+            nativeInputStatePublisher: NativeInputStatePublisher,
+            duckAiTabSessionRepository: DuckAiTabSessionRepository,
+            pageTitleFetcher: PageTitleFetcher,
+            pageContextJSHelper: DuckAiPageContextLifecycle,
+        ): TabDataRepository = TabDataRepository(
+            tabsDao = tabsDao,
+            siteFactory = siteFactory,
+            webViewPreviewPersister = webViewPreviewPersister,
+            faviconManager = faviconManager,
+            tabSwitcherDataStore = tabSwitcherDataStore,
+            timeProvider = timeProvider,
+            appCoroutineScope = appCoroutineScope,
+            dispatchers = dispatchers,
+            adClickManager = adClickManager,
+            webViewSessionStorage = webViewSessionStorage,
+            tabManagerFeatureFlags = tabManagerFeatureFlags,
+            duckChatContextualDataStore = duckChatContextualDataStore,
+            tabVisitedSitesRepository = tabVisitedSitesRepository,
+            nativeInputStatePublisher = nativeInputStatePublisher,
+            duckAiTabSessionRepository = duckAiTabSessionRepository,
+            pageTitleFetcher = pageTitleFetcher,
+            pageContextJSHelper = pageContextJSHelper,
+        )
+
+        @Provides
+        @SingleIn(AppScope::class)
+        @FireMode
+        fun provideFireTabRepository(
+            @FireMode tabsDao: TabsDao,
+            siteFactory: SiteFactory,
+            webViewPreviewPersister: WebViewPreviewPersister,
+            faviconManager: FaviconManager,
+            tabSwitcherDataStore: TabSwitcherDataStore,
+            timeProvider: CurrentTimeProvider,
+            @AppCoroutineScope appCoroutineScope: CoroutineScope,
+            dispatchers: DispatcherProvider,
+            adClickManager: AdClickManager,
+            webViewSessionStorage: WebViewSessionStorage,
+            tabManagerFeatureFlags: TabManagerFeatureFlags,
+            duckChatContextualDataStore: DuckChatContextualDataStore,
+            tabVisitedSitesRepository: TabVisitedSitesRepository,
+            nativeInputStatePublisher: NativeInputStatePublisher,
+            duckAiTabSessionRepository: DuckAiTabSessionRepository,
+            pageTitleFetcher: PageTitleFetcher,
+            pageContextJSHelper: DuckAiPageContextLifecycle,
+        ): TabDataRepository = TabDataRepository(
+            tabsDao = tabsDao,
+            siteFactory = siteFactory,
+            webViewPreviewPersister = webViewPreviewPersister,
+            faviconManager = faviconManager,
+            tabSwitcherDataStore = tabSwitcherDataStore,
+            timeProvider = timeProvider,
+            appCoroutineScope = appCoroutineScope,
+            dispatchers = dispatchers,
+            adClickManager = adClickManager,
+            webViewSessionStorage = webViewSessionStorage,
+            tabManagerFeatureFlags = tabManagerFeatureFlags,
+            duckChatContextualDataStore = duckChatContextualDataStore,
+            tabVisitedSitesRepository = tabVisitedSitesRepository,
+            nativeInputStatePublisher = nativeInputStatePublisher,
+            duckAiTabSessionRepository = duckAiTabSessionRepository,
+            pageTitleFetcher = pageTitleFetcher,
+            pageContextJSHelper = pageContextJSHelper,
+        )
+    }
+}

@@ -16,113 +16,254 @@
 
 package com.duckduckgo.app.systemsearch
 
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duckduckgo.app.autocomplete.api.AutoComplete
-import com.duckduckgo.app.autocomplete.api.AutoComplete.AutoCompleteResult
-import com.duckduckgo.app.autocomplete.api.AutoCompleteApi
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
-import com.duckduckgo.app.bookmarks.model.SavedSite
-import com.duckduckgo.app.bookmarks.ui.EditSavedSiteDialogFragment
-import com.duckduckgo.app.browser.favicon.FaviconManager
-import com.duckduckgo.app.browser.favorites.FavoritesQuickAccessAdapter
-import com.duckduckgo.app.global.DefaultDispatcherProvider
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.SingleLiveEvent
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
+import com.duckduckgo.app.browser.newtab.FavoritesQuickAccessAdapter
+import com.duckduckgo.app.browser.omnibar.OmnibarType
+import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.onboarding.store.AppStage
 import com.duckduckgo.app.onboarding.store.UserStageStore
 import com.duckduckgo.app.onboarding.store.isNewUser
 import com.duckduckgo.app.pixels.AppPixelName.*
+import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.jakewharton.rxrelay2.PublishRelay
-import com.squareup.anvil.annotations.ContributesMultibinding
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.functions.BiFunction
-import io.reactivex.schedulers.Schedulers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.flow.collect
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Daily
+import com.duckduckgo.browser.api.autocomplete.AutoComplete
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteResult
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteHistoryRelatedSuggestion.AutoCompleteHistorySearchSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteHistoryRelatedSuggestion.AutoCompleteHistorySuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion.AutoCompleteUrlSuggestion.AutoCompleteSwitchToTabSuggestion
+import com.duckduckgo.browser.api.autocomplete.AutoCompleteFactory
+import com.duckduckgo.browser.api.autocomplete.AutoCompleteSettings
+import com.duckduckgo.browser.ui.autocomplete.AutocompleteHistoryDeleteFeature
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.duckchat.api.DuckAiFeatureState
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import com.duckduckgo.history.api.NavigationHistory
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.savedsites.api.models.SavedSite
+import com.duckduckgo.savedsites.api.models.SavedSite.Bookmark
+import com.duckduckgo.savedsites.api.models.SavedSite.Favorite
+import com.duckduckgo.savedsites.impl.SavedSitesPixelName
+import com.duckduckgo.savedsites.impl.dialogs.EditSavedSiteDialogFragment
+import com.duckduckgo.voice.api.VoiceSearchAvailability
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import timber.log.Timber
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.withContext
+import logcat.LogPriority.WARN
+import logcat.asLog
+import logcat.logcat
 import javax.inject.Inject
-import javax.inject.Provider
 
-data class SystemSearchResult(val autocomplete: AutoCompleteResult, val deviceApps: List<DeviceApp>)
-
-class SystemSearchViewModel(
+@ContributesViewModel(ActivityScope::class)
+class SystemSearchViewModel @Inject constructor(
+    private val duckAiFeatureState: DuckAiFeatureState,
+    private val voiceSearchAvailability: VoiceSearchAvailability,
+    private val duckChat: DuckChat,
     private var userStageStore: UserStageStore,
-    private val autoComplete: AutoComplete,
-    private val deviceAppLookup: DeviceAppLookup,
+    autoCompleteFactory: AutoCompleteFactory,
+    private val browserMode: BrowserMode,
     private val pixel: Pixel,
-    private val favoritesRepository: FavoritesRepository,
-    private val faviconManager: FaviconManager,
-    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
-) : ViewModel(), EditSavedSiteDialogFragment.EditSavedSiteListener {
+    private val savedSitesRepository: SavedSitesRepository,
+    private val appSettingsPreferencesStore: SettingsDataStore,
+    private val autoCompleteSettings: AutoCompleteSettings,
+    private val history: NavigationHistory,
+    private val dispatchers: DispatcherProvider,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val autocompleteHistoryDeleteFeature: AutocompleteHistoryDeleteFeature,
+) : ViewModel(),
+    EditSavedSiteDialogFragment.EditSavedSiteListener {
 
     data class OnboardingViewState(
         val visible: Boolean,
-        val expanded: Boolean = false
+        val expanded: Boolean = false,
     )
+
+    data class OmnibarViewState(
+        val isVoiceSearchButtonVisible: Boolean = false,
+        val isDuckAiButtonVisible: Boolean = false,
+        val isClearButtonVisible: Boolean = false,
+    ) {
+        val isButtonDividerVisible: Boolean
+            get() = (isClearButtonVisible || isVoiceSearchButtonVisible) && isDuckAiButtonVisible
+    }
 
     sealed class Suggestions {
         data class SystemSearchResultsViewState(
             val autocompleteResults: AutoCompleteResult = AutoCompleteResult("", emptyList()),
-            val appResults: List<DeviceApp> = emptyList()
         ) : Suggestions()
 
-        data class QuickAccessItems(val favorites: List<FavoritesQuickAccessAdapter.QuickAccessFavorite>) : Suggestions()
+        data class QuickAccessItems(
+            val favorites: List<FavoritesQuickAccessAdapter.QuickAccessFavorite> = emptyList(),
+        ) : Suggestions()
     }
+
+    data class HiddenBookmarksIds(
+        val favorites: List<String> = emptyList(),
+    )
 
     sealed class Command {
-        object ClearInputText : Command()
-        object LaunchDuckDuckGo : Command()
-        data class LaunchBrowser(val query: String) : Command()
-        data class LaunchEditDialog(val savedSite: SavedSite) : Command()
-        data class DeleteSavedSiteConfirmation(val savedSite: SavedSite) : Command()
-        data class LaunchDeviceApplication(val deviceApp: DeviceApp) : Command()
-        data class ShowAppNotFoundMessage(val appName: String) : Command()
-        object DismissKeyboard : Command()
-        data class EditQuery(val query: String) : Command()
+        data object ClearInputText : Command()
+
+        data object LaunchDuckDuckGo : Command()
+
+        data class LaunchBrowser(
+            val query: String,
+        ) : Command()
+
+        data class LaunchBrowserAndSwitchToTab(
+            val query: String,
+            val tabId: String,
+        ) : Command()
+
+        data class LaunchEditDialog(
+            val savedSite: SavedSite,
+        ) : Command()
+
+        data class DeleteFavoriteConfirmation(
+            val savedSite: SavedSite,
+        ) : Command()
+
+        data class DeleteSavedSiteConfirmation(
+            val savedSite: SavedSite,
+        ) : Command()
+
+        data class LaunchDeviceApplication(
+            val deviceAppSuggestion: AutoCompleteSuggestion.AutoCompleteDeviceAppSuggestion,
+        ) : Command()
+
+        data class ShowAppNotFoundMessage(
+            val appName: String,
+        ) : Command()
+
+        data object DismissKeyboard : Command()
+
+        data class EditQuery(
+            val query: String,
+        ) : Command()
+
+        data class ShowRemoveSearchSuggestionDialog(
+            val suggestion: AutoCompleteSuggestion,
+        ) : Command()
+
+        data object AutocompleteItemRemoved : Command()
+
+        data object ExitSearch : Command()
+
+        data object LaunchDuckAiVoiceChat : Command()
     }
 
+    private val isSearchOnly = MutableStateFlow(false)
+
     val onboardingViewState: MutableLiveData<OnboardingViewState> = MutableLiveData()
-    val resultsViewState: MutableLiveData<Suggestions> = MutableLiveData()
     val command: SingleLiveEvent<Command> = SingleLiveEvent()
 
-    private val resultsPublishSubject = PublishRelay.create<String>()
-    private var results = SystemSearchResult(AutoCompleteResult("", emptyList()), emptyList())
-    private var resultsDisposable: Disposable? = null
-    private var latestQuickAccessItems: Suggestions.QuickAccessItems = Suggestions.QuickAccessItems(emptyList())
+    @VisibleForTesting
+    internal val queryFlow = MutableStateFlow("")
+    private val refreshTrigger = MutableSharedFlow<Unit>(replay = 1)
+    private val voiceSearchState = MutableSharedFlow<Unit>(replay = 1)
+    private val hiddenIds = MutableStateFlow(HiddenBookmarksIds())
+    private var omnibarType: OmnibarType = appSettingsPreferencesStore.omnibarType
 
-    private var appsJob: Job? = null
+    val isOmnibarAtTop: Boolean
+        get() = omnibarType == OmnibarType.SINGLE_TOP || omnibarType == OmnibarType.SPLIT
+
+    private val autoComplete: AutoComplete = autoCompleteFactory.create(
+        AutoComplete.Config(showInstalledApps = true),
+        browserMode,
+    )
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val suggestionsViewState =
+        combine(queryFlow, refreshTrigger) { query, _ -> query.trim() }
+            .debounce(DEBOUNCE_TIME_MS)
+            .distinctUntilChanged()
+            .flatMapLatest { query ->
+                autoComplete.autoComplete(query)
+            }.flowOn(dispatchers.io())
+            .catch { t: Throwable? -> logcat(WARN) { "Failed to get search results: ${t?.asLog()}" } }
+            .map {
+                val result = it.copy(
+                    suggestions = if (isSearchOnly.value) {
+                        it.suggestions.filterNot { suggestion -> suggestion is AutoCompleteSuggestion.AutoCompleteDuckAIPrompt }
+                    } else {
+                        it.suggestions
+                    },
+                )
+                Suggestions.SystemSearchResultsViewState(autocompleteResults = result)
+            }.stateIn(viewModelScope, SharingStarted.Lazily, Suggestions.SystemSearchResultsViewState())
+
+    val favoritesViewState =
+        combine(
+            flow = savedSitesRepository.getFavorites(),
+            flow2 = hiddenIds,
+            queryFlow,
+        ) { favorites, hiddenIds, query ->
+            if (query.isEmpty()) {
+                favorites.filter { it.id !in hiddenIds.favorites }
+            } else {
+                emptyList()
+            }
+        }.map { favorites ->
+            Suggestions.QuickAccessItems(favorites = favorites.map { favorite -> FavoritesQuickAccessAdapter.QuickAccessFavorite(favorite) })
+        }.stateIn(viewModelScope, SharingStarted.Lazily, Suggestions.QuickAccessItems())
+
+    val omnibarViewState =
+        combine(
+            flow = voiceSearchState.map { voiceSearchAvailability.isVoiceSearchAvailable },
+            flow2 = queryFlow,
+            flow3 = duckAiFeatureState.showOmnibarShortcutOnNtpAndOnFocus,
+            flow4 = isSearchOnly,
+        ) { isVoiceSearchEnabled, query, isDuckAiEnabled, isSearchOnly ->
+            OmnibarViewState(
+                isVoiceSearchButtonVisible = isVoiceSearchEnabled,
+                isDuckAiButtonVisible = !isSearchOnly && isDuckAiEnabled,
+                isClearButtonVisible = query.isNotEmpty(),
+            )
+        }.stateIn(viewModelScope, SharingStarted.Lazily, OmnibarViewState())
 
     init {
         resetViewState()
-        configureResults()
-        refreshAppList()
-        viewModelScope.launch {
-            favoritesRepository.favorites().collect { favorite ->
-                latestQuickAccessItems = Suggestions.QuickAccessItems(favorite.map { FavoritesQuickAccessAdapter.QuickAccessFavorite(it) })
-                resultsViewState.postValue(latestQuickAccessItems)
-            }
-        }
+    }
+
+    fun setLaunchedFromSearchOnlyWidget(launchedFromSearchOnlyWidget: Boolean) {
+        isSearchOnly.value = launchedFromSearchOnlyWidget
     }
 
     private fun currentOnboardingState(): OnboardingViewState = onboardingViewState.value!!
-    private fun currentResultsState(): Suggestions = resultsViewState.value!!
 
     fun resetViewState() {
         command.value = Command.ClearInputText
         viewModelScope.launch {
             resetOnboardingState()
         }
-        resetResultsState()
+
+        queryFlow.update { "" }
+
+        voiceSearchState.tryEmit(Unit)
+        refreshTrigger.tryEmit(Unit)
     }
 
     private suspend fun resetOnboardingState() {
@@ -133,35 +274,12 @@ class SystemSearchViewModel(
         }
     }
 
-    private fun resetResultsState() {
-        results = SystemSearchResult(AutoCompleteResult("", emptyList()), emptyList())
-        appsJob?.cancel()
-        resultsViewState.value = latestQuickAccessItems
+    fun onOmnibarConfigured(type: OmnibarType) {
+        omnibarType = type
     }
 
-    private fun configureResults() {
-        resultsDisposable = resultsPublishSubject
-            .debounce(DEBOUNCE_TIME_MS, TimeUnit.MILLISECONDS)
-            .switchMap { buildResultsObservable(query = it) }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { result ->
-                    updateResults(result)
-                },
-                { t: Throwable? -> Timber.w(t, "Failed to get search results") }
-            )
-    }
-
-    private fun buildResultsObservable(query: String): Observable<SystemSearchResult>? {
-        return Observable.zip(
-            autoComplete.autoComplete(query),
-            Observable.just(deviceAppLookup.query(query)),
-            BiFunction<AutoCompleteResult, List<DeviceApp>, SystemSearchResult> { autocompleteResult: AutoCompleteResult, appsResult: List<DeviceApp> ->
-                SystemSearchResult(autocompleteResult, appsResult)
-            }
-        )
-    }
+    val hasOmnibarTypeChanged: Boolean
+        get() = omnibarType != appSettingsPreferencesStore.omnibarType
 
     fun userTappedOnboardingToggle() {
         onboardingViewState.value = currentOnboardingState().copy(expanded = !currentOnboardingState().expanded)
@@ -185,47 +303,36 @@ class SystemSearchViewModel(
         command.value = Command.EditQuery(query)
     }
 
-    fun userUpdatedQuery(query: String) {
-        appsJob?.cancel()
-
-        if (query.isBlank()) {
-            inputCleared()
-            return
-        }
-
-        val trimmedQuery = query.trim()
-        resultsPublishSubject.accept(trimmedQuery)
+    fun onVoiceSearchResult(capturedText: String) {
+        command.value = Command.LaunchBrowser(query = capturedText)
     }
 
-    private fun updateResults(results: SystemSearchResult) {
-        this.results = results
+    fun onVoiceSearchStateChanged() {
+        voiceSearchState.tryEmit(Unit)
+    }
 
-        val suggestions = results.autocomplete.suggestions
-        val appResults = results.deviceApps
-        val hasMultiResults = suggestions.isNotEmpty() && appResults.isNotEmpty()
+    fun onDuckAiRequested(query: String, entryPoint: DuckChatEntryPoint, voice: Boolean = false) {
+        duckChat.openDuckChatWithAutoPrompt(query, entryPoint, voice = voice)
+        command.value = Command.ExitSearch
+    }
 
-        val updatedSuggestions = if (hasMultiResults) suggestions.take(RESULTS_MAX_RESULTS_PER_GROUP) else suggestions
-        val updatedApps = if (hasMultiResults) appResults.take(RESULTS_MAX_RESULTS_PER_GROUP) else appResults
-
-        resultsViewState.postValue(
-            when (val currentResultsState = currentResultsState()) {
-                is Suggestions.SystemSearchResultsViewState -> {
-                    currentResultsState.copy(
-                        autocompleteResults = AutoCompleteResult(results.autocomplete.query, updatedSuggestions),
-                        appResults = updatedApps
-                    )
-                }
-                is Suggestions.QuickAccessItems -> Suggestions.SystemSearchResultsViewState(
-                    autocompleteResults = AutoCompleteResult(results.autocomplete.query, updatedSuggestions),
-                    appResults = updatedApps
-                )
+    fun onDigitalAssistOpened() {
+        viewModelScope.launch {
+            if (duckAiFeatureState.allowDuckAiAsDigitalAssistant.value && duckChat.isEnabled()) {
+                pixel.fire(AICHAT_VOICE_SESSION_DIGITAL_ASSISTANT_STARTED)
+                command.value = Command.LaunchDuckAiVoiceChat
             }
-        )
+        }
+    }
+
+    fun userUpdatedQuery(query: String) {
+        if (autoCompleteSettings.autoCompleteSuggestionsEnabled) {
+            queryFlow.update { query }
+        }
     }
 
     private fun inputCleared() {
-        resultsPublishSubject.accept("")
-        resetResultsState()
+        queryFlow.update { "" }
     }
 
     fun userTappedDax() {
@@ -253,41 +360,97 @@ class SystemSearchViewModel(
         }
     }
 
-    fun userSubmittedAutocompleteResult(query: String) {
-        command.value = Command.LaunchBrowser(query)
-        pixel.fire(INTERSTITIAL_LAUNCH_BROWSER_QUERY)
-    }
+    fun userSubmittedAutocompleteResult(suggestion: AutoCompleteSuggestion) {
+        when (suggestion) {
+            is AutoCompleteSwitchToTabSuggestion -> {
+                command.value = Command.LaunchBrowserAndSwitchToTab(suggestion.phrase, suggestion.tabId)
+                pixel.fire(INTERSTITIAL_LAUNCH_BROWSER_QUERY)
+            }
 
-    fun userSelectedApp(app: DeviceApp) {
-        command.value = Command.LaunchDeviceApplication(app)
-        pixel.fire(INTERSTITIAL_LAUNCH_DEVICE_APP)
-    }
+            is AutoCompleteSuggestion.AutoCompleteDuckAIPrompt -> {
+                onDuckAiRequested(suggestion.phrase, DuckChatEntryPoint.SUGGESTION_ASK_AI)
+            }
 
-    fun appNotFound(app: DeviceApp) {
-        command.value = Command.ShowAppNotFoundMessage(app.shortName)
+            is AutoCompleteSuggestion.AutoCompleteDeviceAppSuggestion -> {
+                command.value = Command.LaunchDeviceApplication(deviceAppSuggestion = suggestion)
+                pixel.fire(INTERSTITIAL_LAUNCH_DEVICE_APP)
+            }
 
-        refreshAppList()
-    }
-
-    private fun refreshAppList() {
-        viewModelScope.launch(dispatchers.io()) {
-            deviceAppLookup.refreshAppList()
+            else -> {
+                command.value = Command.LaunchBrowser(suggestion.phrase)
+                pixel.fire(INTERSTITIAL_LAUNCH_BROWSER_QUERY)
+            }
         }
     }
 
-    override fun onCleared() {
-        resultsDisposable?.dispose()
-        resultsDisposable = null
-        super.onCleared()
+    suspend fun isAutocompleteHistoryDeleteButtonEnabled(): Boolean =
+        withContext(dispatchers.io()) { autocompleteHistoryDeleteFeature.self().isEnabled() }
+
+    fun onUserRequestedToDeleteAutocompleteItem(suggestion: AutoCompleteSuggestion) {
+        when (suggestion) {
+            is AutoCompleteHistorySuggestion, is AutoCompleteHistorySearchSuggestion -> {
+                appCoroutineScope.launch(dispatchers.io()) {
+                    if (autocompleteHistoryDeleteFeature.self().isEnabled()) {
+                        // Explicit delete button: remove immediately, no confirmation dialog.
+                        pixel.fire(AUTOCOMPLETE_RESULT_DELETE_BUTTON_CLICKED)
+                        pixel.fire(AUTOCOMPLETE_RESULT_DELETE_BUTTON_CLICKED_DAILY, type = Daily())
+                        withContext(dispatchers.main()) {
+                            onRemoveSearchSuggestionConfirmed(suggestion, queryFlow.value)
+                        }
+                    } else {
+                        // Legacy hidden long-press: confirm before removing.
+                        showRemoveSearchSuggestionDialog(suggestion)
+                    }
+                }
+            }
+            else -> return
+        }
+    }
+
+    private fun showRemoveSearchSuggestionDialog(suggestion: AutoCompleteSuggestion) {
+        appCoroutineScope.launch(dispatchers.main()) {
+            command.value = Command.ShowRemoveSearchSuggestionDialog(suggestion)
+        }
+    }
+
+    fun onRemoveSearchSuggestionConfirmed(
+        suggestion: AutoCompleteSuggestion,
+        omnibarText: String,
+    ) {
+        appCoroutineScope.launch(dispatchers.io()) {
+            pixel.fire(AUTOCOMPLETE_RESULT_DELETED)
+            pixel.fire(AUTOCOMPLETE_RESULT_DELETED_DAILY, type = Daily())
+
+            when (suggestion) {
+                is AutoCompleteHistorySuggestion -> {
+                    history.removeHistoryEntryByUrl(suggestion.url)
+                }
+
+                is AutoCompleteHistorySearchSuggestion -> {
+                    history.removeHistoryEntryByQuery(suggestion.phrase)
+                }
+
+                else -> {}
+            }
+            withContext(dispatchers.main()) {
+                queryFlow.value = omnibarText
+                refreshTrigger.tryEmit(Unit)
+                command.value = Command.AutocompleteItemRemoved
+            }
+        }
+    }
+
+    fun appNotFound(deviceAppSuggestion: AutoCompleteSuggestion.AutoCompleteDeviceAppSuggestion) {
+        command.value = Command.ShowAppNotFoundMessage(deviceAppSuggestion.shortName)
     }
 
     fun onQuickAccessListChanged(newList: List<FavoritesQuickAccessAdapter.QuickAccessFavorite>) {
         viewModelScope.launch(dispatchers.io()) {
-            favoritesRepository.updateWithPosition(newList.map { it.favorite })
+            savedSitesRepository.updateWithPosition(newList.map { it.favorite })
         }
     }
 
-    fun onQuickAccesItemClicked(it: FavoritesQuickAccessAdapter.QuickAccessFavorite) {
+    fun onQuickAccessItemClicked(it: FavoritesQuickAccessAdapter.QuickAccessFavorite) {
         pixel.fire(FAVORITE_SYSTEM_SEARCH_ITEM_PRESSED)
         command.value = Command.LaunchBrowser(it.favorite.url)
     }
@@ -297,73 +460,75 @@ class SystemSearchViewModel(
     }
 
     fun onDeleteQuickAccessItemRequested(it: FavoritesQuickAccessAdapter.QuickAccessFavorite) {
-        deleteQuickAccessItem(it.favorite)
+        hideQuickAccessItem(it)
+        command.value = Command.DeleteFavoriteConfirmation(it.favorite)
+    }
+
+    fun onDeleteSavedSiteRequested(it: FavoritesQuickAccessAdapter.QuickAccessFavorite) {
+        hideQuickAccessItem(it)
         command.value = Command.DeleteSavedSiteConfirmation(it.favorite)
     }
 
     companion object {
         private const val DEBOUNCE_TIME_MS = 200L
-        private const val RESULTS_MAX_RESULTS_PER_GROUP = 4
     }
 
-    override fun onSavedSiteEdited(savedSite: SavedSite) {
-        when (savedSite) {
-            is SavedSite.Favorite -> {
-                viewModelScope.launch(dispatchers.io()) {
-                    favoritesRepository.update(savedSite)
-                }
-            }
-            else -> throw IllegalArgumentException("Illegal SavedSite to edit received")
+    override fun onFavouriteEdited(favorite: Favorite) {
+        viewModelScope.launch(dispatchers.io()) {
+            savedSitesRepository.updateFavourite(favorite)
         }
     }
 
-    private fun deleteQuickAccessItem(savedSite: SavedSite) {
+    override fun onBookmarkEdited(
+        bookmark: Bookmark,
+        oldFolderId: String,
+        updateFavorite: Boolean,
+    ) {
+        viewModelScope.launch(dispatchers.io()) {
+            savedSitesRepository.updateBookmark(bookmark, oldFolderId, updateFavorite)
+        }
+    }
+
+    override fun onFavoriteAdded() {
+        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED)
+        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_ADD_FAVORITE_TOGGLED_DAILY, type = Daily())
+    }
+
+    override fun onFavoriteRemoved() {
+        pixel.fire(SavedSitesPixelName.EDIT_BOOKMARK_REMOVE_FAVORITE_TOGGLED)
+    }
+
+    fun deleteFavoriteSnackbarDismissed(savedSite: SavedSite) {
         when (savedSite) {
             is SavedSite.Favorite -> {
-                viewModelScope.launch(dispatchers.io() + NonCancellable) {
-                    favoritesRepository.delete(savedSite)
+                appCoroutineScope.launch(dispatchers.io()) {
+                    savedSitesRepository.delete(savedSite)
                 }
             }
+
             else -> throw IllegalArgumentException("Illegal SavedSite to delete received")
         }
     }
 
-    fun insertQuickAccessItem(savedSite: SavedSite) {
-        when (savedSite) {
-            is SavedSite.Favorite -> {
-                viewModelScope.launch(dispatchers.io()) {
-                    favoritesRepository.insert(savedSite)
-                }
-            }
-            else -> throw IllegalArgumentException("Illegal SavedSite to delete received")
+    fun deleteSavedSiteSnackbarDismissed(savedSite: SavedSite) {
+        appCoroutineScope.launch(dispatchers.io()) {
+            savedSitesRepository.delete(savedSite, true)
         }
     }
-}
 
-@ContributesMultibinding(AppObjectGraph::class)
-class SystemSearchViewModelFactory @Inject constructor(
-    private val userStageStore: Provider<UserStageStore>,
-    private val autoComplete: Provider<AutoCompleteApi>,
-    private val deviceAppLookup: Provider<DeviceAppLookup>,
-    private val favoritesRepository: Provider<FavoritesRepository>,
-    private val faviconManager: Provider<FaviconManager>,
-    private val pixel: Provider<Pixel>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(SystemSearchViewModel::class.java) -> (
-                    SystemSearchViewModel(
-                        userStageStore.get(),
-                        autoComplete.get(),
-                        deviceAppLookup.get(),
-                        pixel.get(),
-                        favoritesRepository.get(),
-                        faviconManager.get()
-                    ) as T
-                    )
-                else -> null
-            }
+    private fun hideQuickAccessItem(quickAccessFavourite: FavoritesQuickAccessAdapter.QuickAccessFavorite) {
+        viewModelScope.launch(dispatchers.io()) {
+            hiddenIds.emit(hiddenIds.value.copy(favorites = hiddenIds.value.favorites + quickAccessFavourite.favorite.id))
+        }
+    }
+
+    fun undoDelete(savedSite: SavedSite) {
+        viewModelScope.launch(dispatchers.io()) {
+            hiddenIds.emit(
+                hiddenIds.value.copy(
+                    favorites = hiddenIds.value.favorites - savedSite.id,
+                ),
+            )
         }
     }
 }

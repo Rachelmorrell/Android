@@ -16,40 +16,82 @@
 
 package com.duckduckgo.app.launch
 
+import android.content.Intent
+import android.os.Bundle
 import androidx.lifecycle.ViewModel
-import com.duckduckgo.app.global.SingleLiveEvent
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
-import com.duckduckgo.app.onboarding.store.UserStageStore
-import com.duckduckgo.app.onboarding.store.isNewUser
-import com.duckduckgo.app.referral.AppInstallationReferrerStateListener
-import com.duckduckgo.app.referral.AppInstallationReferrerStateListener.Companion.MAX_REFERRER_WAIT_TIME_MS
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import androidx.lifecycle.viewModelScope
+import com.duckduckgo.app.onboarding.orchestrator.PendingOnboardingStarter
+import com.duckduckgo.app.pixels.AppPixelName
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.onboarding.api.LinearOnboardingHost
+import com.duckduckgo.referral.api.AppInstallationReferrerStateListener
+import com.duckduckgo.referral.api.AppInstallationReferrerStateListener.Companion.MAX_REFERRER_WAIT_TIME_MS
+import com.duckduckgo.testseeder.api.TestScenarioSeeder
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import timber.log.Timber
+import logcat.LogPriority
+import logcat.logcat
 import javax.inject.Inject
-import javax.inject.Provider
 
-class LaunchViewModel(
-    private val userStageStore: UserStageStore,
-    private val appReferrerStateListener: AppInstallationReferrerStateListener
-) :
-    ViewModel() {
+@ContributesViewModel(ActivityScope::class)
+class LaunchViewModel @Inject constructor(
+    private val appReferrerStateListener: AppInstallationReferrerStateListener,
+    private val pixel: Pixel,
+    private val testScenarioSeeder: TestScenarioSeeder,
+    private val pendingOnboardingStarter: PendingOnboardingStarter,
+) : ViewModel() {
 
     val command: SingleLiveEvent<Command> = SingleLiveEvent()
 
     sealed class Command {
-        object Onboarding : Command()
+        data object Onboarding : Command()
         data class Home(val replaceExistingSearch: Boolean = false) : Command()
     }
 
-    suspend fun determineViewToShow() {
-        waitForReferrerData()
+    fun start(intent: Intent) {
+        viewModelScope.launch {
+            seedTestScenario(intent)
+            waitForReferrerData()
+            showOnboardingOrHome()
+        }
+    }
 
-        if (userStageStore.isNewUser()) {
-            command.value = Command.Onboarding
-        } else {
+    private suspend fun seedTestScenario(intent: Intent) {
+        runCatching {
+            testScenarioSeeder.seedIfNeeded(intent.extras.toStringMap())
+        }
+        // runCatching swallows CancellationException; re-check so a cancelled viewModelScope
+        // (activity finished mid-launch) stops the rest of start() instead of routing into a dead UI.
+        currentCoroutineContext().ensureActive()
+    }
+
+    private fun Bundle?.toStringMap(): Map<String, String> {
+        if (this == null) return emptyMap()
+        return keySet().mapNotNull { key -> getString(key)?.let { key to it } }.toMap()
+    }
+
+    suspend fun showOnboardingOrHome() {
+        val startState = pendingOnboardingStarter.startPending()
+        if (startState == null) {
             command.value = Command.Home()
+            return
+        }
+        when (startState.currentStep.host) {
+            LinearOnboardingHost.OnboardingActivity -> {
+                command.value = Command.Onboarding
+            }
+            LinearOnboardingHost.BrowserActivity -> {
+                command.value = Command.Home()
+            }
+            else -> {
+                // extend to support initial hosts in the future
+                throw IllegalArgumentException("unsupported initial onboarding host transition")
+            }
         }
     }
 
@@ -57,25 +99,15 @@ class LaunchViewModel(
         val startTime = System.currentTimeMillis()
 
         withTimeoutOrNull(MAX_REFERRER_WAIT_TIME_MS) {
-            Timber.d("Waiting for referrer")
+            logcat { "Waiting for referrer" }
             return@withTimeoutOrNull appReferrerStateListener.waitForReferrerCode()
-        }
+        } ?: onReferrerTimeout()
 
-        Timber.d("Waited ${System.currentTimeMillis() - startTime}ms for referrer")
+        logcat { "Waited ${System.currentTimeMillis() - startTime}ms for referrer" }
     }
-}
 
-@ContributesMultibinding(AppObjectGraph::class)
-class LaunchViewModelFactory @Inject constructor(
-    private val userStageStore: Provider<UserStageStore>,
-    private val appInstallationReferrerStateListener: Provider<AppInstallationReferrerStateListener>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(LaunchViewModel::class.java) -> (LaunchViewModel(userStageStore.get(), appInstallationReferrerStateListener.get()) as T)
-                else -> null
-            }
-        }
+    private fun onReferrerTimeout() {
+        logcat(LogPriority.ERROR) { "LaunchViewModel timed out waiting for referrer" }
+        pixel.fire(AppPixelName.TIMEOUT_WAITING_FOR_APP_REFERRER)
     }
 }

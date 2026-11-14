@@ -1,0 +1,246 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.site.permissions.impl
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.webkit.PermissionRequest
+import androidx.core.content.ContextCompat
+import androidx.core.location.LocationManagerCompat
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.extensions.toTldPlusOneOrSelf
+import com.duckduckgo.common.utils.extractDomain
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.site.permissions.api.SitePermissionsManager
+import com.duckduckgo.site.permissions.api.SitePermissionsManager.LocationPermissionRequest
+import com.duckduckgo.site.permissions.api.SitePermissionsManager.SitePermissionQueryResponse
+import com.duckduckgo.site.permissions.api.SitePermissionsManager.SitePermissions
+import com.duckduckgo.site.permissions.impl.drm.DrmPolicyAction
+import com.duckduckgo.site.permissions.impl.drm.DrmPolicyDecision
+import com.duckduckgo.site.permissions.impl.drm.DrmPolicyManager
+import com.duckduckgo.site.permissions.impl.drm.DrmPolicyReason
+import com.duckduckgo.site.permissions.impl.drm.DrmSessionStore
+import com.duckduckgo.site.permissions.impl.feature.DrmPolicyFeature
+import com.duckduckgo.site.permissions.impl.feature.SitePermissionsDialogRedesignFeature
+import com.duckduckgo.site.permissions.impl.feature.SitePermissionsSystemRecoveryFeature
+import com.duckduckgo.site.permissions.impl.feature.isCentralPolicyEnabled
+import dev.zacsweers.metro.ContributesBinding
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import javax.inject.Inject
+
+// Cannot be a Singleton
+@ContributesBinding(AppScope::class)
+class SitePermissionsManagerImpl @Inject constructor(
+    private val packageManager: PackageManager,
+    private val locationManager: LocationManager,
+    private val sitePermissionsRepository: SitePermissionsRepository,
+    private val dispatcherProvider: DispatcherProvider,
+    private val context: Context,
+    private val sitePermissionsSystemRecoveryFeature: SitePermissionsSystemRecoveryFeature,
+    private val drmPolicyFeature: DrmPolicyFeature,
+    private val drmPolicyManager: DrmPolicyManager,
+    private val drmSessionStore: DrmSessionStore,
+    private val pixel: Pixel,
+    private val sitePermissionsDialogRedesignFeature: SitePermissionsDialogRedesignFeature,
+) : SitePermissionsManager {
+
+    private suspend fun getSitePermissionsGranted(
+        url: String,
+        tabId: String,
+        resources: Array<String>,
+    ): Array<String> =
+        resources
+            .filter { sitePermissionsRepository.isDomainGranted(url, tabId, it) }
+            .toTypedArray()
+
+    override suspend fun getSitePermissions(
+        tabId: String,
+        request: PermissionRequest,
+    ): SitePermissions {
+        val autoAccept = mutableListOf<String>()
+        val url = request.origin.toString()
+
+        val drmDecision = if (!request.resources.contains(PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID)) {
+            null
+        } else {
+            withContext(dispatcherProvider.io()) {
+                drmPolicyManager
+                    .takeIf { drmPolicyFeature.isCentralPolicyEnabled() }
+                    ?.decide(url, tabId)
+                    ?.also { logcat { "Permissions: drm policy decision for $url is $it" } }
+            }
+        }
+        drmDecision?.let { fireDrmAutoGrantedPixel(it, tabId, url) }
+
+        val sitePermissionsAllowedToAsk = request.resources
+            .filter { drmDecision == null || it != PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID }
+            .filter { isPermissionSupported(it) && isHardwareSupported(it) }
+            .filter { sitePermissionsRepository.isDomainAllowedToAsk(url, it) }
+            .toTypedArray()
+
+        logcat { "Permissions: sitePermissionsAllowedToAsk in $url ${sitePermissionsAllowedToAsk.asList()}" }
+
+        val permissionsGranted = getSitePermissionsGranted(url, tabId, sitePermissionsAllowedToAsk)
+
+        // Drop saved grants the app can no longer honor, so the dialog can ask for the OS permission back
+        val filteredPermissionsGranted = if (sitePermissionsSystemRecoveryFeature.self().isEnabled()) {
+            permissionsGranted.filter { hasSystemPermission(it) }.toTypedArray()
+        } else {
+            permissionsGranted
+        }
+
+        val sitePermissionsGranted = if (drmDecision?.action == DrmPolicyAction.GRANT) {
+            filteredPermissionsGranted + PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID
+        } else {
+            filteredPermissionsGranted
+        }
+
+        if (sitePermissionsGranted.isNotEmpty()) {
+            withContext(dispatcherProvider.main()) {
+                logcat { "Permissions: site permission granted" }
+                autoAccept.addAll(sitePermissionsGranted)
+            }
+        }
+
+        logcat { "Permissions: sitePermissionsGranted for $url are ${sitePermissionsGranted.asList()}" }
+
+        val userList = sitePermissionsAllowedToAsk.filter { !sitePermissionsGranted.contains(it) } +
+            listOfNotNull(PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID.takeIf { drmDecision?.action == DrmPolicyAction.PROMPT })
+        if (userList.isEmpty() && sitePermissionsGranted.isEmpty()) {
+            withContext(dispatcherProvider.main()) {
+                logcat { "Permissions: site permission not granted, deny" }
+                request.deny()
+            }
+        }
+        if (userList.isEmpty() && autoAccept.isNotEmpty()) {
+            withContext(dispatcherProvider.main()) {
+                logcat { "Permissions: site permission granted, auto accept" }
+                request.grant(autoAccept.toTypedArray())
+                autoAccept.clear()
+            }
+        }
+
+        val sitePermissions = SitePermissions(autoAccept = autoAccept, userHandled = userList)
+        logcat { "Permissions: site permissions $sitePermissions" }
+        return sitePermissions
+    }
+
+    override suspend fun clearAllButFireproof(fireproofDomains: List<String>) {
+        drmSessionStore.clear()
+        sitePermissionsRepository.domainsWithPermissions().forEach { domain ->
+            if (!fireproofDomains.contains(domain)) {
+                sitePermissionsRepository.deletePermissionsForSite(domain)
+            }
+        }
+    }
+
+    override suspend fun clearForDomainsButFireproof(domains: Set<String>, fireproofDomains: List<String>) {
+        if (!withContext(dispatcherProvider.io()) { sitePermissionsDialogRedesignFeature.singleTabBurnClearing().isEnabled() }) return
+        sitePermissionsRepository.domainsWithPermissions().forEach { domain ->
+            if (domain.toTldPlusOneOrSelf() in domains && domain !in fireproofDomains) {
+                sitePermissionsRepository.deletePermissionsForSite(domain)
+            }
+        }
+    }
+
+    override suspend fun getPermissionsQueryResponse(
+        url: String,
+        tabId: String,
+        queriedPermission: String,
+    ): SitePermissionQueryResponse {
+        getAndroidPermission(queriedPermission)?.let { androidPermission ->
+            if (sitePermissionsRepository.isDomainGranted(url, tabId, androidPermission)) {
+                return SitePermissionQueryResponse.Granted
+            } else if (isHardwareSupported(androidPermission) && sitePermissionsRepository.isDomainAllowedToAsk(url, androidPermission)) {
+                return SitePermissionQueryResponse.Prompt
+            }
+            return SitePermissionQueryResponse.Denied
+        }
+
+        return SitePermissionQueryResponse.Denied
+    }
+
+    override suspend fun hasSitePermanentPermission(
+        url: String,
+        request: String,
+    ): Boolean {
+        return sitePermissionsRepository.isDomainGranted(url, "", LocationPermissionRequest.RESOURCE_LOCATION_PERMISSION)
+    }
+
+    private fun fireDrmAutoGrantedPixel(
+        decision: DrmPolicyDecision,
+        tabId: String,
+        url: String,
+    ) {
+        if (decision.action != DrmPolicyAction.GRANT) return
+        val reason = when (decision.reason) {
+            DrmPolicyReason.ALLOW_LIST -> SitePermissionsPixelValues.ALLOW_LIST
+            DrmPolicyReason.PROTECTIONS_OFF -> SitePermissionsPixelValues.PROTECTIONS_OFF
+            else -> return
+        }
+        if (!drmSessionStore.markAutoGrantReported(tabId, url.extractDomain() ?: url)) return
+
+        pixel.fire(
+            SitePermissionsPixelName.PERMISSION_AUTO_GRANTED,
+            mapOf(
+                SitePermissionsPixelParameters.PERMISSION_TYPE to SitePermissionsPixelValues.DRM,
+                SitePermissionsPixelParameters.REASON to reason,
+                Pixel.PixelParameter.PETAL to Pixel.PixelValues.PETAL_RANDOMIZE,
+            ),
+        )
+    }
+
+    private fun hasSystemPermission(sitePermission: String): Boolean = when (sitePermission) {
+        PermissionRequest.RESOURCE_AUDIO_CAPTURE ->
+            isSystemPermissionGranted(Manifest.permission.RECORD_AUDIO) &&
+                isSystemPermissionGranted(Manifest.permission.MODIFY_AUDIO_SETTINGS)
+        PermissionRequest.RESOURCE_VIDEO_CAPTURE -> isSystemPermissionGranted(Manifest.permission.CAMERA)
+        LocationPermissionRequest.RESOURCE_LOCATION_PERMISSION -> isSystemPermissionGranted(Manifest.permission.ACCESS_COARSE_LOCATION)
+        else -> true
+    }
+
+    private fun isSystemPermissionGranted(androidPermission: String): Boolean =
+        ContextCompat.checkSelfPermission(context, androidPermission) == PackageManager.PERMISSION_GRANTED
+
+    private fun isPermissionSupported(permission: String): Boolean =
+        permission == PermissionRequest.RESOURCE_AUDIO_CAPTURE || permission == PermissionRequest.RESOURCE_VIDEO_CAPTURE ||
+            permission == PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID || permission == LocationPermissionRequest.RESOURCE_LOCATION_PERMISSION
+
+    private fun isHardwareSupported(permission: String): Boolean = when (permission) {
+        PermissionRequest.RESOURCE_VIDEO_CAPTURE -> {
+            kotlin.runCatching { packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }.getOrDefault(false)
+        }
+        LocationPermissionRequest.RESOURCE_LOCATION_PERMISSION -> {
+            kotlin.runCatching { LocationManagerCompat.isLocationEnabled(locationManager) }.getOrDefault(false)
+        }
+        else -> {
+            true
+        }
+    }
+
+    private fun getAndroidPermission(webQueryPermission: String): String? {
+        return when (webQueryPermission) {
+            "camera" -> PermissionRequest.RESOURCE_VIDEO_CAPTURE
+            "microphone" -> PermissionRequest.RESOURCE_AUDIO_CAPTURE
+            else -> null
+        }
+    }
+}

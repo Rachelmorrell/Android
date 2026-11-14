@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2020 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="atp_name">Lietotņu pretizsekošanas aizsardzība</string>
+    <string name="refresh">Atsvaidzināt</string>
+
+    <!-- Debug Screens -->
+    <string name="atp_DiagnosticsMenuLabel">Diagnostika</string>
+    <string name="atp_DataMenuLabel">Datu statistika</string>
+    <string name="atp_MeteredConnection" instruction="Placeholder is true or false">"Mērāms: %1$s"</string>
+    <string name="atp_ConnectionStatus" instruction="Placeholder is true or false">"VPN pieslēgts: %1$s"</string>
+    <string name="atp_NetworkAvailable" instruction="Placeholder is true or false">"Internets pieslēgts: %1$s"</string>
+    <string name="atp_DnsServers" instruction="Placeholder is a list of dns addresses">"Aktīvais tīkla DNS: %1$s"</string>
+    <string name="atp_AppExitsReasonsTitle">Lietotnes izejas iemesli</string>
+    <string name="atp_AppRestartsTitle">Lietotne restartējas</string>
+
+    <!-- Diagnostics -->
+    <string name="vpnTimeRunning" instruction="Placeholder is the time expressed as a String that the vpn has been running">Darbības laiks: %1$s</string>
+    <string name="vpnTrackerCompaniesBlockedToday" instruction="Placeholder is a number">Šodien bloķēti izsekotāju uzņēmumi: %1$d</string>
+    <string name="vpnTrackerCompaniesBlockedThisWeek" instruction="Placeholder is a number">Šonedēļ bloķēti izsekotāju uzņēmumi: %1$d</string>
+    <string name="vpnTrackerCompaniesNone">"Vēl nav bloķēts neviens izsekotāju uzņēmums"</string>
+    <string name="vpnTrackersBlockedToday" instruction="Placeholder is a number">Šodien bloķēti izsekotāji: %1$d</string>
+    <string name="vpnTrackersBlockedThisWeek" instruction="Placeholder is a number">Šonedēļ bloķēti izsekotāji: %1$d</string>
+    <string name="vpnTrackersNone">"Vēl nav bloķēts neviens izsekotājs"</string>
+    <string name="vpnNotRunYet">"VPN vēl nav palaists"</string>
+    <string name="vpnDataTransferred" instruction="%1$s is the size of data transferred, i.e. 340MB. %2$s is the amount of packets, i.e. 123 packets ">"%1$s\n%2$s paketes"</string>
+
+    <!-- App Tracking Protection Ongoing Notification -->
+    <string name="atp_ReportIssue">Problēmas ar lietotni?</string>
+    <string name="atp_OnInitialNotification">"Lietotņu pretizsekošanas aizsardzība ir iespējota un bloķē izsekošanas mēģinājumus tavās lietotnēs"</string>
+    <string name="atp_OnNoTrackersNotificationHeader">"Notiek izsekošanas aktivitāšu skenēšana… bīp… bīp..."</string>
+    <plurals name="atp_OnNotification">
+        <item quantity="zero"><![CDATA[ Izsekošanas mēģinājumi bloķēti <b>%1$d lietotnēs</b> (pēdējās stundas laikā).]]></item>
+        <item quantity="one" instruction="Placeholder is a number"><![CDATA[ Izsekošanas mēģinājumi bloķēti <b>%1$d lietotnē</b> (pēdējās stundas laikā).]]></item>
+        <item quantity="other" instruction="Placeholder is a number"><![CDATA[ Izsekošanas mēģinājumi bloķēti <b>%1$d lietotnēs</b> (pēdējās stundas laikā).]]></item>
+    </plurals>
+    <string name="atp_DisabledNotification">Lietotņu pretizsekošanas aizsardzība ir atspējota. Pieskaries, lai turpinātu bloķēt izsekošanas mēģinājumus.</string>
+    <string name="atp_RevokedNotification">Kāda VPN lietotne tavā ierīcē traucē Lietotņu pretizsekošanas aizsardzību. Pieskaries, lai iespējotu no jauna.</string>
+
+    <!-- App Tracking Protection Daily Notification -->
+    <string name="atp_DailyTrackersNotificationOneTrackingZeroApps" instruction="Placeholder is a number"><![CDATA[ Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyTrackersNotificationOneTrackingOneApps" instruction="%1$d is the number of tracking attempts and %2$s is the name of the app where it happened"><![CDATA[ Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu 1 lietotnē %2$s</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyTrackersNotificationOtherTrackingZeroApps" instruction="Placeholder is a number"><![CDATA[ Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyTrackersNotificationOtherTrackingOtherApps" instruction="%1$d is the number of tracking attempts, %2$d is the number of apps where the tracking took place, %3$s is the name of one of the apps where it happened"><![CDATA[ Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus %2$d lietotnēs, tostarp %3$s</b> (pēdējās diennakts laikā).]]></string>
+
+    <plurals name="atp_DailyTopCompanyNotification">
+        <item quantity="zero"><![CDATA[%1$s mēģināja tevi izsekot <b>%2$d lietotnēs</b> (pēdējās diennakts laikā). <b>Skatīt vairāk</b>]]></item>
+        <item quantity="one" instruction="%1$s is the name of a company, %2$d is the number of apps the company tried to track the user"><![CDATA[%1$s mēģināja tevi izsekot <b>%2$d lietotnē</b> (pēdējās diennakts laikā). <b>Skatīt vairāk</b>]]></item>
+        <item quantity="other" instruction="%1$s is the name of a company, %2$d is the number of apps the company tried to track the user"><![CDATA[%1$s mēģināja tevi izsekot <b>%2$d lietotnēs</b> (pēdējās diennakts laikā). <b>Skatīt vairāk</b>]]></item>
+    </plurals>
+
+    <plurals name="atp_DailyCompanyBlockedNotification">
+        <item quantity="zero"><![CDATA[Lietotņu pretizsekošanas aizsardzība visvairāk izsekošanas mēģinājumu bloķējusi lietotnēs <b>%1$s</b> un <b>%2$s</b> (pēdējās diennakts laikā).]]></item>
+        <item quantity="one" instruction="Placeholder is the name of an app"><![CDATA[Lietotņu pretizsekošanas aizsardzība visvairāk izsekošanas mēģinājumu bloķējusi lietotnē <b>%1$s</b> (pēdējās diennakts laikā).]]></item>
+        <item quantity="other" instruction="Both placeholders are the name of an app"><![CDATA[Lietotņu pretizsekošanas aizsardzība visvairāk izsekošanas mēģinājumu bloķējusi lietotnēs <b>%1$s</b> un <b>%2$s</b> (pēdējās diennakts laikā).]]></item>
+    </plurals>
+
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeZeroOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d reizi lietotnē %3$s</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeOneOtherApp" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d reizi lietotnē %3$s un 1 citā lietotnē</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeMoreOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened, %4$d is the number of apps this the tracking also happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d reizi lietotnē %3$s un %4$d citās lietotnēs</b> (pēdējās diennakts laikā).]]></string>
+
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesZeroOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d reizes lietotnē %3$s</b> (pēdējās diennakts laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesOneOtherApp" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķēja <b>%1$s %2$d reizes lietotnē %3$s un 1 citā lietotnē</b> (pēdējās dienas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesMoreOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened, %4$d is the number of apps this the tracking also happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d reizes lietotnē %3$s un %4$d citās lietotnēs</b> (pēdējās diennakts laikā).]]></string>
+
+    <!-- App Tracking Protection Weekly Notification -->
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeZeroOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu lietotnē %2$s</b> (pēdējās nedēļas laikā).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeOneOtherApp" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu lietotnē %2$s</b> un 1 citā lietotnē (pēdējās nedēļas laikā).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeMoreOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened, %3$d is the number of other apps where this also happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu lietotnē %2$s</b> un %3$d citās lietotnēs (pēdējās nedēļas laikā).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesZeroOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus lietotnē %2$s</b> (pēdējās nedēļas laikā).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesOneOtherApp" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķēja <b>%1$d izsekošanas mēģinājumus lietotnē %2$s</b> un 1 citā lietotnē (pēdējās nedēļas laikā).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesMoreOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened, %3$d is the number of other apps where this also happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus lietotnē %2$s</b> un %3$d citās lietotnēs (pēdējās nedēļas laikā).]]></string>
+
+    <plurals name="atp_WeeklyCompanyTeaserNotification">
+        <item quantity="zero"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d lietotnēs, tostarp %3$s</b> (pēdējās nedēļas laikā).]]></item>
+        <item quantity="one" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of apps where blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d lietotnē, %3$s</b> (pēdējās nedēļas laikā).]]></item>
+        <item quantity="other" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of apps where blocked their tracking attempts. %3$s is the name of one of the apps where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$s %2$d lietotnēs, tostarp %3$s</b> (pēdējās nedēļas laikā).]]></item>
+    </plurals>
+
+    <string name="atp_EnableCTA">Iespējot Lietotņu pretizsekošanas aizsardzību</string>
+
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeZeroOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķēja <b>%1$d izsekošanas mēģinājumu lietotnē %2$s</b> (pēdējās stundas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeOneOtherApp" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu lietotnē %2$s un 1 citā lietotnē</b> (pēdējās stundas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeMoreOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened, %3$d is the number of other apps where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumu lietotnē %2$s un %3$d citās lietotnēs</b> (pēdējās stundas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesZeroOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus lietotnē %2$s</b> (pēdējās stundas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesOneOtherApp" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus %2$s un 1 citā lietotnē</b> (pēdējās stundas laikā).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesMoreOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened, %3$d is the number of other apps where it happened"><![CDATA[Lietotņu pretizsekošanas aizsardzība bloķējusi <b>%1$d izsekošanas mēģinājumus lietotnē %2$s un %3$d citās lietotnēs</b> (pēdējās stundas laikā).]]></string>
+
+    <!-- App Tracking Protection Privacy Report -->
+    <string name="atp_PrivacyReportEnabledTooltip">Lietotņu pretizsekošanas aizsardzība ir iespējota un bloķē izsekotājus visā ierīcē</string>
+
+    <!-- App Tracking Protection Onboarding -->
+    <string name="atp_OnboardingLogoDescription">Iespējot Lietotņu pretizsekošanas aizsardzību</string>
+    <string name="atp_OnboardingLastPageOneTitle">Viens vienkāršs solis labākam lietotņu privātumam!</string>
+    <string name="atp_OnboardingLatsPageOneSubtitle" formatted="false">Esam konstatējuši, ka <b>vairāk nekā 96% populārāko bezmaksas lietotņu</b> ļauj citiem uzņēmumiem izsekot tavu personisko informāciju, pat kamēr tu guli.\n\nSkati, kuras lietotnes <b>mēs pieķersim, ļaujam citiem uzņēmumiem izsekot tevi</b>, un atgūsti kontroli!</string>
+    <string name="atp_OnboardingLastPageTwoTitle">Kā tas darbojas?</string>
+    <string name="atp_OnboardingLastPageTwoSubTitle">Lietotņu pretizsekošanas aizsardzība <b>atklāj un bloķē citu uzņēmumu lietotņu izsekotājus</b>, piemēram, Facebook, kad tas mēģina izsekot tevi veselības lietotnē.\n\n<b>Tā ir bezmaksas</b>, un tu vari izmantot savas lietotnes kā parasti. Tā darbojas fonā un palīdz <b>aizsargāt tevi dienu un nakti.</b></string>
+    <string name="atp_OnboardingLastPageThreeTitle">Kas redz tavus datus?</string>
+    <string name="atp_OnboardingLastPageThreeSubTitle"><b>App Tracking Protection nav VPN.</b> Tomēr tava ierīce to atpazīs kā tādu. Tas ir tāpēc, ka tās darbībai tiek izmantots vietējs VPN savienojums.\n\nApp Tracking Protection darbojas citādi.<b> Tā nekad nenovirza lietotņu datus caur ārēju serveri.</b>\n\n<annotation type="learn_more_link"><b>Uzzināt vairāk</b></annotation></string>
+    <string name="atp_FAQCta">Bieži uzdotie jautājumi par Lietotņu pretizsekošanas aizsardzību</string>
+    <string name="atp_OnboardingContinue">Turpināt</string>
+    <string name="atp_OnboardingMaybeLater">Varbūt vēlāk</string>
+
+    <!-- App Tracking Protection Dax Onboarding -->
+    <string name="atp_daxOnboardingIntroTitle">Lietotņu pretizsekošanas aizsardzība</string>
+    <string name="atp_daxOnboardingIntroMessage" formatted="false">Vairāk nekā 96% populārāko bezmaksas lietotņu ļauj citiem uzņēmumiem tevi izsekot, pat laikā, kad tu neizmanto savu tālruni. Lietotņu pretizsekošanas aizsardzība šos izsekošanas mēģinājumus atklāj un bloķē.</string>
+    <string name="atp_daxOnboardingPermissionTitle">Kā tas darbojas?</string>
+    <string name="atp_daxOnboardingPermissionMessage">Lietotņu pretizsekošanas aizsardzība nav VPN. Tomēr tava ierīce to atpazīs kā tādu. Tas ir tāpēc, ka tās darbībai tiek izmantots vietējs VPN savienojums.\n\n Tā nekad nenovirza lietotņu datus caur ārēju serveri. <annotation type="learn_more_link">Uzzināt vairāk</annotation></string>
+
+    <!--  App Tracking Protection Enabled Activity -->
+    <string name="atp_EnabledTitle">Urrā! Viss ir gatavs.</string>
+    <string name="atp_EnabledMessage">Lietotņu pretizsekošanas aizsardzība parāda <b>reāllaika sarakstu ar tavas ierīces lietotnēm</b>, kuras mēs pieķeram mēģinājumos izsekot tevi.</string>
+    <string name="atp_EnabledActivityCTA">Skatīt lietotņu izsekošanas kopsavilkumu</string>
+    <string name="atp_EnabledSettings">Lietotņu pretizsekošanas aizsardzībai vari piekļūt sadaļā <annotation type="settings_link">Iestatījumi</annotation>.</string>
+
+    <!-- New Tab Integration -->
+    <string name="atp_NewTabDisabled"><b>Lietotņu pretizsekošanas aizsardzība ir atspējota.</b>\nPieskaries, lai turpinātu bloķēt izsekošanas mēģinājumus visās lietotnēs.</string>
+    <string name="atp_NewTabRevoked"><b>Kāda VPN lietotne tavā ierīcē atspējojusi Lietotņu pretizsekošanas aizsardzību.</b>\nPieskaries, lai iespējotu no jauna.</string>
+    <string name="atp_NewTabEnabled"><b>Lietotņu pretizsekošanas aizsardzība ir iespējota</b> un bloķē izsekošanas mēģinājumus tavās lietotnēs.</string>
+
+    <!-- Exclusion List -->
+    <string name="atp_ExclusionListActivityTitle">Visas lietotnes</string>
+    <string name="atp_ExcludedAppsFeature">Lietotņu pretizsekošanas aizsardzība atklāj un bloķē citu uzņēmumu lietotņu izsekotājus, piemēram, Facebook, kad tas mēģina tevi izsekot veselības lietotnē. Uzņēmumi joprojām var izsekot tevi paši savās lietotnēs.\n\nJa kāda lietotne nedarbojas, kā paredzēts, mēģini atspējot tās aizsardzību.</string>
+    <string name="atp_ExcludedAppsEnabledLabel">DuckDuckGo var atspējot dažu lietotņu aizsardzību, lai atrisinātu zināmas satura ielādes problēmas. Tavi pielāgotie iestatījumi nemainīsies, ja vien neatjaunosi noklusējuma iestatījumus.</string>
+    <string name="atp_ExcludedAppsDisabledLabel"><b>Lietotņu pretizsekošanas aizsardzība ir atspējota</b> Vai Lietotņu pretizsekošanas aizsardzība ir apgrūtinājusi tavu lietotņu darbību? <annotation type="report_issues_link">Ziņo par problēmām</annotation></string>
+    <string name="atp_ExcludedAppsReport">Ziņot par problēmu ar citu lietotni</string>
+    <string name="atp_ExcludedReasonManuallyDisabled">Manuāli atspējota</string>
+    <string name="atp_ExcludedReasonManuallyEnabled">Manuāli iespējota</string>
+    <string name="atp_ExcludeAppsManuallyCTACancel">Atcelt</string>
+    <string name="atp_ExcludeAppsManuallyCTARestore">Atjaunot</string>
+    <string name="atp_ExcludeAppsManuallyEnableFooter">Aizsardzības iespējošana nosūta lietotnes nosaukumu DuckDuckGo.</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerOne">Tā pārstāja darboties pareizi</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerTwo">Es neiebilstu pret izsekošanu šajā lietotnē</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerThree">Cita iemesla dēļ</string>
+    <string name="atp_ExcludeAppsManuallyMenuRestore">Atjaunot noklusējuma aizsargātās lietotnes</string>
+    <string name="atp_ExcludeAppsManuallyMenuReport">Ziņot par problēmu ar lietotni</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsTitle">Vai atjaunot noklusējuma aizsardzību?</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsMessage">Tavi pielāgotie aizsardzības iestatījumi tiks atjaunināti uz mūsu jaunākajiem noklusējuma aizsardzības iestatījumiem. Mainīt savus aizsardzības iestatījumus varēsi jebkurā laikā.</string>
+    <string name="atp_ExcludeAppsRestoreDefaultSnackbar">Atjaunoti aizsardzības noklusējuma iestatījumi</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsDisclaimer">Aizsardzības iespējošana nosūta lietotnes nosaukumu DuckDuckGo.</string>
+
+    <!--  Breakage report app list  -->
+    <string name="atp_ReportBreakageAppListActivityTitle">Ziņot par problēmu</string>
+    <string name="atp_ReportBreakageAppFeature"><b>Atlasi lietotni, kurā radusies problēma</b>. Tavas atsauksmes palīdz mums pilnveidoties!\n\nVai tev ir sakāms kas vispārīgs par Lietotņu pretizsekošanas aizsardzību? Tad izmanto <annotation type="use_this_form_link">šo veidlapu</annotation>.</string>
+    <string name="atp_ReportBreakageAppEntry" instruction="Placeholder is the name of an app">Lietotne %1$s</string>
+    <string name="atp_ReportBreakageAppSubmitCta">Iesniegt</string>
+    <string name="atp_ReportBreakageAppNextCta">Nākamais</string>
+    <string name="atp_ReportBreakageFormWhatHappenedText">Lūdzu, apraksti, kas notiek, kādu rezultātu tu gaidīji, un darbības, kas noveda pie problēmas.</string>
+    <string name="atp_ReportBreakageFormInputHint">Pastāsti mums vairāk par problēmu, ar kuru saskaries</string>
+    <string name="atp_ReportBreakageFormCheckboxText">Noklikšķinot uz \"Iesniegt\", es piekrītu, ka DuckDuckGo drīkst izmantot šajā ziņojumā sniegto informāciju, lai uzlabotu lietotnes funkcijas.
+    </string>
+    <string name="atp_ReportBreakageFormDisclaimerText">
+        <![CDATA[Papildus šajā veidlapā ievadītajai informācijai tavs lietotnes problēmas ziņojums ietvers:<br/>• lietotnes paketes nosaukumu;<br/>• lietotnē bloķēto izsekotāju sarakstu;<br/>• vai ir iespējotas noteiktas DuckDuckGo funkcijas;<br/>• apkopotu DuckDuckGo lietotnes diagnostiku.<br/>]]>
+    </string>
+    <string name="atp_ReportBreakageSent">Ziņojums nosūtīts, paldies! Tavas atsauksmes palīdz mums uzlabot Lietotņu pretizsekošanas aizsardzību visiem.</string>
+    <string name="atp_ThanksForTheFeedback">Paldies tev par atsauksmēm!</string>
+    <string name="atp_ReportBreakageCategoriesTitle">Kas notiek?</string>
+    <string name="atp_ReportBreakageCategoriesHint">Kas notiek?</string>
+    <string name="atp_ReportBreakageCategoryCrashes">Lietotne sastingst vai avarē</string>
+    <string name="atp_ReportBreakageCategoryMessages">Neizdodas ziņojuma piegāde</string>
+    <string name="atp_ReportBreakageCategoryCalls">Nedarbojas balss zvani</string>
+    <string name="atp_ReportBreakageCategoryUploads">Nevar augšupielādēt vai koplietot failus</string>
+    <string name="atp_ReportBreakageCategoryDownloads">Nevar lejupielādēt failus</string>
+    <string name="atp_ReportBreakageCategoryContent">Saturs ielādējas lēni</string>
+    <string name="atp_ReportBreakageCategoryConnection">Lietotnei nav savienojuma</string>
+    <string name="atp_ReportBreakageCategoryIot">Nevar izveidot savienojumu ar vietēju ierīci</string>
+    <string name="atp_ReportBreakageCategoryOther">Kaut kas cits</string>
+
+    <!--  Tracker Profiling Info -->
+    <string name="atp_ProfilingActivityTitle">Par lietotņu izsekotājiem</string>
+    <string name="atp_ProfilingInfoTitle">Kas ir lietotņu izsekotāji?</string>
+    <string name="atp_ProfilingInfoFirstParagraph" formatted="false">Droši vien, esi dzirdējis, ka tādi uzņēmumi kā Google un Facebook tevi nemanāmi izseko trešo pušu vietnēs. Bet vai zināji, ka tie izseko tavu personisko informāciju, arī izmantojot tavas ierīces lietotnes?\n\n<b>Vairāk nekā 96\\% no 100 populārākajām bezmaksas Android lietotnēm</b>, ko testējām, saturēja slēptus trešo pušu izsekotājus. No tiem 87\\% nosūtīja datus uzņēmumam Google un 68\\% nosūtīja datus uzņēmumam Facebook. Tas notiek pat laikā, kad tu nelieto ierīci.\n\n<b>Izsekotājiem lietotnēs var būt piekļuve daudz plašākai informācijai</b> nekā izsekotājiem vietnēs, piemēram, tavai atrašanās vietai – līdz pat ēkas stāvam, kurā atrodies; cik bieži tu spēlē spēles darba laikā; un kad un cik ilgi tu guli. <b>Pat ja tev nav, piemēram, Google vai Facebook konta, tie joprojām var vākt datus par tevi no tavām lietotnēm.</b>\n\nTādi izsekošanas tīkli kā Facebook un Google izmanto šos nelielos informācijas fragmentus, <b>lai veidotu tavu digitālo profilu.</b> Izmantojot to, izsekošanas tīkli var manipulēt ar saturu, ko redzi tiešsaistē, un ļaut reklāmdevējiem solīt cenas par piekļuvi tev, pamatojoties uz taviem datiem.\n\nIzsekotāji lietotnēs ir LIELA privātuma problēma. <b>Bet DuckDuckGo ir risinājums, kas var palīdzēt.</b>\n\nIespējojot Lietotņu pretizsekošanas aizsardzību lietotnē DuckDuckGo Privacy Browser, tā bloķē daudzus izsekotājus citās lietotnēs tavā ierīcē; vienlaikus DuckDuckGo lietotne bloķē izsekotājus, ko atrodam aplūkotājās tīmekļa vietnēs. <b>Šie divi aizsardzības slāņi samazina to, ko izsekošanas uzņēmumi zina par tevi</b>, tāpēc vari izmantot savas lietotnes mierīgāk, zinot, ka esi aizsargāts labāk.</string>
+
+    <!--  App Tracking Protection Activity -->
+    <string name="atp_ActivityPastWeek">Pēdējās 7 dienas</string>
+    <string name="atp_ActivityTitle">Lietotņu pretizsekošanas aizsardzība</string>
+    <string name="atp_MostRecentActivityTitle">Visas nesen veiktās darbības</string>
+    <string name="atp_ActivityRecentActivity">Darbības</string>
+    <string name="atp_ActivityCtaShowAll">Skatīt visas nesen veiktās darbības</string>
+    <string name="atp_ActivityAppTrackersFAQ">Kas ir lietotņu izsekotāji?</string>
+    <string name="atp_ActivityReportProblem">Ziņojiet par problēmu ar lietotni</string>
+    <string name="atp_ActivityBetaInstructions">Beta versijas norādījumi</string>
+    <string name="atp_ActivityManageProtection">Radušās problēmas?</string>
+    <string name="atp_RecentAppActivity">Nesen veiktās lietotņu darbības</string>
+
+    <string name="atp_ActivityTrackersCompanyBlockedOnetimeOneCompany" instruction="Placeholder %1$s is the name of the app doing the tracking. Example: 1 tracking attempt blocked from 1 company in Venmo app.">
+        <![CDATA[Bloķēts 1 izsekošanas mēģinājums no 1 uzņēmuma lietotnē <b>%1$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOnetimeOtherCompanies" instruction="Placeholder %1$d is the number of companies doing the tracking. Placeholder %2$s is the name of the app doing the tracking. Example: 1 tracking attempt blocked from 5 companies in Venmo app.">
+        <![CDATA[Bloķēts 1 izsekošanas mēģinājums no %1$d uzņēmumiem lietotnē <b>%2$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOtherTimesOneCompany" instruction="Placeholder %1$d is the number of tracking attempts blocked. Placeholder %2$s is the name of the app doing the tracking. Example: 5 tracking attempts blocked from 1 company in Venmo app.">
+        <![CDATA[Bloķēti %1$d izsekošanas mēģinājumi no 1 uzņēmuma lietotnē <b>%2$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOtherTimesOtherCompanies" instruction="Placeholder %1$d is the number of tracking attempts blocked. Placeholder %2$d is the number of companies doing the tracking. Placeholder %3$s is the name of the app doing the tracking. Example: 10 tracking attempts blocked from 5 companies in Venmo app.">
+        <![CDATA[%1$d bloķēti izsekošanas mēģinājumi no %2$d uzņēmumiem <b>%3$s</b> lietotnē]]>
+    </string>
+
+    <string name="atp_ActivityPastWeekBlocked">Bloķēti</string>
+    <string name="atp_ActivityPastWeekAcross">Lietotņu skaits</string>
+
+    <plurals name="atp_ActivityPastWeekTrackerCount" tools:ignore="ImpliedQuantity">
+        <item quantity="zero">izsekošanas mēģinājumu</item>
+        <item quantity="one">izsekošanas mēģinājums</item>
+        <item quantity="other">izsekošanas mēģinājumi</item>
+    </plurals>
+    <plurals name="atp_ActivityPastWeekAppCount" tools:ignore="ImpliedQuantity">
+        <item quantity="zero">lietotnes</item>
+        <item quantity="one">lietotne</item>
+        <item quantity="other">lietotnes</item>
+    </plurals>
+    <string name="atp_ActivityDisabledLabel"><b>Lietotņu pretizsekošanas aizsardzība ir atspējota</b>\nVai Lietotņu pretizsekošanas aizsardzība ir radījusi kādu problēmu ar tavām lietotnēm? <annotation type="report_issues_link">Ziņo par problēmām</annotation></string>
+    <string name="atp_ActivityDisabledBySystemLabel"><b>Android atspējoja lietotņu pretizsekošanas aizsardzību</b>. Vai vēlies, lai tas vairs neatkārtotos? <annotation type="re_enable_link">Iespējot no jauna</annotation></string>
+    <string name="atp_ActivityRevokedLabel"><b>Lietotņu pretizsekošanas aizsardzība ir atspējota.</b>\nIespējams, to ir atspējojusi kāda VPN lietotne tavā ierīcē. Izmanto augstāk redzamo slēdzi, lai to no jauna iespējotu.</string>
+    <string name="atp_ActivityAbout">Par</string>
+    <string name="atp_ActivityManage">Pārvaldīt</string>
+    <string name="atp_ActivityRemoveFeature">Atspējot un dzēst datus</string>
+    <string name="atp_ActivityBlockingTrackersEnabledDescription">DuckDuckGo bloķē slēptos izsekotājus tavās lietotnēs.</string>
+    <string name="atp_ActivityBlockingTrackersDisabledDescription">Atkal iespējo lietotņu izsekošanas aizsardzību, lai turpinātu bloķēt izsekotājus visās lietotnēs.</string>
+    <string name="atp_ActivityBlockedByHeaderText" instruction="Placeholder %1$s is a text containing either Today or Yesterday. Example: Blocked by DuckDuckGo Today">DuckDuckGo bloķēja %1$s</string>
+    <string name="atp_ActivityBlockedByOnDateHeaderText" instruction="Placeholder %1$s is a text containing a formatted date like Feb 05. Example: Blocked by DuckDuckGo on Feb 05">DuckDuckGo bloķēja %1$s</string>
+
+    <!--  App Tracking Protection FAQ -->
+    <string name="atp_FAQActivityTitle">BUJ</string>
+    <string name="atp_FAQFirstHeader">Kā darbojas Lietotņu pretizsekošanas aizsardzība?</string>
+    <string name="atp_FAQFirstText"><b>Lietotņu pretizsekošanas aizsardzība bloķē zināmos citu uzņēmumu lietotņu izsekotājus, piemēram, Facebook, kad tas mēģina izsekot tevi veselības lietotnē.</b> Uzņēmumi joprojām var izsekot tevi paši savās lietotnēs.\n\n</string>
+    <string name="atp_FAQSecondHeader">Vai Lietotņu pretizsekošanas aizsardzība bloķē izsekotājus visās manās lietotnēs?</string>
+    <string name="atp_FAQSecondText"><b>Dažām lietotnēm, piemēram, tām, kas ielādē tīmekļa vietnes, aizsardzība var tikt automātiski atspējota, lai saturs tiktu parādīts normāli</b>. Lietotnēm ar zināmām problēmām tas lielākoties ir īslaicīgi, jo mēs strādājam pie Lietotņu pretizsekošanas aizsardzības uzlabošanas. Šo aizsardzību vari pārvaldīt katrai lietotnei iestatījumos savā ierīcē.\n\nTurklāt daži izsekotāji var netikt bloķēti, jo mēs tos vēl neesam atklājuši un pievienojuši savam bloķēšanas sarakstam. Mēs nepārtraukti strādājam, lai identificētu jaunus izsekotājus un sniegtu aizsardzību pret tiem, tāpēc vari būt mierīgs, zinot, ka tev tiek nodrošināta visjaunākā aizsardzība.\n\nIk pēc dažiem mēnešiem vari gaidīt mūsu izsekotāju saraksta atjauninājumus. Šie atjauninājumi tavā ierīcē tiks lietoti automātiski</string>
+    <string name="atp_FAQThirdHeader">Kāpēc Lietotņu pretizsekošanas aizsardzība izmanto VPN savienojumu?</string>
+    <string name="atp_FAQThirdText">Tevi aicinās iestatīt virtuālā privātā tīkla (VPN) savienojumu, <b>taču tev nav jāinstalē VPN lietotne, lai Lietotņu pretizsekošanas aizsardzība darbotos.</b>\n\nŠī atļauja ļauj Lietotņu pretizsekošanas aizsardzībai, kas darbojas lokāli tavā ierīcē, pārraudzīt tīkla datplūsmu <b>un bloķēt zināmos izsekotājus.</b></string>
+    <string name="atp_FAQFourthHeader">Vai Lietotņu pretizsekošanas aizsardzība darbosies, ja izmantošu arī VPN lietotni?</string>
+    <string name="atp_FAQFourthText">""<b>"<![CDATA[Android vienlaikus atļauj tikai vienu aktīvu VPN savienojumu.]]>"</b>"<![CDATA[ Tas nozīmē, ka nevari izmantot Lietotņu pretizsekošanas aizsardzību, kamēr tavā ierīcē darbojas cita VPN lietotne vai tā ir iestatīta kā \"Vienmēr ieslēgta\".\n\n]]>"<b>"<![CDATA[Mēs iesakām iespējot Lietotņu pretizsekošanas aizsardzību, kad neizmanto VPN lietotni]]>"</b>"<![CDATA[ Tikai pārliecinies, ka VPN lietotne nav iestatīta kā vienmēr ieslēgta. Dodies uz Android tīkla iestatījumiem > VPN. Tad izmanto zobrata ikonu, lai skatītu VPN lietotnes, un atspējo opciju \"Vienmēr ieslēgta\". Dažās VPN lietotnēs var būt arī automātiskās savienošanas iestatījums, kas ir jāizslēdz.]]>"</string>
+    <string name="atp_FAQFifthHeader">Kā Lietotņu pretizsekošanas aizsardzība atšķiras no VPN?</string>
+    <string name="atp_FAQFifthText">VPN nosūta tavus datus no ierīces uz savu serveri, kur tie tiek anonimizēti un aizsargāti no ziņkārīgo acīm. Taču tas ļauj VPN uzņēmumam redzēt tava tīkla datplūsmu.\n\n<b>Lietotņu pretizsekošanas aizsardzība darbojas citādāk.</b> Tā vietā, lai nosūtītu tavus datus uz VPN serveri, <b>Lietotņu pretizsekošanas aizsardzība darbojas lokāli tavā ierīcē</b>, starp tavām lietotnēm un serveriem, ar kuriem tās sazinās.\n\nKad Lietotņu pretizsekošanas aizsardzība atpazīst zināmu izsekotāju, <b>tā neļauj izsekotājam nosūtīt personisku informāciju (piemēram, tavu IP adresi, darbības un ierīces informāciju) no tavas ierīces.</b>. Visa pārējā datplūsma sasniedz galamērķi, tāpēc tavas lietotnes darbojas normāli.</string>
+    <string name="atp_FAQSixthHeader">Vai mani dati paliek privāti?</string>
+    <string name="atp_FAQSixthText">Lietotņu pretizsekošanas aizsardzība darbojas tavā ierīcē un nesūta tavus personiskos datus no ierīces uz DuckDuckGo.</string>
+
+    <!--  App Tracking Protection Waitlist -->
+    <string name="atp_WaitlistNotificationTitle">Tavs Lietotņu pretizsekošanas aizsardzības ielūgums ir klāt!</string>
+    <string name="atp_WaitlistNotificationDescription">Tu pievienojies gaidīšanas sarakstam un lūdzi mūs informēt, kad pienāks tava kārta izmēģināt mūsu Lietotņu pretizsekošanas aizsardzības funkciju. Pieskaries, lai skatītu savu uzaicinājumu.</string>
+    <string name="atp_WaitlistStatusNotJoined">Viens vienkāršs solis labākam lietotņu privātumam!</string>
+    <string name="atp_WaitlistStatusJoined">Tu esi sarakstā!</string>
+    <string name="atp_WaitlistStatusInBeta">Tu esi uzaicināts(-ta)!</string>
+    <string name="atp_WaitlistDescription">Bloķē izsekotājus, kurus mēs atrodam slēpjamies citās tavās lietotnēs, un uzzini, kas mēģināja tevi izsekot.\n<annotation type="beta_link">Uzzināt vairāk</annotation></string>
+    <string name="atp_WaitlistInBetaDescription">Bloķē izsekotājus, kurus atradīsim slēpjamies citās tavās lietotnēs, un uzzini, kas mēģina tevi izsekot.\n\n<annotation type="beta_link">Uzzināt vairāk par beta versiju</annotation></string>
+    <string name="atp_WaitlistJoin">Pievienojies privātajam nogaides sarakstam</string>
+    <string name="atp_WaitlistCodeCta">Man ir uzaicinājuma kods</string>
+    <string name="atp_WaitlistGetStartedCta">Sākt darbu</string>
+    <string name="atp_WaitlistRedeemCodeCta">Turpināt</string>
+    <string name="atp_WaitlistRedeemCodeLabel">Uzaicinājuma kods</string>
+    <string name="atp_WaitlistRedeemCodeTitle">Gandrīz gatavs…</string>
+    <string name="atp_WaitlistRedeemCodeError">Mēs neatpazinām šo ielūguma kodu.</string>
+    <string name="atp_WaitlistFooterDescription">Lai pievienotos gaidīšanas sarakstam, tev nav jādalās ar personisku informāciju. Tu ieņemsi vietu rindā, izmantojot laikspiedolu, kas pastāv tikai tavā ierīcē, lai mēs varētu tevi informēt, kad pienāks tava kārta.</string>
+    <string name="atp_WaitlistErrorJoining">Radās kļūda, pievienojoties nogaides sarakstam. Lūdzu, mēģini vēlāk vēlreiz.</string>
+    <string name="atp_WaitlistJoinedWithNotification">Mēs nosūtīsim tev paziņojumu, kad varēsi izmantot Lietotņu pretizsekošanas aizsardzību.\n\n<annotation type="beta_link">Uzzināt vairāk par beta versiju</annotation></string>
+    <string name="atp_WaitlistJoinedWithoutNotification">Tavs uzaicinājums izmēģināt Lietotņu pretizsekošanas aizsardzību pienāks šeit. Drīz ieskaties atkal, vai arī mēs varam tev nosūtīt paziņojumu, kad būs pienākusi tava kārta\n\n<annotation type="notify_me_link">Paziņojiet man</annotation>\n\n<annotation type="beta_link">Uzzināt vairāk par beta versiju</annotation></string>
+    <string name="atp_WaitlistRedeemedCodeStatus">Izdevās! Tu esi pievienojies.</string>
+    <string name="atp_WaitlistBetaBlogPost">https://spreadprivacy.com/introducing-app-tracking-protection</string>
+
+    <!--  App Tracking Company Details -->
+    <plurals name="atp_CompanyDetailsTrackingAttempts">
+        <item quantity="zero">%1$d mēģinājumi. Zināms, ka vāc šādus datus:</item>
+        <item quantity="one" instruction="Placeholder is a number">%1$d mēģinājums. Zināms, ka vāc šādus datus:</item>
+        <item quantity="other" instruction="Placeholder is a number">%1$d mēģinājumi. Zināms, ka vāc šādus datus:</item>
+    </plurals>
+    <plurals name="atp_CompanyDetailsTrackingAttemptsTitle">
+        <item quantity="zero">DuckDuckGo bloķēja %1$d izsekošanas mēģinājumus</item>
+        <item quantity="one" instruction="Placeholder is a number">DuckDuckGo bloķēja %1$d izsekošanas mēģinājumu</item>
+        <item quantity="other" instruction="Placeholder is a number">DuckDuckGo bloķēja %1$d izsekošanas mēģinājumus</item>
+    </plurals>
+    <string name="atp_CompanyDetailsTrackingMenuReport">Ziņot par problēmu ar šo lietotni</string>
+    <string name="atp_CompanyDetailsTrackingShowMore" instruction="Placeholder is a number">Rādīt vēl %1$d</string>
+    <string name="atp_CompanyDetailsTrackingLearnMore">Lietotnēs var būt iekļauti citu uzņēmumu izsekošanas rīki, piemēram, analītikai un mārketingam. Ja mēs tos nebloķētu, šie izsekotāji varētu izveidot vēl detalizētākus digitālos profilus par tevi. <annotation type="learn_more_link">Uzzināt vairāk.</annotation></string>
+    <string name="atp_CompanyDetailsTrackingShowLess">Parādīt mazāk</string>
+    <string name="atp_CompanyDetailsAppInfoPanel">Pašlaik aizsardzība šai lietotnei ir atspējota. Ja Lietotņu pretizsekošanas aizsardzība ir radījusi problēmu, lūdzu, <annotation type="report_issues_link">ziņo par to</annotation></string>
+    <string name="atp_CompanyDetailsNotAvailableForUninstalledApps" instruction="Toast shown when users tap on item that corresponds to an already uninstalled application">Izsekotāju informācija par atinstalētām lietotnēm nav pieejama</string>
+
+    <!--  App Tracking Company Signals -->
+    <string name="atp_TrackingSignalAAID">Android reklāmas ID</string>
+    <string name="atp_TrackingSignalUniqueIdentifier">Unikālais identifikators</string>
+    <string name="atp_TrackingSignalCookies">Sīkfaili</string>
+    <string name="atp_TrackingSignalOsVersion">OS versija</string>
+    <string name="atp_TrackingSignalOsBuildNumber">OS būvējuma numurs</string>
+    <string name="atp_TrackingSignalPlatform">Ierīces platforma</string>
+    <string name="atp_TrackingSignalDeviceBrand">Ierīces zīmols</string>
+    <string name="atp_TrackingSignalDeviceLanguage">Ierīces valoda</string>
+    <string name="atp_TrackingSignalDeviceModel">Ierīces modelis</string>
+    <string name="atp_TrackingSignalCPUData">Centrālā procesora dati</string>
+    <string name="atp_TrackingSignalScreenResolution">Ekrāna izšķirtspēja</string>
+    <string name="atp_TrackingSignalInternalStorage">Iekšējā krātuve</string>
+    <string name="atp_TrackingSignalExternalStorage">Ārējā krātuve</string>
+    <string name="atp_TrackingSignalDeviceMemory">Ierīces atmiņa</string>
+    <string name="atp_TrackingSignalDeviceName">Ierīces nosaukums</string>
+    <string name="atp_TrackingSignalWifiNetworkName">Wi-Fi tīkla nosaukums</string>
+    <string name="atp_TrackingSignalAppName">Lietotnes nosaukums</string>
+    <string name="atp_TrackingSignalAppVersion">Lietotnes versija</string>
+    <string name="atp_TrackingSignalLocalIPAddress">Vietējā IP adrese</string>
+    <string name="atp_TrackingSignalISP">Interneta pakalpojumu sniedzējs</string>
+    <string name="atp_TrackingSignalDeviceBootTime">Ierīces palaišanas laiks</string>
+    <string name="atp_TrackingSignalNetworkConnectionType">Tīkla savienojuma veids</string>
+    <string name="atp_TrackingSignalSystemVolume">Sistēmas skaļums</string>
+    <string name="atp_TrackingSignalBatteryLevel">Uzlādes līmenis</string>
+    <string name="atp_TrackingSignalChargingStatus">Uzlādes statuss</string>
+    <string name="atp_TrackingSignalBrightness">Spilgtums</string>
+    <string name="atp_TrackingSignalHeadphoneStatus">Austiņu statuss</string>
+    <string name="atp_TrackingSignalAccelerometerData">Akselerometra dati</string>
+    <string name="atp_TrackingSignalRotationData">Rotācijas dati</string>
+    <string name="atp_TrackingSignalDeviceOrientation">Ierīces orientācija</string>
+    <string name="atp_TrackingSignalMagnetometerData">Magnetometra dati</string>
+    <string name="atp_TrackingSignalAvailableInternalStorage">Pieejamā iekšējā krātuve</string>
+    <string name="atp_TrackingSignalAvailableExternalStorage">Pieejamā ārējā krātuve</string>
+    <string name="atp_TrackingSignalDeviceTotalMemory">Ierīces kopējā atmiņa</string>
+    <string name="atp_TrackingSignalAvailableDeviceMemory">Ierīces pieejamā atmiņa</string>
+    <string name="atp_TrackingSignalScreenMargins">Ekrāna malas</string>
+    <string name="atp_TrackingSignalScreenDensity">Ekrāna blīvums</string>
+    <string name="atp_TrackingSignalFontSize">Fonta izmērs</string>
+    <string name="atp_TrackingSignalNetworkCarrier">Tīkla operators</string>
+    <string name="atp_TrackingSignalAppInstallDate">Lietotnes instalēšanas datums</string>
+    <string name="atp_TrackingSignalFirstAppLaunchDate">Lietotnes pirmās palaišanas datums</string>
+    <string name="atp_TrackingSignalGPSCoordinates">GPS koordinātas</string>
+    <string name="atp_TrackingSignalPostalCode">Pasta indekss</string>
+    <string name="atp_TrackingSignalNeighbourhood">Rajons</string>
+    <string name="atp_TrackingSignalCity">Pilsēta</string>
+    <string name="atp_TrackingSignalState">Štats</string>
+    <string name="atp_TrackingSignalCountry">Valsts</string>
+    <string name="atp_TrackingSignalTimezone">Laika josla</string>
+    <string name="atp_TrackingSignalEmailAddress">E-pasta adrese</string>
+    <string name="atp_TrackingSignalBirthday">Dzimšanas diena</string>
+    <string name="atp_TrackingSignalGender">Dzimums</string>
+    <string name="atp_TrackingSignalFirstName">Vārds</string>
+    <string name="atp_TrackingSignalLastName">Uzvārds</string>
+
+    <!--  App Tracking Protection Disable VPN Dialog -->
+    <string name="atp_DisableConfirmationDialogTitle">Vai atspējot Lietotņu pretizsekošanas aizsardzību?</string>
+    <string name="atp_DisableConfirmationDialogMessage">Ja esi pamanījis problēmu ar kādu lietotni, vari pārvaldīt tieši konkrētās lietotnes aizsardzību.</string>
+    <string name="atp_DisableConfirmationDisableApp">Atspējot vienai lietotnei</string>
+    <string name="atp_DisableConfirmationDisableAllApps">Aizliegt visām lietotnēm</string>
+    <string name="atp_DisableConfirmationCancel">Atcelt</string>
+
+    <!--  App Tracking Protection VPN Conflict Dialog -->
+    <string name="atp_VpnConflictDialogTitle">Iespējams, tava VPN lietotne tikt atvienota</string>
+    <string name="atp_VpnConflictAlwaysOnDialogTitle">Tava VPN lietotne bloķē Lietotņu pretizsekošanas aizsardzību</string>
+    <string name="atp_VpnConflictDialogMessage">Android vienlaicīgi atļauj tikai vienu aktīvu VPN savienojumu. Ieslēdzot Lietotņu pretizsekošanas aizsardzību, var tikt atvienots cits VPN, kas darbojas tavā ierīcē.</string>
+    <string name="atp_VpnConflictDialogAlwaysOnMessage">Android vienlaicīgi atļauj tikai vienu aktīvu VPN savienojumu. Atver tīkla iestatījumus &gt; VPN. Atrodi VPN lietojumprogrammu, kura ir iestatīta kā “Vienmēr ieslēgta”, un atspējo to, lai turpinātu.</string>
+    <string name="atp_VpnConflictDialogCancel">Atcelt</string>
+    <string name="atp_VpnConflictDialogOpenSettings">Atvērt iestatījumus</string>
+    <string name="atp_VpnConflictDialogGotIt">Sapratu</string>
+
+    <!-- Manage Recent Apps Protection -->
+    <string name="atp_ManageRecentAppsProtectionReportIssues">Ja joprojām rodas problēmas ar kādu konkrētu lietotni, atspējo šīs lietotnes aizsardzību un <annotation type="report_issues_link">iesniedz ziņojumu.</annotation>.</string>
+    <string name="atp_ManageRecentAppsProtectionActivityTitle">Radušās problēmas?</string>
+    <string name="atp_ManageRecentAppsProtectionShowAll">Rādīt visas lietotnes</string>
+    <string name="atp_ManageRecentAppsProtectionEmpty">Šeit parādīsies lietotnes ar nesen bloķētiem izsekošanas mēģinājumiem</string>
+    <string name="atp_ManageRecentAppsProtectionSectionTitle">Ieteicamie sistēmas iestatījumi</string>
+    <string name="atp_ManageRecentAppsProtectionAlwaysOnTitle">Pārliecinies, ka VPN ir Vienmēr ieslēgts</string>
+    <string name="atp_ManageRecentAppsProtectionAlwaysOnByline">Android iestatījumos atļauj opciju Vienmēr ieslēgts, lai pēc VPN savienojuma pārtraukumiem automātiski atkārtoti iespējotu App Tracking Protection</string>
+    <string name="atp_ManageRecentAppsProtectionAllowUnrestrictedBattTitle">Atļaut neierobežotu lietotņu akumulatora lietošanu</string>
+    <string name="atp_ManageRecentAppsProtectionAllowUnrestrictedBattByline">Lietotnes akumulatora iestatījumos atļauj opciju Neierobežota lietošana, lai novērstu to, ka operētājsistēma Android atspējo App Tracking Protection lietošanu fona režīmā</string>
+    <string name="atp_ManageRecentAppsProtectionUnrestrictedBattTitle">Lietotnes akumulatora lietojums ir neierobežots</string>
+    <string name="atp_ManageRecentAppsProtectionUnrestrictedBattByline">Lietotņu akumulatora iestatījumos tas neļauj operētājsistēmai Android atspējot App Tracking Protection lietošanu fonā</string>
+
+    <!--  App Tracking Protection Remove Feature Dialog -->
+    <string name="atp_RemoveFeatureDialogTitle">Atspējot un dzēst datus?</string>
+    <string name="atp_RemoveFeatureDialogMessage">Lietotņu pretizsekošanas aizsardzība tiks atspējota, un visi iestatījumi un izsekošanas mēģinājumu vēsture tiks dzēsta. Jebkurā laikā vari to atkal iespējot sadaļā Iestatījumi.</string>
+    <string name="atp_RemoveFeatureDialogCancel">Atcelt</string>
+    <string name="atp_RemoveFeatureDialogRemove">Atslēgt</string>
+
+    <!--  App Tracking Protection Promote Always On -->
+    <string name="atp_PromoteAlwaysOnDialogSettings">Doties uz Iestatījumiem</string>
+    <string name="atp_PromoteAlwaysOnDialogNotNow">Ne tagad</string>
+    <string name="atp_AlwaysOnModalBody"><![CDATA[Dodies uz savas ierīces DuckDuckGo VPN iestatījumiem un iespējo opciju <b>Vienmēr ieslēgts</b> VPN, lai nepieļautu, ka Android atspējo aizsardzību.\n\nAtceries, ka otrs iestatījums jāatstāj IZSLĒGTS.]]></string>
+    <string name="atp_AlwaysOnLockdownModalBody"><![CDATA[Lai izvairītos no lietotņu problēmām, dodies uz savas ierīces <b>DuckDuckGo VPN iestatījumiem</b> un atspējo opciju <b>Bloķēt savienojumus bez VPN</b>]]></string>
+    <string name="atp_AlwaysOnModalHeading">Iestatīt \"Vienmēr ieslēgts\"</string>
+    <string name="atp_AlwaysOnLockdownModalHeading">VPN iestatījumu maiņa</string>
+    <string name="atp_AlwaysOnLockDownEnabled"><b>Nepieciešama rīcība!</b> Lai izvairītos no problēmām ar lietotnēm, ir jāmaina Android iestatījumi. <annotation type="open_settings_link">Mainīt iestatījumus</annotation></string>
+    <string name="atp_AlwaysOnLockDownNotificationTitle">Nepieciešama rīcība! Ir jāmaina Android iestatījums, lai nodrošinātu lietotņu pretizsekošanas aizsardzību.</string>
+
+    <!--  App Tracking Protection Exclusion list -->
+    <string name="atp_TrackingProtectionExclusionListActivityTitle">Manas lietotnes</string>
+    <string name="atp_ExcludedReasonIssuesMayOccur">Iespējošana var traucēt citām lietotnēm</string>
+    <string name="atp_ExcludeAppsManuallyCTAEnableAnyway">Tomēr iespējot</string>
+    <string name="atp_ExcludeAppsManuallyEnableAnywayLabel" instruction="Placeholder is the name of an app">%1$s var nedarboties pareizi, ja ir iespējota lietotņu pretizsekošanas aizsardzība</string>
+    <string name="atp_ExcludeAppsManuallyDisableAppDialogTitle">Ziņot par problēmu?</string>
+    <string name="atp_ExcludeAppsManuallyDisableAppDialogLabel" instruction="Placeholder is the name of an app">Lūdzu, informē mūs, ja atspējoji pretizsekošanas aizsardzību lietotnei %1$s tās darbības traucējumu dēļ.</string>
+    <string name="atp_ExcludeAppsManuallyCTAReportIssue">Ziņot par problēmu</string>
+    <string name="atp_ExcludeAppsManuallyCTANotNow">Ne tagad</string>
+    <string name="atp_ActivityRecentActivityHeader">Darbības</string>
+    <string name="atp_ActivityManageProtectionLabel">Radušās problēmas?</string>
+    <string name="atp_ActivityEnabledBannerLabel">Dažu lietotņu aizsardzība ir automātiski atspējota. <annotation type="app_settings_link">Skatīt lietotnes</annotation></string>
+    <string name="atp_ActivityDescription">Šeit tiks parādīti bloķētie izsekošanas mēģinājumi</string>
+    <plurals name="atp_ActivityProtectedApps" instruction="Placeholder is the number of apps that are protected">
+        <item quantity="zero">%1$s no tavām lietotnēm ir aizsargātas pret slēptiem izsekotājiem, kuri mēģina piekļūt tavai personiskajai informācijai</item>
+        <item quantity="one">%1$s no tavām lietotnēm ir aizsargāta pret slēptiem izsekotājiem, kuri mēģina piekļūt tavai personiskajai informācijai</item>
+        <item quantity="other">%1$s no tavām lietotnēm ir aizsargātas pret slēptiem izsekotājiem, kuri mēģina piekļūt tavai personiskajai informācijai</item>
+    </plurals>
+    <plurals name="atp_ActivityUnprotectedApps" instruction="Placeholder is the number of apps that are not protected">
+        <item quantity="zero">%1$s no tavām lietotnēm ir atspējota aizsardzība</item>
+        <item quantity="one">%1$s no tavām lietotnēm ir atspējota aizsardzība</item>
+        <item quantity="other">%1$s no tavām lietotnēm ir atspējota aizsardzība</item>
+    </plurals>
+    <string name="atp_ActivityAppTpEnabledCtaText"><![CDATA[Labas ziņas! Lietotņu pretizsekošanas aizsardzība tagad ir iespējota.<br/><br/>👍 Es rādīšu reāllaika sarakstu ar lietotnēm tavā ierīcē, kuras pieķeršu, mēģinot tevi izsekot.]]></string>
+    <string name="atp_ActivityAppTpEnabledCtaButtonLabel">Sapratu!</string>
+    <string name="atp_ExcludedAppsFilterProtectedLabel" instruction="Placeholder is the number of apps where protection is enabled">Aizsardzība iespējota (%1$s)</string>
+    <string name="atp_ExcludedAppsFilterUnprotectedLabel" instruction="Placeholder is the number of apps where protection is disabled">Aizsardzība atspējota (%1$s)</string>
+    <string name="atp_ExcludedAppsFilterAllLabel">Viss</string>
+    <string name="atp_ExcludedAppsFilterMenuProtectedLabel">Aizsardzība iespējota</string>
+    <string name="atp_ExcludedAppsFilterMenuUnprotectedLabel">Aizsardzība atspējota</string>
+    <string name="atp_ExcludedAppsFilterMenuAllLabel">Viss</string>
+    <string name="atp_ActivityViewAppsLabel">Skatīt lietotnes</string>
+    <string name="atp_ActivityEnabledMoreThanADayLabel">Problēmas ar kādu lietotni? <annotation type="app_settings_link">Palīdzi mums veikt uzlabojumus</annotation></string>
+    <string name="atp_ExcludedAppsEnabledLearnWhyLabel">Dažām lietotnēm var rasties problēmas, ja ir iespējota lietotņu pretizsekošanas aizsardzība.\n<annotation type="learn_why_link">Uzzini, kāpēc</annotation></string>
+    <string name="atp_ExcludedAppsDisabledLearnWhyLabel">Aizsardzība ir atspējota lietotnēm ar zināmām problēmām. Vari šīs lietotnes iespējot, taču tās var nedarboties, kā paredzēts. <annotation type="learn_why_link">Uzzini, kāpēc</annotation></string>
+
+    <!-- Notify Me View on AppTP -->
+    <string name="appTrackingProtectionNotifyMeTitle">Pieskati bloķētos izsekotājus</string>
+    <string name="appTrackingProtectionNotifyMeSubtitle">Paziņojumu panelī saņem atjauninājumus par bloķētajiem izsekošanas mēģinājumiem.</string>
+
+    <!-- Privacy pro upsell -->
+    <string name="apptp_PproUpsellInfoDisabled">Nevari izmantot App Tracking Protection sava VPN dēļ? Pārslēdzies uz DuckDuckGo VPN — vienīgo saderīgo VPN. <annotation type="ppro_upsell_link">Uzzini vairāk</annotation>.</string>
+    <string name="apptp_PproUpsellInfoDisabled_freeTrial">Nevari izmantot App Tracking Protection sava VPN dēļ? Pārslēdzies uz DuckDuckGo VPN — vienīgo saderīgo VPN. <annotation type="ppro_upsell_link">Izmēģini bez maksas!</annotation>.</string>
+    <string name="apptp_PproUpsellInfoRevoked"><b>App Tracking Protection ir atspējota</b>\nVai jūsu VPN atspējoja App Tracking Protection? Izmanto augstāk redzamo slēdzi, lai to no jauna iespējotu.\n\nIegūsti DuckDuckGo VPN — vienīgais VPN, kas darbojas ar App Tracking Protection. <annotation type="ppro_upsell_link">Uzzini vairāk</annotation>.</string>
+    <string name="apptp_PproUpsellInfoRevoked_freeTrial"><b>App Tracking Protection ir atspējota</b>\nVai tavs VPN atspējoja App Tracking Protection? Izmanto augstāk redzamo slēdzi, lai to no jauna iespējotu.\n\nPārslēdzies uz DuckDuckGo VPN — vienīgo VPN, kas darbojas ar App Tracking Protection. <annotation type="ppro_upsell_link">Izmēģini bez maksas!</annotation>.</string>
+    <string name="apptp_PproUpsellBannerTitle">Pacel savu privātumu nākamajā līmenī</string>
+    <string name="apptp_PproUpsellBannerMessage">DuckDuckGo ir vienīgais VPN, kas ir saderīgs ar App Tracking Protection. Aktivizē ar apmaksātu Privacy Pro abonementu.</string>
+    <string name="apptp_PproUpsellBannerAction">Uzzināt vairāk</string>
+    <string name="apptp_PproUpsellBannerMessage_freeTrial">Abonē DuckDuckGo un iegūsti vienīgo VPN, kas ir saderīgs ar App Tracking Protection.</string>
+    <string name="apptp_PproUpsellBannerAction_freeTrial">Izmēģini bez maksas!</string>
+
+    <!-- Content Descriptions -->
+    <string name="atp_onboarding_close_button_content_description">Aizvērt</string>
+    <string name="atp_close_button_content_description">Aizvērt</string>
+
+</resources>

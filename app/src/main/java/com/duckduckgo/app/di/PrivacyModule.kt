@@ -17,58 +17,77 @@
 package com.duckduckgo.app.di
 
 import android.content.Context
-import androidx.lifecycle.LifecycleObserver
-import androidx.work.WorkManager
 import com.duckduckgo.app.browser.WebDataManager
+import com.duckduckgo.app.browser.api.WebViewCapabilityChecker
 import com.duckduckgo.app.browser.cookies.ThirdPartyCookieManager
-import com.duckduckgo.app.fire.*
+import com.duckduckgo.app.browser.favicon.FaviconManager
+import com.duckduckgo.app.fire.AndroidAppCacheClearer
+import com.duckduckgo.app.fire.AppCacheClearer
+import com.duckduckgo.app.fire.BackgroundTimeKeeper
+import com.duckduckgo.app.fire.DataClearerForegroundAppRestartPixel
+import com.duckduckgo.app.fire.DataClearerTimeKeeper
+import com.duckduckgo.app.fire.SiteDataCleaner
+import com.duckduckgo.app.fire.UnsentForgetAllPixelStore
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.file.FileDeleter
+import com.duckduckgo.app.fire.model.AppCacheExclusionPlugin
+import com.duckduckgo.app.fire.store.TabVisitedSitesRepository
+import com.duckduckgo.app.fire.wideevents.DataClearingWideEvent
 import com.duckduckgo.app.global.view.ClearDataAction
 import com.duckduckgo.app.global.view.ClearPersonalDataAction
-import com.duckduckgo.app.location.GeoLocationPermissions
-import com.duckduckgo.app.location.GeoLocationPermissionsManager
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.app.location.data.LocationPermissionsDao
 import com.duckduckgo.app.location.data.LocationPermissionsRepository
-import com.duckduckgo.app.privacy.model.PrivacyPractices
-import com.duckduckgo.app.privacy.model.PrivacyPracticesImpl
-import com.duckduckgo.app.privacy.store.TermsOfServiceStore
+import com.duckduckgo.app.location.data.LocationPermissionsRepositoryImpl
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.tabs.model.TabRepository
-import com.duckduckgo.app.trackerdetection.EntityLookup
-import com.duckduckgo.app.trackerdetection.TdsEntityLookup
-import com.duckduckgo.app.trackerdetection.db.TdsDomainEntityDao
-import com.duckduckgo.app.trackerdetection.db.TdsEntityDao
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
-import javax.inject.Singleton
+import com.duckduckgo.app.trackerdetection.WebTrackersBlockedHistory
+import com.duckduckgo.browsermode.api.RegularMode
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.file.FileDeleter
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.cookies.api.DuckDuckGoCookieManager
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.duckchat.api.DuckAiHostProvider
+import com.duckduckgo.history.api.NavigationHistory
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.site.permissions.api.SitePermissionsManager
+import com.duckduckgo.site.preferences.api.SitePreferencesDataClearer
+import com.duckduckgo.sync.api.DeviceSyncState
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-class PrivacyModule {
-
-    @Provides
-    @Singleton
-    fun privacyPractices(termsOfServiceStore: TermsOfServiceStore, entityLookup: EntityLookup): PrivacyPractices =
-        PrivacyPracticesImpl(termsOfServiceStore, entityLookup)
-
-    @Provides
-    @Singleton
-    fun entityLookup(entityDao: TdsEntityDao, domainEntityDao: TdsDomainEntityDao): EntityLookup =
-        TdsEntityLookup(entityDao, domainEntityDao)
+@BindingContainer
+@ContributesTo(AppScope::class)
+object PrivacyModule {
 
     @Provides
     fun clearDataAction(
         context: Context,
         dataManager: WebDataManager,
         clearingStore: UnsentForgetAllPixelStore,
-        tabRepository: TabRepository,
+        @RegularMode tabRepository: TabRepository,
         settingsDataStore: SettingsDataStore,
         cookieManager: DuckDuckGoCookieManager,
         appCacheClearer: AppCacheClearer,
-        geoLocationPermissions: GeoLocationPermissions,
-        thirdPartyCookieManager: ThirdPartyCookieManager
+        thirdPartyCookieManager: ThirdPartyCookieManager,
+        fireproofWebsiteRepository: FireproofWebsiteRepository,
+        sitePermissionsManager: SitePermissionsManager,
+        deviceSyncState: DeviceSyncState,
+        savedSitesRepository: SavedSitesRepository,
+        navigationHistory: NavigationHistory,
+        dispatcherProvider: DispatcherProvider,
+        webTrackersBlockedHistory: WebTrackersBlockedHistory,
+        tabVisitedSitesRepository: TabVisitedSitesRepository,
+        webViewCapabilityChecker: WebViewCapabilityChecker,
+        duckAiHostProvider: DuckAiHostProvider,
+        siteDataCleaner: SiteDataCleaner,
+        sitePreferencesDataClearer: SitePreferencesDataClearer,
     ): ClearDataAction {
+        // TODO: Burns currently only clear @RegularMode tabs. Cross-mode tab clearing will be
+        // handled as part of the data-clearing fire-mode work.
         return ClearPersonalDataAction(
             context,
             dataManager,
@@ -77,8 +96,19 @@ class PrivacyModule {
             settingsDataStore,
             cookieManager,
             appCacheClearer,
-            geoLocationPermissions,
-            thirdPartyCookieManager
+            thirdPartyCookieManager,
+            fireproofWebsiteRepository,
+            sitePermissionsManager,
+            deviceSyncState,
+            savedSitesRepository,
+            navigationHistory,
+            dispatcherProvider,
+            webTrackersBlockedHistory,
+            tabVisitedSitesRepository,
+            webViewCapabilityChecker,
+            duckAiHostProvider,
+            siteDataCleaner,
+            sitePreferencesDataClearer,
         )
     }
 
@@ -88,43 +118,29 @@ class PrivacyModule {
     }
 
     @Provides
-    @Singleton
-    fun automaticDataClearer(
-        workManager: WorkManager,
-        settingsDataStore: SettingsDataStore,
-        clearDataAction: ClearDataAction,
-        dataClearerTimeKeeper: BackgroundTimeKeeper,
-        dataClearerForegroundAppRestartPixel: DataClearerForegroundAppRestartPixel
-    ): DataClearer {
-        return AutomaticDataClearer(workManager, settingsDataStore, clearDataAction, dataClearerTimeKeeper, dataClearerForegroundAppRestartPixel)
-    }
-
-    @Provides
-    @Singleton
-    @IntoSet
-    fun dataClearerLifecycleObserver(dataClearer: DataClearer): LifecycleObserver = dataClearer
-
-    @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @IntoSet
     fun dataClearerForegroundAppRestartPixelObserver(
-        dataClearerForegroundAppRestartPixel: DataClearerForegroundAppRestartPixel
-    ): LifecycleObserver = dataClearerForegroundAppRestartPixel
+        dataClearerForegroundAppRestartPixel: DataClearerForegroundAppRestartPixel,
+    ): MainProcessLifecycleObserver = dataClearerForegroundAppRestartPixel
 
     @Provides
-    @Singleton
-    fun appCacheCleaner(context: Context, fileDeleter: FileDeleter): AppCacheClearer {
-        return AndroidAppCacheClearer(context, fileDeleter)
+    @SingleIn(AppScope::class)
+    fun appCacheCleaner(
+        context: Context,
+        fileDeleter: FileDeleter,
+        exclusionPlugins: PluginPoint<AppCacheExclusionPlugin>,
+        dataClearingWideEvent: DataClearingWideEvent,
+    ): AppCacheClearer {
+        return AndroidAppCacheClearer(context, fileDeleter, exclusionPlugins, dataClearingWideEvent)
     }
 
     @Provides
-    @Singleton
-    fun geoLocationPermissions(
-        context: Context,
-        locationPermissionsRepository: LocationPermissionsRepository,
-        fireproofWebsiteRepository: FireproofWebsiteRepository,
-        dispatcherProvider: DispatcherProvider
-    ): GeoLocationPermissions {
-        return GeoLocationPermissionsManager(context, locationPermissionsRepository, fireproofWebsiteRepository, dispatcherProvider)
+    fun providesLocationPermissionsRepository(
+        locationPermissionsDao: LocationPermissionsDao,
+        faviconManager: Lazy<FaviconManager>,
+        dispatchers: DispatcherProvider,
+    ): LocationPermissionsRepository {
+        return LocationPermissionsRepositoryImpl(locationPermissionsDao, faviconManager, dispatchers)
     }
 }

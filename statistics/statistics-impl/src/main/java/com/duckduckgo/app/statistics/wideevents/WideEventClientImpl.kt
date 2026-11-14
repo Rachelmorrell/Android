@@ -1,0 +1,201 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.statistics.wideevents
+
+import com.duckduckgo.app.di.ProcessName
+import com.duckduckgo.app.statistics.wideevents.WideEventClient.Companion.SAMPLED_OUT_FLOW_ID
+import com.duckduckgo.app.statistics.wideevents.db.WideEventRepository
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import kotlin.random.Random
+import kotlin.runCatching
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
+import kotlin.time.toKotlinDuration
+
+@ContributesBinding(AppScope::class)
+class WideEventClientImpl @Inject constructor(
+    private val wideEventRepository: WideEventRepository,
+    private val wideEventFeature: Lazy<WideEventFeature>,
+    private val dispatcherProvider: DispatcherProvider,
+    private val random: Random,
+    @ProcessName private val processName: String,
+    private val wideEventCleaner: WideEventCleaner,
+) : WideEventClient {
+    override suspend fun flowStart(
+        name: String,
+        flowEntryPoint: String?,
+        metadata: Map<String, String>,
+        cleanupPolicy: CleanupPolicy,
+        samplingProbability: Float,
+        definition: WideEventDefinition,
+    ): Result<Long> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (samplingProbability !in 0.0f..1.0f) {
+            return Result.failure(IllegalArgumentException("samplingProbability must be between 0.0 and 1.0, was $samplingProbability"))
+        }
+
+        if (random.nextFloat() >= samplingProbability) return Result.success(SAMPLED_OUT_FLOW_ID)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            wideEventRepository.insertWideEvent(
+                name = name,
+                flowEntryPoint = flowEntryPoint,
+                metadata = metadata,
+                cleanupPolicy = cleanupPolicy.mapToRepositoryCleanupPolicy(ownerProcessName = processName),
+                samplingProbability = samplingProbability,
+                metaType = definition.type ?: WideEventMeta.typeFor(name),
+                metaVersion = WideEventMeta.versionFor(definition.version),
+            )
+        }
+    }
+
+    override suspend fun flowStep(
+        wideEventId: Long,
+        stepName: String,
+        success: Boolean,
+        metadata: Map<String, String>,
+    ): Result<Unit> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (wideEventId == SAMPLED_OUT_FLOW_ID) return Result.success(Unit)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            wideEventRepository.addWideEventStep(
+                eventId = wideEventId,
+                step = WideEventRepository.WideEventStep(name = stepName, success = success),
+                metadata = metadata,
+            )
+        }
+    }
+
+    override suspend fun flowFinish(
+        wideEventId: Long,
+        status: FlowStatus,
+        metadata: Map<String, String>,
+    ): Result<Unit> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (wideEventId == SAMPLED_OUT_FLOW_ID) return Result.success(Unit)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            val (wideEventStatus, statusMetadata) = status.mapToWideEventStatus()
+
+            wideEventRepository.setWideEventStatus(
+                eventId = wideEventId,
+                status = wideEventStatus,
+                metadata = metadata + statusMetadata,
+            )
+        }
+    }
+
+    override suspend fun flowAbort(wideEventId: Long): Result<Unit> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (wideEventId == SAMPLED_OUT_FLOW_ID) return Result.success(Unit)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            val deleted = wideEventRepository.deleteWideEvent(wideEventId)
+            check(deleted) { "There is no event with given ID" }
+        }
+    }
+
+    override suspend fun getFlowIds(name: String): Result<List<Long>> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            wideEventRepository.getActiveWideEventIdsByName(name)
+        }
+    }
+
+    override suspend fun intervalStart(
+        wideEventId: Long,
+        key: String,
+        timeout: Duration?,
+        buckets: Set<Duration>?,
+    ): Result<Unit> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (wideEventId == SAMPLED_OUT_FLOW_ID) return Result.success(Unit)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            wideEventRepository.startInterval(
+                eventId = wideEventId,
+                name = key,
+                timeout = timeout?.toJavaDuration(),
+                buckets = buckets?.map { it.toJavaDuration() },
+            )
+        }
+    }
+
+    override suspend fun intervalEnd(
+        wideEventId: Long,
+        key: String,
+    ): Result<Duration> {
+        if (!isFeatureEnabled()) return Result.failure(Exception("Wide events feature disabled"))
+        if (wideEventId == SAMPLED_OUT_FLOW_ID) return Result.success(Duration.ZERO)
+
+        return runCatching {
+            wideEventCleaner.ensureInitialized()
+            wideEventRepository.endInterval(
+                eventId = wideEventId,
+                name = key,
+            ).toKotlinDuration()
+        }
+    }
+
+    private suspend fun isFeatureEnabled(): Boolean =
+        withContext(dispatcherProvider.io()) {
+            wideEventFeature.value.self().isEnabled()
+        }
+}
+
+private fun FlowStatus.mapToWideEventStatus(): Pair<WideEventRepository.WideEventStatus, Map<String, String>> =
+    when (this) {
+        FlowStatus.Cancelled -> WideEventRepository.WideEventStatus.CANCELLED to emptyMap()
+        is FlowStatus.Failure -> WideEventRepository.WideEventStatus.FAILURE to mapOf("failure_reason" to reason)
+        FlowStatus.Success -> WideEventRepository.WideEventStatus.SUCCESS to emptyMap()
+        FlowStatus.Unknown -> WideEventRepository.WideEventStatus.UNKNOWN to emptyMap()
+    }
+
+private fun CleanupPolicy.mapToRepositoryCleanupPolicy(ownerProcessName: String): WideEventRepository.CleanupPolicy {
+    val (wideEventStatus, metadata) = flowStatus.mapToWideEventStatus()
+
+    return when (this) {
+        is CleanupPolicy.OnProcessStart -> {
+            WideEventRepository.CleanupPolicy.OnProcessStart(
+                ownerProcessName = ownerProcessName,
+                ignoreIfIntervalTimeoutPresent = ignoreIfIntervalTimeoutPresent,
+                status = wideEventStatus,
+                metadata = metadata,
+            )
+        }
+
+        is CleanupPolicy.OnTimeout -> {
+            WideEventRepository.CleanupPolicy.OnTimeout(
+                duration = duration.toJavaDuration(),
+                status = wideEventStatus,
+                metadata = metadata,
+            )
+        }
+    }
+}

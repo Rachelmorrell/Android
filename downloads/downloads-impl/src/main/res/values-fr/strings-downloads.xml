@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">Échec du téléchargement. Vérifiez la connexion Internet.</string>
+
+    <string name="notificationChannelFileDownloading">Téléchargement du fichier</string>
+    <string name="notificationChannelFileDownloaded">Fichier téléchargé</string>
+
+    <string name="downloadInProgress">Téléchargement en cours</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">Début du téléchargement pour %1$s</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">Téléchargement terminé pour %1$s</string>
+    <string name="downloadsDownloadGenericErrorMessage">Échec du téléchargement.</string>
+    <string name="downloadsCancel">Annuler</string>
+    <string name="downloadsRetry">Réessayer</string>
+    <string name="notificationDownloadComplete">Téléchargement terminé.</string>
+    <string name="notificationDownloadFailed">Échec du téléchargement.</string>
+
+    <string name="downloadConfirmationContinue">Enregistrer dans les téléchargements</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">À partir de : %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Tout supprimer</string>
+    <string name="downloadsActivityNoItemsDescription">Aucun fichier n\'a encore été téléchargé</string>
+    <string name="downloadsActivityTitle">Téléchargements</string>
+    <string name="downloadsAllFilesDeletedMessage">Tous les fichiers sont supprimés.</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Impossible d\'ouvrir le fichier. Vérifiez la compatibilité de l\'application.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">&lt;b&gt;%1$s&lt;/b&gt; supprimé</string>
+    <string name="downloadsFileNotFoundErrorMessage">Le fichier n\'existe plus</string>
+    <string name="downloadsItemMenuCancel">Annuler</string>
+    <string name="downloadsItemMenuDelete">Supprimer</string>
+    <string name="downloadsItemMenuShare">Partager</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">Plus d\'options pour %1$s</string>
+    <string name="downloadsNotifyMeSubtitle">Recevez une notification lorsque les téléchargements sont terminés.</string>
+    <string name="downloadsNotifyMeTitle">Sachez quand les téléchargements sont prêts</string>
+    <string name="downloadsShareTitle">Partager avec…</string>
+    <string name="downloadsStateInProgress">En cours...</string>
+    <string name="downloadsUndoActionName">Annuler</string>
+    <string name="downloadsSearchHint">Rechercher</string>
+</resources>

@@ -1,0 +1,77 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.autoconsent.impl.handlers
+
+import android.webkit.WebView
+import com.duckduckgo.autoconsent.api.AutoconsentCallback
+import com.duckduckgo.autoconsent.api.AutoconsentResult
+import com.duckduckgo.autoconsent.impl.AutoconsentReloadLoopDetector
+import com.duckduckgo.autoconsent.impl.MessageHandlerPlugin
+import com.duckduckgo.autoconsent.impl.adapters.JSONObjectAdapter
+import com.duckduckgo.autoconsent.impl.pixels.AutoConsentPixel
+import com.duckduckgo.autoconsent.impl.pixels.AutoconsentPixelManager
+import com.duckduckgo.di.scopes.AppScope
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
+import dev.zacsweers.metro.ContributesIntoSet
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesIntoSet(AppScope::class)
+class SelfTestResultMessageHandlerPlugin @Inject constructor(
+    private val autoconsentPixelManager: AutoconsentPixelManager,
+    private val reloadLoopDetector: AutoconsentReloadLoopDetector,
+) : MessageHandlerPlugin {
+
+    private val moshi = Moshi.Builder().add(JSONObjectAdapter()).build()
+
+    override fun process(messageType: String, jsonString: String, webView: WebView, autoconsentCallback: AutoconsentCallback) {
+        if (supportedTypes.contains(messageType)) {
+            try {
+                val message: SelfTestResultMessage = parseMessage(jsonString) ?: return
+
+                if (message.result) {
+                    autoconsentPixelManager.fireDailyPixel(AutoConsentPixel.AUTOCONSENT_SELF_TEST_OK_DAILY)
+                } else {
+                    autoconsentPixelManager.fireDailyPixel(AutoConsentPixel.AUTOCONSENT_SELF_TEST_FAIL_DAILY)
+                }
+
+                autoconsentCallback.onResultReceived(
+                    AutoconsentResult(
+                        consentManaged = true,
+                        optOutFailed = false,
+                        selfTestFailed = message.result,
+                        isCosmetic = null,
+                        consentRule = message.cmp,
+                        consentReloadLoop = reloadLoopDetector.isReloadLoopDetected(webView),
+                    ),
+                )
+            } catch (e: Exception) {
+                logcat { e.localizedMessage }
+            }
+        }
+    }
+
+    override val supportedTypes: List<String> = listOf("selfTestResult")
+
+    private fun parseMessage(jsonString: String): SelfTestResultMessage? {
+        val jsonAdapter: JsonAdapter<SelfTestResultMessage> = moshi.adapter(SelfTestResultMessage::class.java)
+        return jsonAdapter.fromJson(jsonString)
+    }
+
+    data class SelfTestResultMessage(val type: String, val cmp: String, val result: Boolean, val url: String)
+}

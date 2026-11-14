@@ -15,6 +15,7 @@
  */
 
 @file:Suppress("unused")
+
 package com.duckduckgo.app.global.view
 
 import android.view.View
@@ -66,7 +67,7 @@ private class ViewChildrenRecursiveSequence(private val view: View) : Sequence<V
 
     private class RecursiveViewIterator(view: View) : Iterator<View> {
         private val sequences = arrayListOf(view.childrenSequence())
-        private var current = sequences.removeLast().iterator()
+        private var current = sequences.removeLastElement().iterator()
 
         override fun next(): View {
             if (!hasNext()) throw NoSuchElementException()
@@ -79,13 +80,13 @@ private class ViewChildrenRecursiveSequence(private val view: View) : Sequence<V
 
         override fun hasNext(): Boolean {
             if (!current.hasNext() && sequences.isNotEmpty()) {
-                current = sequences.removeLast().iterator()
+                current = sequences.removeLastElement().iterator()
             }
             return current.hasNext()
         }
 
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun <T : Any> MutableList<T>.removeLast(): T {
+        private inline fun <T : Any> MutableList<T>.removeLastElement(): T {
             if (isEmpty()) throw NoSuchElementException()
             return removeAt(size - 1)
         }

@@ -1,0 +1,250 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.generalsettings.showonapplaunch
+
+import androidx.core.net.toUri
+import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
+import com.duckduckgo.app.browser.autofill.SystemAutofillEngagement
+import com.duckduckgo.app.browser.returnsession.ReturnSessionLanding
+import com.duckduckgo.app.browser.returnsession.ReturnSessionLandingListener
+import com.duckduckgo.app.browser.returnsession.ReturnSessionLandingResult
+import com.duckduckgo.app.browser.state.IdleReturnLandingGate
+import com.duckduckgo.app.browser.state.ModeSwitchRecreateSignal
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.generalsettings.showonapplaunch.model.ShowOnAppLaunchOption.NewTabPage
+import com.duckduckgo.app.generalsettings.showonapplaunch.store.ShowOnAppLaunchOptionDataStore
+import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.app.tabs.model.TabRepository
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.api.BrowserLifecycleObserver
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.browser.ui.newtab.hatch.NewTabReturnHatchFeature
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.browsermode.api.BrowserModeDataProvider
+import com.duckduckgo.browsermode.api.BrowserModeStateHolder
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.customtabs.api.CustomTabDetector
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.duckchat.api.DuckAiSessionCallback
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.newtabpage.api.NtpAfterIdleManager
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<BrowserLifecycleObserver>(),
+)
+@SingleIn(AppScope::class)
+class FirstScreenHandlerImpl @Inject constructor(
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+    private val showOnAppLaunchFeature: ShowOnAppLaunchFeature,
+    private val settingsDataStore: SettingsDataStore,
+    private val showOnAppLaunchOptionHandler: ShowOnAppLaunchOptionHandler,
+    private val showOnAppLaunchOptionDataStore: ShowOnAppLaunchOptionDataStore,
+    private val appBuildConfig: AppBuildConfig,
+    private val dispatcherProvider: DispatcherProvider,
+    private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector,
+    private val duckChat: DuckChat,
+    private val tabRepositoryProvider: BrowserModeDataProvider<TabRepository>,
+    private val ntpAfterIdleManager: NtpAfterIdleManager,
+    private val systemAutofillEngagement: SystemAutofillEngagement,
+    private val customTabDetector: CustomTabDetector,
+    private val browserModeStateHolder: BrowserModeStateHolder,
+    private val modeSwitchRecreateSignal: ModeSwitchRecreateSignal,
+    private val returnSessionLandingListener: ReturnSessionLandingListener,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val idleThresholdResolver: IdleThresholdResolver,
+    private val duckAiSessionCallback: DuckAiSessionCallback,
+    private val idleReturnLandingGate: IdleReturnLandingGate,
+    private val newTabReturnHatchFeature: NewTabReturnHatchFeature,
+) : BrowserLifecycleObserver {
+
+    // Launch boundary: process-lifecycle callback, no activity graph exists to provide a frozen mode.
+    @Suppress("DenyListedApi")
+    private val tabRepository: TabRepository
+        get() = tabRepositoryProvider.forMode(browserModeStateHolder.currentMode.value)
+
+    override fun onOpen(isFreshLaunch: Boolean) {
+        // A programmatic mode switch recreates BrowserActivity, which fires onClose+onOpen as if the
+        // app reopened. Skip launch handling for that recreate so it doesn't add a spurious NTP that
+        // clobbers the action carried across the switch (e.g. the escape hatch's OpenExistingTab).
+        if (modeSwitchRecreateSignal.consumePending()) return
+
+        // Notify the NtpAfterIdleManager synchronously on a fresh launch when the currently
+        // selected tab is already an NTP: BrowserViewModel's flowSelectedTab subscription will
+        // fire onNtpShown immediately on activity recreation, and the async handler path below
+        // doesn't run in time to classify it.
+        //
+        // Restricted to isFreshLaunch=true: on plain background+resume, NtpAfterIdleManager
+        // preserves the prior session's classification, so the existing _isAfterIdleReturn value
+        // is correct without a fresh trigger. Setting pendingAfterIdle here would leak — no
+        // onNtpShown fires (same NTP tab), and the next user action that DOES show an NTP
+        // (e.g. opening a new tab manually) would incorrectly consume the stale pending flag.
+        val preAppliedFreshNtpTreatment = if (isFreshLaunch &&
+            androidBrowserConfigFeature.showNTPAfterIdleReturn().isEnabled() &&
+            computeWasIdle() &&
+            isCurrentSelectedTabNtp()
+        ) {
+            ntpAfterIdleManager.onIdleReturnTriggered()
+            AfterIdleTreatment.NTP
+        } else {
+            null
+        }
+
+        // BrowserActivity's first frame runs before the async landing below, so the hold must be set here.
+        if (
+            androidBrowserConfigFeature.showNTPAfterIdleReturn().isEnabled() &&
+            newTabReturnHatchFeature.idleReturnFirstFrameHold().isEnabled() &&
+            computeWasIdle()
+        ) {
+            idleReturnLandingGate.hold()
+        } else {
+            idleReturnLandingGate.open()
+        }
+
+        appCoroutineScope.launch {
+            logcat { "FirstScreen: onOpen isFreshLaunch $isFreshLaunch" }
+            val resolvedLanding = try {
+                // Persist the new-user default eagerly so screens that read optionFlow
+                // (e.g. GeneralSettings) don't fall back to LastOpenedTab before the
+                // after-inactivity flow has had a chance to run.
+                ensureNewUserDefault()
+                handleFirstScreen(isFreshLaunch, preAppliedFreshNtpTreatment)
+            } finally {
+                idleReturnLandingGate.resolve()
+            }
+            returnSessionLandingListener.onReturnLandingResolved(resolvedLanding)
+            // Report a duck.ai tab launch to the Ai session wide event.
+            val duckAiTab = tabRepository.getSelectedTab().takeIf { resolvedLanding.landing == ReturnSessionLanding.DUCK_AI }
+            duckAiSessionCallback.onLaunchLandingResolved(duckAiTab?.tabId, duckAiTab?.url)
+        }
+    }
+
+    private suspend fun ensureNewUserDefault() {
+        val ntpAfterIdleEnabled = androidBrowserConfigFeature.showNTPAfterIdleReturn().isEnabled()
+        if (ntpAfterIdleEnabled && appBuildConfig.isNewInstall() && !showOnAppLaunchOptionDataStore.hasOptionSelected()) {
+            logcat { "FirstScreen: setting New Tab for new users" }
+            showOnAppLaunchOptionDataStore.setShowOnAppLaunchOption(NewTabPage)
+        }
+    }
+
+    private fun isCurrentSelectedTabNtp(): Boolean {
+        return tabRepository.liveSelectedTab.value?.url.isNullOrBlank()
+    }
+
+    private fun computeWasIdle(): Boolean {
+        val timeoutMs = getTimeoutSeconds() * 1000
+        val lastBackgrounded = settingsDataStore.lastSessionBackgroundTimestamp
+        val elapsed = System.currentTimeMillis() - lastBackgrounded
+        return lastBackgrounded != 0L && elapsed >= timeoutMs
+    }
+
+    // Launch boundary: process-lifecycle callback, no activity graph exists to provide a frozen mode.
+    @Suppress("DenyListedApi")
+    private suspend fun handleFirstScreen(
+        isFreshLaunch: Boolean,
+        preAppliedFreshNtpTreatment: AfterIdleTreatment?,
+    ): ReturnSessionLandingResult {
+        val currentMode = browserModeStateHolder.currentMode.value
+        if (androidBrowserConfigFeature.showNTPAfterIdleReturn().isEnabled()) {
+            val lastBackgrounded = settingsDataStore.lastSessionBackgroundTimestamp
+            val wasIdle = computeWasIdle()
+            if (lastBackgrounded == 0L || wasIdle) {
+                if (isVoiceSessionActiveOnCurrentTab() || isActiveTabCustomTab()) {
+                    return resolveCurrentLanding(currentMode)
+                }
+
+                val result = showOnAppLaunchOptionHandler.handleAfterInactivityOption(wasIdle = wasIdle, currentMode = currentMode)
+                val fallbackTreatment = preAppliedFreshNtpTreatment.takeIf {
+                    currentMode == BrowserMode.REGULAR && result.destinationUrl.isNullOrBlank()
+                }
+
+                // A restored NTP isn't re-added, but its hatch is still resolving, so the frame waits for it too.
+                val landingTabId = result.landingTabId ?: if (fallbackTreatment != null) tabRepository.getSelectedTab()?.tabId else null
+                idleReturnLandingGate.resolve(
+                    landingTabId,
+                    awaitHatch = result.treatment == AfterIdleTreatment.NTP || fallbackTreatment != null,
+                )
+                return resolveReturnLanding(result = result, fallbackTreatment = fallbackTreatment)
+            }
+        } else if (isFreshLaunch && showOnAppLaunchFeature.self().isEnabled()) {
+            if (isVoiceSessionActiveOnCurrentTab()) {
+                return resolveCurrentLanding(currentMode)
+            }
+            return resolveReturnLanding(showOnAppLaunchOptionHandler.handleAppLaunchOption(currentMode))
+        }
+        return resolveCurrentLanding(currentMode)
+    }
+
+    private suspend fun resolveCurrentLanding(currentMode: BrowserMode): ReturnSessionLandingResult {
+        val destinationUrl = tabRepositoryProvider.forMode(currentMode).getSelectedTab()?.url
+        return resolveReturnLanding(
+            ShowOnAppLaunchResult(
+                destinationUrl = destinationUrl,
+                treatment = null,
+            ),
+        )
+    }
+
+    private fun resolveReturnLanding(
+        result: ShowOnAppLaunchResult,
+        fallbackTreatment: AfterIdleTreatment? = null,
+    ): ReturnSessionLandingResult {
+        val afterIdle = (result.treatment ?: fallbackTreatment) != null
+        val landing = when {
+            result.destinationUrl.isNullOrBlank() -> if (afterIdle) ReturnSessionLanding.NTP else ReturnSessionLanding.NTP_USER_INITIATED
+            duckChat.isDuckChatUrl(result.destinationUrl.toUri()) -> ReturnSessionLanding.DUCK_AI
+            duckDuckGoUrlDetector.isDuckDuckGoQueryUrl(result.destinationUrl) -> ReturnSessionLanding.SERP
+            else -> ReturnSessionLanding.WEB
+        }
+        return ReturnSessionLandingResult(afterIdle = afterIdle, landing = landing)
+    }
+
+    private suspend fun isVoiceSessionActiveOnCurrentTab(): Boolean = withContext(dispatcherProvider.io()) {
+        val selectedTab = tabRepository.getSelectedTab()
+        return@withContext selectedTab?.tabId?.let {
+            duckChat.isVoiceChatSessionActive(it)
+        } == true
+    }
+
+    private suspend fun isActiveTabCustomTab(): Boolean = withContext(dispatcherProvider.io()) {
+        return@withContext customTabDetector.isCustomTab()
+    }
+
+    override fun onClose() {
+        returnSessionLandingListener.onReturnClosed()
+        systemAutofillEngagement.clearIdleReturnTriggered()
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            settingsDataStore.lastSessionBackgroundTimestamp = System.currentTimeMillis()
+        }
+    }
+
+    private fun getTimeoutSeconds(): Long =
+        idleThresholdResolver.effectiveThresholdSeconds(settingsDataStore.userSelectedIdleThresholdSeconds)
+
+    companion object {
+        const val DEFAULT_IDLE_THRESHOLD_SECONDS = 300L
+        val DEFAULT_IDLE_THRESHOLD_OPTIONS = listOf(0L, 60L, 300L, 600L, 1800L, 3600L, 43200L, 86400L)
+    }
+}

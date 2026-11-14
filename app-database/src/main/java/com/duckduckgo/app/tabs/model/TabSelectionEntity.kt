@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) 2018 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.tabs.model
+
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+
+/**
+ * Shared by `AppDatabase` and `FireModeDatabase`. Any schema change here requires a migration in
+ * BOTH databases — forgetting one will result in a runtime crash for the affected users.
+ */
+@Entity(
+    tableName = "tab_selection",
+    foreignKeys = [
+        ForeignKey(
+            entity = TabEntity::class,
+            parentColumns = ["tabId"],
+            childColumns = ["tabId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ],
+    indices = [
+        Index("tabId"),
+    ],
+)
+data class TabSelectionEntity(
+    @PrimaryKey var id: Int = 1,
+    var tabId: String?,
+)

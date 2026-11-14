@@ -1,0 +1,297 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.nativeinput
+
+import android.content.Context
+import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.shape.RelativeCornerSize
+import com.google.android.material.shape.ShapeAppearanceModel
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+@RunWith(AndroidJUnit4::class)
+class RealNativeInputAnimatorTest {
+
+    private lateinit var context: Context
+    private lateinit var testee: RealNativeInputAnimator
+
+    @Before
+    fun setUp() {
+        context = InstrumentationRegistry.getInstrumentation().targetContext
+        testee = RealNativeInputAnimator()
+    }
+
+    /**
+     * Bottom-mode hierarchy as introduced by #8730: the card is a weighted child of a horizontal
+     * LinearLayout, so card.layoutParams is LinearLayout.LayoutParams (not FrameLayout.LayoutParams).
+     */
+    private data class Hierarchy(val widgetView: View, val card: View, val omnibarCard: View)
+
+    private fun bottomHierarchy(): Hierarchy {
+        val widgetView = FrameLayout(context)
+        val linear = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        widgetView.addView(linear, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val card = FrameLayout(context)
+        linear.addView(card, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        val omnibarCard = FrameLayout(context)
+        widgetView.layout(0, 0, 1000, 200)
+        linear.layout(0, 0, 1000, 200)
+        card.layout(0, 0, 1000, 200)
+        omnibarCard.layout(0, 0, 900, 100)
+        return Hierarchy(widgetView, card, omnibarCard)
+    }
+
+    @Test
+    fun whenAnimateExitInBottomModeWithLinearLayoutParentThenDoesNotThrow() {
+        val (widgetView, card, omnibarCard) = bottomHierarchy()
+
+        // Pre-fix this throws ClassCastException at stripCompatPadding; reaching the end is the assertion.
+        testee.animateExit(
+            widgetCard = card,
+            widgetView = widgetView,
+            omnibarCard = omnibarCard,
+            isBottom = true,
+            onComplete = {},
+        )
+    }
+
+    @Test
+    fun whenInitInBottomModeWithLinearLayoutParentThenReturnsMarginsAndZeroesWeight() {
+        val (_, card, omnibarCard) = bottomHierarchy()
+
+        val margins = testee.init(card, omnibarCard, omnibarCard.width, omnibarCard.height, isBottom = true)
+
+        // Enter morph must no longer be skipped in bottom mode...
+        assertNotNull(margins)
+        // ...and the weight must be zeroed so explicit width lerps take effect.
+        assertEquals(0f, (card.layoutParams as LinearLayout.LayoutParams).weight, 0f)
+    }
+
+    @Test
+    fun whenInitInTopModeWithFrameLayoutParentThenReturnsMargins() {
+        val widgetView = FrameLayout(context)
+        val card = FrameLayout(context)
+        widgetView.addView(card, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val omnibarCard = FrameLayout(context)
+        widgetView.layout(0, 0, 1000, 200)
+        card.layout(0, 0, 1000, 200)
+        omnibarCard.layout(0, 0, 900, 100)
+
+        val margins = testee.init(card, omnibarCard, omnibarCard.width, omnibarCard.height, isBottom = false)
+
+        assertNotNull(margins)
+    }
+
+    @Test
+    fun whenInitWithRelativeWidgetCornersThenPreservesShapeAndCompatPadding() {
+        val params = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+        val relativeShape = ShapeAppearanceModel.builder().setAllCornerSizes(ShapeAppearanceModel.PILL).build()
+        val card = mock<MaterialCardView> {
+            on { layoutParams } doReturn params
+            on { shapeAppearanceModel } doReturn relativeShape
+            on { radius } doReturn 0f
+            on { cardElevation } doReturn 6f
+            on { paddingLeft } doReturn 8
+            on { paddingTop } doReturn 12
+            on { paddingRight } doReturn 8
+            on { paddingBottom } doReturn 12
+        }
+        val omnibarCard = mock<MaterialCardView> {
+            on { radius } doReturn 48f
+        }
+
+        val margins = testee.init(card, omnibarCard, omnibarWidth = 300, omnibarHeight = 48, isBottom = false)
+
+        assertNotNull(margins)
+        assertTrue(card.shapeAppearanceModel.topLeftCornerSize is RelativeCornerSize)
+        verify(card, never()).radius = any()
+        assertEquals(72, params.height)
+    }
+
+    @Test
+    fun whenInitWithLargerOmnibarRadiusThenVisibleCardMatchesOmnibarHeight() {
+        val params = LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f)
+        var compatPadding = 49
+        val card = mock<MaterialCardView> {
+            on { layoutParams } doReturn params
+            on { shapeAppearanceModel } doReturn ShapeAppearanceModel.builder().setAllCornerSizes(72f).build()
+            on { radius } doReturn 72f
+            on { paddingLeft } doAnswer { compatPadding }
+            on { paddingTop } doAnswer { compatPadding }
+            on { paddingRight } doAnswer { compatPadding }
+            on { paddingBottom } doAnswer { compatPadding }
+        }
+        doAnswer { compatPadding = 70 }.whenever(card).radius = 144f
+        val omnibarCard = mock<MaterialCardView> {
+            on { radius } doReturn 144f
+        }
+
+        testee.init(card, omnibarCard, omnibarWidth = 636, omnibarHeight = 132, isBottom = false)
+
+        assertEquals(132, params.height - card.paddingTop - card.paddingBottom)
+        assertEquals(636, params.width - card.paddingLeft - card.paddingRight)
+    }
+
+    @Test
+    fun whenSnapShowInTopModeThenBarVisibleAndWidgetAtRest() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context)
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = false, heightPx = 56, show = true, animate = false)
+
+        assertEquals(View.VISIBLE, navBar.visibility)
+        assertEquals(0f, navBar.translationY, 0f)
+        assertEquals(0f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenSnapHideInTopModeThenBarGoneAndWidgetRidesUp() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context)
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = false, heightPx = 56, show = false, animate = false)
+
+        assertEquals(View.GONE, navBar.visibility)
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(-56f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenSnapHideInBottomModeThenBarGoneAndWidgetUntouched() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context).apply { translationY = 99f }
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = true, heightPx = 56, show = false, animate = false)
+
+        assertEquals(View.GONE, navBar.visibility)
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(99f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenSnapShowInBottomModeThenBarVisibleAndWidgetUntouched() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context).apply { translationY = 99f }
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = true, heightPx = 56, show = true, animate = false)
+
+        assertEquals(View.VISIBLE, navBar.visibility)
+        assertEquals(0f, navBar.translationY, 0f)
+        assertEquals(99f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenAnimateShowFromRestThenBarStartsOffScreen() {
+        val navBar = FrameLayout(context).apply { translationY = 0f }
+        val widget = FrameLayout(context).apply { translationY = 0f }
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = true, heightPx = 56, show = true, animate = true)
+
+        // Animator starts from hiddenY so the slide-in has travel; first frame may not have run yet
+        // under Robolectric, but the view must be positioned off-screen before the ValueAnimator ticks.
+        assertEquals(View.VISIBLE, navBar.visibility)
+        assertEquals(-56f, navBar.translationY, 0f)
+    }
+
+    @Test
+    fun whenAnimateShowInTopModeFromRestThenWidgetRidesOffScreenWithBar() {
+        val navBar = FrameLayout(context).apply { translationY = 0f }
+        val widget = FrameLayout(context).apply { translationY = 0f }
+
+        testee.animateNavBarVisibility(navBar, widget, isBottom = false, heightPx = 56, show = true, animate = true)
+
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(-56f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenAnimateShowInTopModeWithoutMovingWidgetThenWidgetStaysPlanted() {
+        val navBar = FrameLayout(context).apply { translationY = 0f }
+        val widget = FrameLayout(context).apply { translationY = 0f }
+
+        testee.animateNavBarVisibility(
+            navBarView = navBar,
+            widgetView = widget,
+            isBottom = false,
+            heightPx = 56,
+            show = true,
+            animate = true,
+            moveWidgetWithBar = false,
+        )
+
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(0f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenSnapHideInTopModeWithoutMovingWidgetThenWidgetStaysPlanted() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context).apply { translationY = 12f }
+
+        testee.animateNavBarVisibility(
+            navBarView = navBar,
+            widgetView = widget,
+            isBottom = false,
+            heightPx = 56,
+            show = false,
+            animate = false,
+            moveWidgetWithBar = false,
+        )
+
+        assertEquals(View.GONE, navBar.visibility)
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(12f, widget.translationY, 0f)
+    }
+
+    @Test
+    fun whenMoveWidgetWithBarTrueInBottomModeThenWidgetStillUntouched() {
+        val navBar = FrameLayout(context)
+        val widget = FrameLayout(context).apply { translationY = 99f }
+
+        testee.animateNavBarVisibility(
+            navBarView = navBar,
+            widgetView = widget,
+            isBottom = true,
+            heightPx = 56,
+            show = false,
+            animate = false,
+            moveWidgetWithBar = true,
+        )
+
+        assertEquals(View.GONE, navBar.visibility)
+        assertEquals(-56f, navBar.translationY, 0f)
+        assertEquals(99f, widget.translationY, 0f)
+    }
+}

@@ -1,0 +1,124 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.espresso.privacy
+
+import android.view.View
+import android.webkit.WebView
+import androidx.test.espresso.IdlingRegistry
+import androidx.test.espresso.IdlingResource
+import androidx.test.espresso.web.assertion.WebViewAssertions.webMatches
+import androidx.test.espresso.web.model.Atoms.script
+import androidx.test.espresso.web.sugar.Web.onWebView
+import androidx.test.espresso.web.webdriver.DriverAtoms.findElement
+import androidx.test.espresso.web.webdriver.DriverAtoms.getText
+import androidx.test.espresso.web.webdriver.DriverAtoms.webClick
+import androidx.test.espresso.web.webdriver.Locator.ID
+import androidx.test.ext.junit.rules.activityScenarioRule
+import androidx.test.platform.app.InstrumentationRegistry
+import com.duckduckgo.app.browser.BrowserActivity
+import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.browser.mode.InAppNavigation
+import com.duckduckgo.espresso.JsObjectIdlingResource
+import com.duckduckgo.espresso.PrivacyTest
+import com.duckduckgo.espresso.WebViewIdlingResource
+import com.duckduckgo.privacy.config.impl.network.JSONObjectAdapter
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
+import org.hamcrest.CoreMatchers.containsString
+import org.hamcrest.CoreMatchers.sameInstance
+import org.junit.After
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+
+class GpcTest {
+
+    @get:Rule
+    var activityScenarioRule = activityScenarioRule<BrowserActivity>(
+        BrowserActivity.intent(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            launchSource = InAppNavigation,
+            queryExtra = "https://privacy-test-pages.site/privacy-protections/gpc/",
+        ),
+    )
+
+    private val registeredResources = mutableListOf<IdlingResource>()
+
+    @Test @PrivacyTest
+    fun whenProtectionsAreEnableGpcSetCorrectly() {
+        preparationsForPrivacyTest()
+
+        var webView: WebView? = null
+
+        activityScenarioRule.scenario.onActivity {
+            webView = it.findViewById(R.id.browserWebView)
+        }
+
+        val testWebView = webView!!
+
+        // The top frame header test calls window.open, so a second tab (and WebView) exists while the
+        // test runs; match this tab's WebView explicitly instead of relying on there being only one.
+        val testWebViewMatcher = sameInstance<View>(testWebView)
+
+        WebViewIdlingResource(testWebView).track()
+
+        // asserts we have injected css by querying the duckduckgo object
+        JsObjectIdlingResource(testWebView, "window.navigator.duckduckgo").track()
+
+        onWebView(testWebViewMatcher)
+            .withElement(findElement(ID, "start"))
+            .check(webMatches(getText(), containsString("Start test")))
+            .perform(webClick())
+
+        WebViewIdlingResource(testWebView).track()
+
+        val results = onWebView(testWebViewMatcher)
+            .perform(script(SCRIPT))
+            .get()
+
+        val testJson: TestJson? = getTestJson(results.toJSONString())
+        testJson?.value?.map {
+            if (compatibleIds.contains(it.id)) {
+                assertTrue("Value ${it.id} should be true", it.value.toString() == "true")
+            }
+        }
+    }
+
+    @After
+    fun unregisterIdlingResources() {
+        registeredResources.forEach { IdlingRegistry.getInstance().unregister(it) }
+    }
+
+    private fun getTestJson(jsonString: String): TestJson? {
+        val moshi = Moshi.Builder().add(JSONObjectAdapter()).build()
+        val jsonAdapter: JsonAdapter<TestJson> = moshi.adapter(TestJson::class.java)
+        return jsonAdapter.fromJson(jsonString)
+    }
+
+    private fun IdlingResource.track() = apply {
+        registeredResources += this
+        IdlingRegistry.getInstance().register(this)
+    }
+
+    companion object {
+        const val SCRIPT = "return results.results;"
+        val compatibleIds = listOf("top frame JS API")
+    }
+
+    data class TestJson(val status: Int, val value: List<GpcTest>)
+    data class GpcTest(val id: String, val value: Any)
+}

@@ -1,0 +1,228 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.common.actions
+
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.EmailConfirmationStep
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.OptOutStep
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.ScanStep
+import com.duckduckgo.pir.impl.common.PirJob.RunType
+import com.duckduckgo.pir.impl.common.PirRunStateHandler
+import com.duckduckgo.pir.impl.common.PirRunStateHandler.PirRunState.BrokerOptOutConditionNotFound
+import com.duckduckgo.pir.impl.common.PirRunStateHandler.PirRunState.BrokerStepActionFailed
+import com.duckduckgo.pir.impl.common.PirRunStateHandler.PirRunState.BrokerStepInvalidEvent
+import com.duckduckgo.pir.impl.common.actions.EventHandler.Next
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event.BrokerActionFailed
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event.BrokerStepCompleted
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event.BrokerStepCompleted.StepStatus.Failure
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event.ExecuteBrokerStepAction
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.State
+import com.duckduckgo.pir.impl.scripts.models.BrokerAction
+import com.duckduckgo.pir.impl.scripts.models.PirError
+import com.duckduckgo.pir.impl.scripts.models.PirScriptRequestData.UserProfile
+import com.duckduckgo.pir.impl.scripts.models.asActionType
+import com.duckduckgo.pir.impl.scripts.models.getDetails
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import javax.inject.Inject
+import kotlin.reflect.KClass
+
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<EventHandler>(),
+)
+class BrokerActionFailedEventHandler @Inject constructor(
+    private val pirRunStateHandler: PirRunStateHandler,
+    private val currentTimeProvider: CurrentTimeProvider,
+) : EventHandler {
+    override val event: KClass<out Event> = BrokerActionFailed::class
+
+    override suspend fun invoke(
+        state: State,
+        event: Event,
+    ): Next {
+        /**
+         * This means we have received an error from the JS layer for the last action we pushed.
+         * We end the run for the broker.
+         */
+        if (!isEventValid(state, event as BrokerActionFailed)) {
+            // Stale event: arrived after the broker step / action was already considered completed.
+            val broker = state.brokerStep.broker
+
+            pirRunStateHandler.handleState(
+                BrokerStepInvalidEvent(
+                    broker = broker,
+                    runType = state.runType,
+                ),
+            )
+            return Next(nextState = state)
+        }
+
+        val currentBrokerStep = state.brokerStep
+        val currentAction = currentBrokerStep.step.actions[state.currentActionIndex]
+        val error = event.error
+
+        // A condition action reports a failure (JsActionFailed, or a local timeout) when its expectation
+        // is not met. For a condition that is expected rather than fatal: treat it as "condition not met"
+        // and skip to the next action, instead of retrying and then failing the whole broker step.
+        if (currentAction is BrokerAction.Condition) {
+            return handleConditionNotMet(state)
+        }
+
+        // Silenced script failures still need diagnostics, but must not stop the broker step.
+        if (currentAction is BrokerAction.ExecuteScript && currentAction.failSilently && error is PirError.ActionError.JsActionFailed) {
+            emitBrokerActionFailedPixel(state, error)
+            return Next(
+                nextState = state.copy(
+                    currentActionIndex = state.currentActionIndex + 1,
+                    actionRetryCount = 0,
+                ),
+                nextEvent = ExecuteBrokerStepAction(UserProfile(userProfile = state.profileQuery)),
+            )
+        }
+
+        // If failure is on Any captcha action, we proceed to next action
+        return if (shouldRetryFailedAction(state, event, currentAction)) {
+            Next(
+                nextState =
+                state.copy(
+                    currentActionIndex = state.currentActionIndex,
+                    actionRetryCount = state.actionRetryCount + 1,
+                ),
+                nextEvent =
+                ExecuteBrokerStepAction(
+                    UserProfile(
+                        userProfile = state.profileQuery,
+                    ),
+                ),
+            )
+        } else {
+            // If error happens we skip to next Broker as next steps will not make sense
+            emitBrokerActionFailedPixel(state, error)
+            Next(
+                nextState = state,
+                nextEvent = BrokerStepCompleted(
+                    needsEmailConfirmation = false,
+                    stepStatus = Failure(
+                        error = error,
+                    ),
+                ),
+            )
+        }
+    }
+
+    private suspend fun handleConditionNotMet(state: State): Next {
+        val currentBrokerStep = state.brokerStep
+        if (currentBrokerStep is OptOutStep) {
+            pirRunStateHandler.handleState(
+                BrokerOptOutConditionNotFound(
+                    broker = currentBrokerStep.broker,
+                    actionID = currentBrokerStep.step.actions[state.currentActionIndex].id,
+                    attemptId = state.attemptId,
+                    durationMs = currentTimeProvider.currentTimeMillis() - state.stageStatus.stageStartMs,
+                    currentActionAttemptCount = state.actionRetryCount + 1,
+                ),
+            )
+        }
+
+        return Next(
+            nextState = state.copy(
+                currentActionIndex = state.currentActionIndex + 1,
+                actionRetryCount = 0,
+            ),
+            nextEvent = ExecuteBrokerStepAction(
+                UserProfile(
+                    userProfile = state.profileQuery,
+                ),
+            ),
+        )
+    }
+
+    private fun isEventValid(
+        state: State,
+        event: BrokerActionFailed,
+    ): Boolean {
+        // Broker step actions has probably been considered completed before the js error arrived
+        if (state.brokerStep.step.actions.size <= state.currentActionIndex) return false
+
+        val currentBrokerStepAction =
+            state.brokerStep.step.actions[state.currentActionIndex]
+
+        // The action IDs don't match, the error is probably for an outdated / old action
+        return !(event.error is PirError.ActionError && event.error.actionID != currentBrokerStepAction.id)
+    }
+
+    private fun shouldRetryFailedAction(
+        state: State,
+        event: BrokerActionFailed,
+        currentAction: BrokerAction,
+    ): Boolean {
+        // Scripts can have non-idempotent side effects, so never retry them.
+        if (!event.allowRetry || currentAction is BrokerAction.ExecuteScript) {
+            return false
+        }
+
+        return if (state.runType == RunType.OPTOUT || state.runType == RunType.EMAIL_CONFIRMATION) {
+            // for optout, for ANY action we retry at most 3 times
+            state.actionRetryCount < MAX_RETRY_COUNT_OPTOUT
+        } else {
+            // For scans, we ONLY retry once
+            state.actionRetryCount < MAX_RETRY_COUNT_SCAN
+        }
+    }
+
+    private suspend fun emitBrokerActionFailedPixel(
+        state: State,
+        error: PirError,
+    ) {
+        val currentBrokerStep = state.brokerStep
+        val currentAction = currentBrokerStep.step.actions[state.currentActionIndex]
+        val extractedProfile = when (currentBrokerStep) {
+            is OptOutStep -> {
+                currentBrokerStep.profileToOptOut
+            }
+
+            is EmailConfirmationStep -> {
+                currentBrokerStep.profileToOptOut
+            }
+
+            else -> {
+                null
+            }
+        }
+
+        pirRunStateHandler.handleState(
+            BrokerStepActionFailed(
+                broker = currentBrokerStep.broker,
+                extractedProfile = extractedProfile,
+                actionID = currentAction.id,
+                errorMessage = error.getDetails(),
+                stepType = currentBrokerStep.step.stepType,
+                completionTimeInMillis = currentTimeProvider.currentTimeMillis(),
+                actionType = currentAction.asActionType(),
+                isFreeScan = (currentBrokerStep as? ScanStep)?.isFreeScan == true,
+            ),
+        )
+    }
+
+    companion object {
+        const val MAX_RETRY_COUNT_OPTOUT = 3
+        const val MAX_RETRY_COUNT_SCAN = 1
+    }
+}

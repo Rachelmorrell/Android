@@ -16,14 +16,14 @@
 
 package com.duckduckgo.app.browser.cookies.db
 
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.UriString
+import com.duckduckgo.app.browser.UriString
+import com.duckduckgo.common.utils.DispatcherProvider
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class AuthCookiesAllowedDomainsRepository @Inject constructor(
     private val authCookiesAllowedDomainsDao: AuthCookiesAllowedDomainsDao,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
 ) {
 
     suspend fun addDomain(domain: String): Long? {
@@ -56,7 +56,7 @@ class AuthCookiesAllowedDomainsRepository @Inject constructor(
 
     suspend fun deleteAll(exceptionList: List<String> = emptyList()) {
         withContext(dispatcherProvider.io()) {
-            authCookiesAllowedDomainsDao.deleteAll(exceptionList.joinToString(","))
+            authCookiesAllowedDomainsDao.deleteAll(exceptionList)
         }
     }
 }

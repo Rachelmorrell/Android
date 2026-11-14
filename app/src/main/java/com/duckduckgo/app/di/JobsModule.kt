@@ -18,17 +18,17 @@ package com.duckduckgo.app.di
 
 import android.app.job.JobScheduler
 import android.content.Context
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesTo
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-@ContributesTo(AppObjectGraph::class)
-class JobsModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object JobsModule {
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
     fun providesJobScheduler(context: Context): JobScheduler {
         return context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler

@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.networkprotection.impl.subscription.onboarding.experiment
+
+import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.duckduckgo.data.store.api.SharedPreferencesProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.feature.toggles.api.ConversionWindow
+import com.duckduckgo.feature.toggles.api.FeatureTogglesInventory
+import com.duckduckgo.feature.toggles.api.MetricType
+import com.duckduckgo.feature.toggles.api.MetricsPixel
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.feature.toggles.api.send
+import dev.zacsweers.metro.ContributesBinding
+import javax.inject.Inject
+
+interface SubscriptionOnboardingExperimentMetrics {
+
+    suspend fun fireVpnActivated()
+}
+
+@ContributesBinding(AppScope::class)
+class RealSubscriptionOnboardingExperimentMetrics @Inject constructor(
+    private val inventory: FeatureTogglesInventory,
+    private val sharedPreferencesProvider: SharedPreferencesProvider,
+) : SubscriptionOnboardingExperimentMetrics {
+
+    private val preferences: SharedPreferences by lazy {
+        sharedPreferencesProvider.getSharedPreferences(FILENAME)
+    }
+
+    override suspend fun fireVpnActivated() {
+        if (preferences.getBoolean(KEY_VPN_ACTIVATED_REPORTED, false)) return
+        val activeToggles = experimentToggles()
+        if (activeToggles.isEmpty()) return
+        preferences.edit { putBoolean(KEY_VPN_ACTIVATED_REPORTED, true) }
+
+        activeToggles.forEach { toggle ->
+            fire(toggle, metric = "vpnActivated_d1", window = ConversionWindow(lowerWindow = 0, upperWindow = 1))
+            when (toggle.featureName().name) {
+                FREE_TRIALS_EXPERIMENT ->
+                    fire(toggle, metric = "vpnActivated_d2_7", window = ConversionWindow(lowerWindow = 2, upperWindow = 7))
+                PAID_SUBS_EXPERIMENT ->
+                    fire(toggle, metric = "vpnActivated_d2_30", window = ConversionWindow(lowerWindow = 2, upperWindow = 30))
+            }
+        }
+    }
+
+    private suspend fun fire(
+        toggle: Toggle,
+        metric: String,
+        window: ConversionWindow,
+    ) {
+        MetricsPixel(
+            metric = metric,
+            type = MetricType.NORMAL,
+            value = "1",
+            toggle = toggle,
+            conversionWindow = listOf(window),
+        ).send()
+    }
+
+    private suspend fun experimentToggles(): List<Toggle> =
+        inventory.getAllActiveExperimentToggles().filter { it.featureName().name in EXPERIMENT_NAMES }
+
+    private companion object {
+        const val FILENAME = "com.duckduckgo.networkprotection.subscription.onboarding.experiment.v1"
+        const val KEY_VPN_ACTIVATED_REPORTED = "KEY_VPN_ACTIVATED_REPORTED"
+        const val FREE_TRIALS_EXPERIMENT = "subscriptionOnboardingFreeTrialsOct2026"
+        const val PAID_SUBS_EXPERIMENT = "subscriptionOnboardingPaidSubsOct2026"
+        val EXPERIMENT_NAMES = setOf(FREE_TRIALS_EXPERIMENT, PAID_SUBS_EXPERIMENT)
+    }
+}

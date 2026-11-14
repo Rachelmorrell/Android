@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.scripts.models
+
+import com.duckduckgo.pir.impl.models.ProfileQuery
+
+data class PirScriptRequestParams(
+    val state: ActionRequest,
+)
+
+data class ActionRequest(
+    val action: BrokerAction,
+    val data: PirScriptRequestData? = null,
+)
+
+sealed class PirScriptRequestData {
+    data class SolveCaptcha(
+        val token: String,
+    ) : PirScriptRequestData()
+
+    data class UserProfile(
+        val userProfile: ProfileQuery? = null,
+        val extractedProfile: ExtractedProfileParams? = null,
+        val fetchedEmail: FetchedEmail? = null,
+        val emailData: Map<String, String>? = null,
+    ) : PirScriptRequestData()
+}
+
+data class ExtractedProfileParams(
+    val id: Int? = null,
+    val name: String? = null,
+    val alternativeNames: List<String> = emptyList(),
+    val profileUrl: String? = null,
+    val email: String? = null,
+    val fullName: String? = null,
+    val age: String? = null,
+    val addresses: List<AddressParams> = emptyList(),
+    val phoneNumbers: List<String> = emptyList(),
+    val relatives: List<String> = emptyList(),
+    val identifier: String? = null,
+    val extras: Map<String, String> = emptyMap(),
+) {
+    data class AddressParams(
+        val city: String,
+        val state: String,
+        val extras: Map<String, String> = emptyMap(),
+    )
+}
+
+// Wraps the generated email as { "email": "..." } so C-S-S can resolve it via data[dataSource].email.
+data class FetchedEmail(
+    val email: String,
+)

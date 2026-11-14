@@ -21,27 +21,32 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.webkit.*
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Observer
-import com.duckduckgo.app.browser.R
 import com.duckduckgo.app.browser.databinding.ActivityUserSurveyBinding
-import com.duckduckgo.app.global.DuckDuckGoActivity
-import com.duckduckgo.mobile.android.ui.view.gone
-import com.duckduckgo.mobile.android.ui.view.show
 import com.duckduckgo.app.pixels.AppPixelName.SURVEY_SURVEY_DISMISSED
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.survey.model.Survey
 import com.duckduckgo.app.survey.ui.SurveyViewModel.Command
 import com.duckduckgo.app.survey.ui.SurveyViewModel.Command.*
-import com.duckduckgo.mobile.android.ui.viewbinding.viewBinding
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.ui.view.gone
+import com.duckduckgo.common.ui.view.show
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
 import javax.inject.Inject
 
+@InjectWith(ActivityScope::class)
 class SurveyActivity : DuckDuckGoActivity() {
 
     private val viewModel: SurveyViewModel by bindViewModel()
 
     @Inject
     lateinit var pixel: Pixel
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
 
     private val binding: ActivityUserSurveyBinding by viewBinding()
 
@@ -51,11 +56,13 @@ class SurveyActivity : DuckDuckGoActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableTransparentEdgeToEdge()
         setContentView(binding.root)
+        configureEdgeToEdgeInsets()
         configureListeners()
 
         webView.settings.javaScriptEnabled = true
-        webView.setBackgroundColor(ContextCompat.getColor(this, R.color.cornflowerBlue))
+        webView.setBackgroundColor(getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorAccentBlue))
         webView.webViewClient = SurveyWebViewClient()
 
         configureObservers()
@@ -70,7 +77,16 @@ class SurveyActivity : DuckDuckGoActivity() {
 
     private fun consumeIntentExtra() {
         val survey = intent.getSerializableExtra(SURVEY_EXTRA) as Survey
-        viewModel.start(survey)
+        val surveySource = intent.getSerializableExtra(SURVEY_SOURCE_EXTRA) as SurveySource
+        intent?.getStringExtra(LAUNCH_FROM_NOTIFICATION_PIXEL_NAME)?.let {
+            pixel.fire(it)
+        }
+        viewModel.start(survey, surveySource)
+    }
+
+    private fun configureEdgeToEdgeInsets() {
+        edgeToEdgeHandler.applyStatusBarAndHorizontalInsets(binding.surveyActivityContainerViewGroup, installScrim = false)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.root, drawBehindGestureNav = true)
     }
 
     private fun configureListeners() {
@@ -80,12 +96,9 @@ class SurveyActivity : DuckDuckGoActivity() {
     }
 
     private fun configureObservers() {
-        viewModel.command.observe(
-            this,
-            Observer {
-                it?.let { command -> processCommand(command) }
-            }
-        )
+        viewModel.command.observe(this) {
+            it?.let { command -> processCommand(command) }
+        }
     }
 
     private fun processCommand(command: Command) {
@@ -124,6 +137,7 @@ class SurveyActivity : DuckDuckGoActivity() {
     }
 
     override fun onBackPressed() {
+        super.onBackPressed()
         if (webView.canGoBack()) {
             webView.goBack()
         } else {
@@ -144,23 +158,43 @@ class SurveyActivity : DuckDuckGoActivity() {
 
     companion object {
 
-        fun intent(context: Context, survey: Survey): Intent {
+        fun intent(
+            context: Context,
+            survey: Survey,
+            source: SurveySource,
+            launchPixel: String? = null,
+        ): Intent {
             val intent = Intent(context, SurveyActivity::class.java)
             intent.putExtra(SURVEY_EXTRA, survey)
+            intent.putExtra(SURVEY_SOURCE_EXTRA, source)
+            intent.putExtra(LAUNCH_FROM_NOTIFICATION_PIXEL_NAME, launchPixel)
             return intent
         }
 
-        const val SURVEY_EXTRA = "SURVEY_EXTRA"
+        private const val SURVEY_EXTRA = "SURVEY_EXTRA"
+        private const val SURVEY_SOURCE_EXTRA = "SURVEY_SOURCE_EXTRA"
+        private const val LAUNCH_FROM_NOTIFICATION_PIXEL_NAME = "LAUNCH_FROM_NOTIFICATION_PIXEL_NAME"
+
+        enum class SurveySource {
+            PUSH,
+            IN_APP,
+        }
     }
 
     inner class SurveyWebViewClient : WebViewClient() {
 
-        override fun onPageFinished(view: WebView?, url: String?) {
+        override fun onPageFinished(
+            view: WebView?,
+            url: String?,
+        ) {
             super.onPageFinished(view, url)
             viewModel.onSurveyLoaded()
         }
 
-        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest,
+        ): WebResourceResponse? {
             if (request.url.host == "duckduckgo.com") {
                 runOnUiThread {
                     viewModel.onSurveyCompleted()
@@ -170,17 +204,29 @@ class SurveyActivity : DuckDuckGoActivity() {
         }
 
         @Suppress("OverridingDeprecatedMember")
-        override fun onReceivedError(view: WebView, errorCode: Int, description: String, failingUrl: String) {
+        override fun onReceivedError(
+            view: WebView,
+            errorCode: Int,
+            description: String,
+            failingUrl: String,
+        ) {
             viewModel.onSurveyFailedToLoad()
         }
 
-        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+        override fun onReceivedError(
+            view: WebView,
+            request: WebResourceRequest,
+            error: WebResourceError,
+        ) {
             if (request.isForMainFrame) {
                 viewModel.onSurveyFailedToLoad()
             }
         }
 
-        override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        override fun onRenderProcessGone(
+            view: WebView?,
+            detail: RenderProcessGoneDetail?,
+        ): Boolean {
             viewModel.onSurveyFailedToLoad()
             return true
         }

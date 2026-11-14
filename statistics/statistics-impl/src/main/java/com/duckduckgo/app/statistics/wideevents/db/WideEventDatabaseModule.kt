@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.statistics.wideevents.db
+
+import android.content.Context
+import androidx.room.Room
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration1To2
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration2To3
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration3To4
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration4To5
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration5To6
+import com.duckduckgo.app.statistics.wideevents.db.migration.WideEventsMigration6To7
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+
+@BindingContainer
+@ContributesTo(AppScope::class)
+class WideEventDatabaseModule {
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideWideEventDatabase(
+        context: Context,
+        wideEventEntityTypeConverters: WideEventEntityTypeConverters,
+        appBuildConfig: AppBuildConfig,
+    ): WideEventDatabase =
+        Room
+            .databaseBuilder(
+                context = context,
+                klass = WideEventDatabase::class.java,
+                name = "wide_events.db",
+            )
+            .addMigrations(
+                WideEventsMigration1To2,
+                WideEventsMigration2To3,
+                WideEventsMigration3To4,
+                WideEventsMigration4To5,
+                WideEventsMigration5To6(appBuildConfig.versionName),
+                WideEventsMigration6To7,
+            )
+            .fallbackToDestructiveMigration()
+            .enableMultiInstanceInvalidation()
+            .addTypeConverter(wideEventEntityTypeConverters)
+            .build()
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideWideEventDao(db: WideEventDatabase): WideEventDao = db.wideEventDao()
+}

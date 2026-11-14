@@ -17,27 +17,31 @@
 package com.duckduckgo.app.browser
 
 import android.net.Uri
-import com.duckduckgo.app.global.AppUrl
-import com.duckduckgo.app.global.AppUrl.ParamKey
+import com.duckduckgo.common.utils.AppUrl
+import com.duckduckgo.common.utils.AppUrl.ParamKey
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import javax.inject.Inject
 
-class DuckDuckGoUrlDetector @Inject constructor() {
+@ContributesBinding(AppScope::class)
+class DuckDuckGoUrlDetectorImpl @Inject constructor() : DuckDuckGoUrlDetector {
 
-    fun isDuckDuckGoEmailUrl(url: String): Boolean {
+    override fun isDuckDuckGoEmailUrl(url: String): Boolean {
         val uri = url.toUri()
         val firstSegment = uri.pathSegments.firstOrNull()
         return isDuckDuckGoUrl(url) && firstSegment == AppUrl.Url.EMAIL_SEGMENT
     }
 
-    fun isDuckDuckGoUrl(uri: String): Boolean {
-        return AppUrl.Url.HOST == uri.toUri().host
+    override fun isDuckDuckGoUrl(url: String): Boolean {
+        return runCatching { AppUrl.Url.HOST == url.toHttpUrl().topPrivateDomain() }.getOrElse { false }
     }
 
-    fun isDuckDuckGoQueryUrl(uri: String): Boolean {
+    override fun isDuckDuckGoQueryUrl(uri: String): Boolean {
         return isDuckDuckGoUrl(uri) && hasQuery(uri)
     }
 
-    fun isDuckDuckGoStaticUrl(uri: String): Boolean {
+    override fun isDuckDuckGoStaticUrl(uri: String): Boolean {
         return isDuckDuckGoUrl(uri) && matchesStaticPage(uri)
     }
 
@@ -53,12 +57,12 @@ class DuckDuckGoUrlDetector @Inject constructor() {
         return uri.toUri().queryParameterNames.contains(ParamKey.QUERY)
     }
 
-    fun extractQuery(uriString: String): String? {
+    override fun extractQuery(uriString: String): String? {
         val uri = uriString.toUri()
         return uri.getQueryParameter(ParamKey.QUERY)
     }
 
-    fun isDuckDuckGoVerticalUrl(uri: String): Boolean {
+    override fun isDuckDuckGoVerticalUrl(uri: String): Boolean {
         return isDuckDuckGoUrl(uri) && hasVertical(uri)
     }
 
@@ -66,7 +70,7 @@ class DuckDuckGoUrlDetector @Inject constructor() {
         return uri.toUri().queryParameterNames.contains(ParamKey.VERTICAL)
     }
 
-    fun extractVertical(uriString: String): String? {
+    override fun extractVertical(uriString: String): String? {
         val uri = uriString.toUri()
         return uri.getQueryParameter(ParamKey.VERTICAL)
     }

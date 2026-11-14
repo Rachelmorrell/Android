@@ -22,16 +22,21 @@ import android.content.SharedPreferences
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.edit
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.LifecycleOwner
+import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.global.intentText
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
 import com.duckduckgo.app.systemsearch.SystemSearchActivity
-import timber.log.Timber
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import logcat.LogPriority.INFO
+import logcat.logcat
 import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Stores information about unsent automatic data clearer restart Pixels, detecting if user started the app from an external Intent.
@@ -39,11 +44,13 @@ import javax.inject.Singleton
  *
  * When writing values here to SharedPreferences, it is crucial to use `commit = true`. As otherwise the change can be lost in the process restart.
  */
-@Singleton
+@SingleIn(AppScope::class)
 class DataClearerForegroundAppRestartPixel @Inject constructor(
     private val context: Context,
-    private val pixel: Pixel
-) : LifecycleObserver {
+    private val pixel: Pixel,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val dispatchers: DispatcherProvider,
+) : MainProcessLifecycleObserver {
     private var detectedUserIntent: Boolean = false
 
     private val pendingAppForegroundRestart: Int
@@ -53,16 +60,16 @@ class DataClearerForegroundAppRestartPixel @Inject constructor(
         get() = preferences.getInt(KEY_UNSENT_CLEAR_APP_RESTARTED_WITH_INTENT_PIXELS, 0)
 
     @UiThread
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    fun onAppCreated() {
-        Timber.i("onAppCreated firePendingPixels")
-        firePendingPixels()
+    override fun onCreate(owner: LifecycleOwner) {
+        logcat(INFO) { "onAppCreated firePendingPixels" }
+        appCoroutineScope.launch(dispatchers.io()) {
+            firePendingPixels()
+        }
     }
 
     @UiThread
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun onAppBackgrounded() {
-        Timber.i("Registered App on_stop")
+    override fun onStop(owner: LifecycleOwner) {
+        logcat(INFO) { "Registered App on_stop" }
         detectedUserIntent = false
     }
 
@@ -72,10 +79,10 @@ class DataClearerForegroundAppRestartPixel @Inject constructor(
 
     fun incrementCount() {
         if (detectedUserIntent) {
-            Timber.i("Registered restart with intent")
+            logcat(INFO) { "Registered restart with intent" }
             incrementCount(pendingAppForegroundRestart, KEY_UNSENT_CLEAR_APP_RESTARTED_WITH_INTENT_PIXELS)
         } else {
-            Timber.i("Registered restart without intent")
+            logcat(INFO) { "Registered restart without intent" }
             incrementCount(pendingAppForegroundRestartWithIntent, KEY_UNSENT_CLEAR_APP_RESTARTED_PIXELS)
         }
     }
@@ -86,17 +93,23 @@ class DataClearerForegroundAppRestartPixel @Inject constructor(
         resetCount()
     }
 
-    private fun incrementCount(counter: Int, sharedPrefKey: String) {
+    private fun incrementCount(
+        counter: Int,
+        sharedPrefKey: String,
+    ) {
         val updated = counter + 1
         preferences.edit(commit = true) {
             putInt(sharedPrefKey, updated)
         }
     }
 
-    private fun firePendingPixels(counter: Int, pixelName: Pixel.PixelName) {
+    private fun firePendingPixels(
+        counter: Int,
+        pixelName: Pixel.PixelName,
+    ) {
         if (counter > 0) {
             for (i in 1..counter) {
-                Timber.i("Fired pixel: ${pixelName.pixelName}/$counter")
+                logcat(INFO) { "Fired pixel: ${pixelName.pixelName}/$counter" }
                 pixel.fire(pixelName)
             }
         }
@@ -107,7 +120,7 @@ class DataClearerForegroundAppRestartPixel @Inject constructor(
             putInt(KEY_UNSENT_CLEAR_APP_RESTARTED_PIXELS, 0)
             putInt(KEY_UNSENT_CLEAR_APP_RESTARTED_WITH_INTENT_PIXELS, 0)
         }
-        Timber.i("counter reset")
+        logcat(INFO) { "counter reset" }
     }
 
     private fun widgetActivity(intent: Intent?): Boolean =

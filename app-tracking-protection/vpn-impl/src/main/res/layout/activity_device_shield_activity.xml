@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.duckduckgo.mobile.android.vpn.ui.tracker_activity.DeviceShieldTrackerActivity">
+
+    <include
+        android:id="@+id/include_toolbar"
+        layout="@layout/include_trackers_toolbar" />
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/contentScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.duckduckgo.common.ui.notifyme.NotifyMeView
+                    android:id="@+id/deviceShieldTrackerNotifyMe"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/appTrackingProtectionNotifyMeTitle"
+                    app:secondaryText="@string/appTrackingProtectionNotifyMeSubtitle"
+                    app:sharedPrefsKeyForDismiss="key_component_dismissed_in_apptp" />
+
+                <FrameLayout
+                    android:id="@+id/deviceShieldTrackerMessageContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+                <ImageView
+                    android:id="@+id/deviceShieldTrackerShieldImage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/mobile_device_protected_128"/>
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/deviceShieldTrackerBlockingTrackersDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/keyline_5"
+                    android:layout_marginTop="@dimen/keyline_2"
+                    android:layout_marginEnd="@dimen/keyline_5"
+                    android:layout_marginBottom="@dimen/keyline_4"
+                    android:gravity="center"
+                    android:text="@string/atp_ActivityBlockingTrackersEnabledDescription"
+                    app:textType="secondary"
+                    app:typography="body1" />
+
+                <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:id="@+id/past_week_activity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_ActivityPastWeek" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/keyline_4"
+                    android:layout_marginTop="@dimen/keyline_1"
+                    android:layout_marginEnd="@dimen/keyline_4"
+                    android:layout_marginBottom="@dimen/keyline_4"
+                    android:background="@drawable/apptp_tracker_activity_shape"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/keyline_4">
+
+                    <com.duckduckgo.mobile.android.vpn.ui.tracker_activity.PastWeekTrackerActivityContentView
+                        android:id="@+id/trackers_blocked_count"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/atp_ActivityPastWeekBlocked" />
+
+                    <com.duckduckgo.common.ui.view.divider.VerticalDivider
+                        android:id="@+id/vertical_divider"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="@dimen/keyline_1"
+                        android:layout_marginBottom="@dimen/keyline_1" />
+
+                    <com.duckduckgo.mobile.android.vpn.ui.tracker_activity.PastWeekTrackerActivityContentView
+                        android:id="@+id/tracking_apps_count"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/atp_ActivityPastWeekAcross" />
+
+                </LinearLayout>
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/activity_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/cta_show_all"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:minHeight="@dimen/keyline_7"
+                    android:paddingStart="72dp"
+                    android:layout_marginTop="@dimen/keyline_4"
+                    android:paddingEnd="@dimen/keyline_4"
+                    android:paddingBottom="@dimen/keyline_empty"
+                    android:text="@string/atp_ActivityCtaShowAll"
+                    android:visibility="gone" />
+
+                <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/keyline_2"
+                    app:primaryText="@string/atp_ActivityAbout" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/cta_what_are_app_trackers"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_ActivityAppTrackersFAQ" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/cta_tracker_faq"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_FAQCta" />
+
+                <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_ActivityManage" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/cta_manage_protection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_ActivityManageProtectionLabel" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/cta_manage_view_all_apps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/atp_ActivityViewAppsLabel" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/cta_remove_feature"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/keyline_2"
+                    app:primaryText="@string/atp_ActivityRemoveFeature" />
+
+            </LinearLayout>
+
+            <nl.dionsegijn.konfetti.KonfettiView
+                android:id="@+id/appTpEnabledKonfetti"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        </FrameLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

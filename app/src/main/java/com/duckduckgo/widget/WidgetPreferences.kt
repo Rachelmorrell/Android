@@ -23,22 +23,35 @@ import javax.inject.Inject
 
 interface WidgetPreferences {
     fun widgetTheme(widgetId: Int): WidgetTheme
-    fun saveWidgetSelectedTheme(widgetId: Int, theme: String)
+    fun saveWidgetSelectedTheme(
+        widgetId: Int,
+        theme: String,
+    )
+
     fun widgetSize(widgetId: Int): Pair<Int, Int>
-    fun storeWidgetSize(widgetId: Int, columns: Int, rows: Int)
+    fun storeWidgetSize(
+        widgetId: Int,
+        columns: Int,
+        rows: Int,
+    )
+
     fun removeWidgetSettings(widgetId: Int)
 }
 
 class AppWidgetThemePreferences @Inject constructor(private val context: Context) : WidgetPreferences {
 
-    private val preferences: SharedPreferences
-        get() = context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE)
+    private val preferences: SharedPreferences by lazy { context.getSharedPreferences(FILENAME, Context.MODE_PRIVATE) }
 
     override fun widgetTheme(widgetId: Int): WidgetTheme {
-        return WidgetTheme.valueOf(preferences.getString(keyForWidgetTheme(widgetId), WidgetTheme.SYSTEM_DEFAULT.toString()) ?: WidgetTheme.SYSTEM_DEFAULT.toString())
+        return WidgetTheme.valueOf(
+            preferences.getString(keyForWidgetTheme(widgetId), WidgetTheme.SYSTEM_DEFAULT.toString()) ?: WidgetTheme.SYSTEM_DEFAULT.toString(),
+        )
     }
 
-    override fun saveWidgetSelectedTheme(widgetId: Int, theme: String) {
+    override fun saveWidgetSelectedTheme(
+        widgetId: Int,
+        theme: String,
+    ) {
         preferences.edit(true) {
             putString(keyForWidgetTheme(widgetId), theme)
         }
@@ -47,11 +60,15 @@ class AppWidgetThemePreferences @Inject constructor(private val context: Context
     override fun widgetSize(widgetId: Int): Pair<Int, Int> {
         return Pair(
             preferences.getInt("$SHARED_PREFS_WIDTH_KEY-$widgetId", 2),
-            preferences.getInt("$SHARED_PREFS_HEIGHT_KEY-$widgetId", 2)
+            preferences.getInt("$SHARED_PREFS_HEIGHT_KEY-$widgetId", 2),
         )
     }
 
-    override fun storeWidgetSize(widgetId: Int, columns: Int, rows: Int) {
+    override fun storeWidgetSize(
+        widgetId: Int,
+        columns: Int,
+        rows: Int,
+    ) {
         preferences.edit(true) {
             putInt("$SHARED_PREFS_WIDTH_KEY-$widgetId", columns)
             putInt("$SHARED_PREFS_HEIGHT_KEY-$widgetId", rows)

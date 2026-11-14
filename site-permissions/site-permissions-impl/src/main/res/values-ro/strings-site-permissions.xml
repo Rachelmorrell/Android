@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <!-- DRM Permission -->
+    <string name="drmSitePermissionDialogTitle" instruction="Placeholder is the name of a website">„%1$s” dorește să deschidă software-ul tău de management al drepturilor digitale (DRM)</string>
+    <string name="drmSitePermissionDialogSubtitle" instruction="Placeholder is the name of a website">Dacă alegi „Refuză”, videoclipurile de pe site ar putea deveni de neredat, dar %1$s nu va avea acces la identificatorii de dispozitiv oferiți de software-ul DRM. Poți gestiona oricând permisiunile din Setări. <annotation type="drm_learn_more_link">Află mai multe</annotation></string>
+    <string name="drmSiteDialogAllowAlways">Întotdeauna</string>
+    <string name="drmSiteDialogAllowOnce">Numai pentru această sesiune</string>
+    <string name="drmSiteDialogDenyAlways">Respinge întotdeauna</string>
+    <string name="drmSiteDialogDenyOnce">Respinge pentru această sesiune</string>
+
+    <!-- Location Permission -->
+    <string name="sitePermissionsLocationDialogTitle" instruction="Placeholder is a website">„%1$s” dorește să-ți acceseze locația</string>
+    <string name="sitePermissionsDialogRememberMeCheckBox">Reține alegerea mea</string>
+    <string name="preciseLocationDDGDialogSubtitle">Utilizăm locația ta anonimă doar pentru a oferi rezultate mai bune, mai aproape de tine. Poți gestiona permisiunile de acces la locație pe care le-ai acordat site-urilor individuale în Setări.</string>
+    <string name="preciseLocationSiteDialogSubtitle">Poți gestiona permisiunile de acces la locație pe care le-ai acordat site-urilor individuale în Setări.</string>
+    <string name="systemPermissionDialogLocationDeniedTitle">Permite DuckDuckGo să solicite acces la locația ta pe acest dispozitiv</string>
+    <string name="systemPermissionDialogLocationDeniedContent">Site-urile îți pot utiliza locația numai dacă permiți ca DuckDuckGo să solicite accesul.</string>
+    <string name="sitePermissionsLocationDeniedSnackBarMessage">Permite ca DuckDuckGo să solicite accesul la locație</string>
+
+    <!-- Site Permission -->
+    <string name="settingsSitePermissions">Permisiuni pentru site</string>
+    <string name="sitePermissionsMicAndCameraDialogSubtitle">Poți gestiona permisiunile de acces la microfon și cameră pe care le-ai acordat site-urilor individuale în Setări.</string>
+    <string name="sitePermissionsMicDialogSubtitle">Poți gestiona permisiunile de acces la microfon pe care le-ai acordat site-urilor individuale în Setări.</string>
+    <string name="sitePermissionsCameraDialogSubtitle">Poți gestiona permisiunile de acces la cameră pe care le-ai acordat site-urilor individuale în Setări.</string>
+    <string name="sitePermissionsMicAndCameraDialogTitle" instruction="Placeholder is a website">„%1$s” dorește să acceseze camera și microfonul</string>
+    <string name="sitePermissionsMicDialogTitle" instruction="Placeholder is a website">„%1$s” dorește să acceseze microfonul</string>
+    <string name="sitePermissionsCameraDialogTitle" instruction="Placeholder is a website">„%1$s” dorește să acceseze camera</string>
+    <string name="sitePermissionsDialogContent">Gestionează permisiunile acordate din setări</string>
+    <string name="sitePermissionsDialogDenyButton">Refuză</string>
+    <string name="sitePermissionsDialogAllowButton">Permite</string>
+    <string name="sitePermissionsCameraAndMicDeniedSnackBarMessage">Permite ca DuckDuckGo să solicite accesul la cameră și microfon</string>
+    <string name="sitePermissionsCameraDeniedSnackBarMessage">Permite ca DuckDuckGo să solicite accesul la cameră</string>
+    <string name="sitePermissionsMicDeniedSnackBarMessage">Permite ca DuckDuckGo să solicite accesul la microfon</string>
+    <string name="sitePermissionsDeniedSnackBarAction">Permite</string>
+    <string name="systemPermissionDialogCameraDeniedTitle">Permite ca DuckDuckGo să solicite accesul la cameră pe acest dispozitiv</string>
+    <string name="systemPermissionDialogCameraDeniedContent">Site-urile îți pot utiliza camera numai dacă permiți ca DuckDuckGo să solicite accesul.</string>
+    <string name="systemPermissionDialogAudioDeniedTitle">Permite ca DuckDuckGo să solicite accesul la microfon pe acest dispozitiv</string>
+    <string name="systemPermissionDialogAudioDeniedContent">Site-urile îți pot utiliza microfonul numai dacă permiți ca DuckDuckGo să solicite accesul.</string>
+    <string name="systemPermissionDialogCameraAndAudioDeniedTitle">Permite ca DuckDuckGo să solicite accesul la cameră și microfon pe acest dispozitiv</string>
+    <string name="systemPermissionDialogCameraAndAudioDeniedContent">Site-urile îți pot utiliza camera și microfonul numai dacă permiți ca DuckDuckGo să solicite accesul.</string>
+    <string name="systemPermissionsDeniedDialogPositiveButton">Deschide Setări</string>
+    <string name="systemPermissionsDeniedDialogNegativeButton">Anulează</string>
+    <string name="duckAiMicPermissionDeniedSnackBarMessage">Este necesară permisiunea pentru microfon în scopul de a utiliza funcțiile vocale</string>
+    <string name="duckAiMicPermissionDeniedDialogTitle">DuckDuckGo are nevoie de acces la microfon</string>
+    <string name="duckAiMicPermissionDeniedDialogContent">Sunt necesare permisiunile pentru microfon dacă vrei să folosești chatul vocal în Duck.ai</string>
+
+    <string name="sitePermissionsSettingsDescription">Site-urile pe care le accesezi îți pot solicita accesul la locația dispozitivului, la camera foto, la microfon sau la software-ul DRM (Digital Rights Management). Acestea nu vor putea accesa aceste date decât dacă le oferi în mod explicit permisiunea.</string>
+    <string name="sitePermissionsSettingsEnablePermissionTitle">Permite tuturor site-urilor să solicite:</string>
+    <string name="sitePermissionsSettingsLocation">Locație</string>
+    <string name="sitePermissionsSettingsCamera">Aparat foto</string>
+    <string name="sitePermissionsSettingsMicrophone">Microfon</string>
+    <string name="sitePermissionsSettingsAllowedSitesTitle">Gestionează site-urile</string>
+    <string name="sitePermissionsSettingsEmptyText">Niciun site încă</string>
+    <string name="sitePermissionsRemoveAllWebsitesSnackbarText">Permisiuni eliminate pentru toate site-urile</string>
+    <string name="permissionPerWebsiteText" instruction="Placeholder is the name of a website">Permisiuni pentru „%1$s” </string>
+    <string name="permissionsPerWebsiteAskSetting">Întreabă de fiecare dată</string>
+    <string name="permissionsPerWebsiteDenySetting">Refuză</string>
+    <string name="permissionsPerWebsiteAllowSetting">Permite</string>
+    <string name="permissionsPerWebsiteAskDisabledSetting">Dezactivat pentru toate site-urile</string>
+    <string name="permissionsPerWebsiteSelectorDialogTitle" instruction="%1$s is the name of a permissions and %2$s is the name of a website, i.e. Camera permission for example.com">Permisiune %1$s pentru %2$s</string>
+
+    <!-- Tiered permission dialog -->
+    <string name="sitePermissionsDialogAllowWhileUsingSiteButton" instruction="Button granting a website a permission for every visit, until the user changes it">Permite în timpul utilizării site-ului</string>
+    <string name="sitePermissionsDialogAllowThisTimeButton" instruction="Button granting a website a permission for the current visit only">Permite de data aceasta</string>
+    <string name="sitePermissionsDialogNeverAllowButton" instruction="Button refusing a website a permission for every visit, until the user changes it">Nu permite niciodată</string>
+    <string name="sitePermissionsTieredLocationDialogTitle" instruction="Placeholder is a website">Site-ul „%1$s” dorește să-ți acceseze locația</string>
+    <string name="sitePermissionsTieredDdgLocationDialogTitle" instruction="Placeholder is a website">„%1$s” dorește să-ți acceseze locația</string>
+    <string name="sitePermissionsTieredDdgLocationDialogSubtitle">Îți vom anonimiza locația și o vom folosi pentru a oferi rezultate mai bune, mai aproape de tine.</string>
+    <string name="sitePermissionsTieredCameraDialogTitle" instruction="Placeholder is a website">Site-ul „%1$s” dorește să-ți acceseze camera</string>
+    <string name="sitePermissionsTieredMicDialogTitle" instruction="Placeholder is a website">Site-ul „%1$s” dorește să-ți acceseze microfonul</string>
+    <string name="sitePermissionsTieredMicAndCameraDialogTitle" instruction="Placeholder is a website">Site-ul „%1$s” dorește să-ți acceseze camera și microfonul</string>
+    <string name="sitePermissionsTieredThirdPartyLocationDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">„%1$s” dorește să-ți acceseze locația pe acest site</string>
+    <string name="sitePermissionsTieredThirdPartyCameraDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">„%1$s” dorește să-ți acceseze camera pe acest site</string>
+    <string name="sitePermissionsTieredThirdPartyMicDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" dorește să-ți acceseze microfonul pe acest site</string>
+    <string name="sitePermissionsTieredThirdPartyMicAndCameraDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">„%1$s” dorește să-ți acceseze camera și microfonul pe acest site</string>
+    <string name="sitePermissionsTieredThirdPartyDrmDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">„%1$s” dorește să-ți acceseze software-ul de management al drepturilor digitale (DRM) pe acest site</string>
+    <string name="sitePermissionsTieredDrmDialogSubtitle">Dacă nu permiți, videoclipurile de pe site ar putea deveni de neredat, dar acest site nu va avea acces la identificatorii de dispozitiv oferiți de software-ul DRM.</string>
+
+    <!-- Reminder dialog -->
+    <string name="sitePermissionsDialogChangePermissionsButton" instruction="Button opening the DuckDuckGo permission settings in the Android system settings app">Modifică permisiunile</string>
+    <string name="sitePermissionsTieredSystemDeniedLocationTitle">DuckDuckGo are nevoie de acces la locație</string>
+    <string name="sitePermissionsTieredSystemDeniedLocationContent">Sunt necesare permisiunile pentru locație dacă vrei să folosești funcțiile de localizare de pe acest site.</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraTitle">DuckDuckGo are nevoie de acces la cameră</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraContent">Sunt necesare permisiunile pentru cameră dacă vrei să folosești funcțiile de cameră de pe acest site.</string>
+    <string name="sitePermissionsTieredSystemDeniedMicTitle">DuckDuckGo are nevoie de acces la microfon</string>
+    <string name="sitePermissionsTieredSystemDeniedMicContent">Sunt necesare permisiunile pentru microfon dacă vrei să folosești funcțiile de microfon de pe acest site.</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraAndMicTitle">DuckDuckGo are nevoie de acces la cameră și microfon</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraAndMicContent">Sunt necesare permisiunile pentru cameră și microfon dacă vrei să folosești funcțiile de cameră și microfon de pe acest site.</string>
+
+    <!-- Denial snackbar -->
+    <string name="sitePermissionsTieredLocationDeniedSnackBarMessage">DuckDuckGo nu a putut partaja locația cu acest site</string>
+    <string name="sitePermissionsTieredCameraDeniedSnackBarMessage">DuckDuckGo nu a putut oferi accesul la cameră acestui site</string>
+    <string name="sitePermissionsTieredMicDeniedSnackBarMessage">DuckDuckGo nu a putut acorda accesul la microfon acestui site</string>
+    <string name="sitePermissionsTieredCameraAndMicDeniedSnackBarMessage">DuckDuckGo nu a putut acorda accesul la cameră și microfon acestui site</string>
+
+    <!-- Permission settings redesign -->
+    <string name="permissionSettingsAlwaysAllow" instruction="Permission setting option: the site gets the permission without asking">Permite întotdeauna</string>
+    <string name="permissionSettingsAskEachTime" instruction="Permission setting option: the site has to ask for the permission every time">Întreabă de fiecare dată</string>
+    <string name="permissionSettingsLocationDialogTitle">Permite site-urilor să solicite permisiunea pentru locație</string>
+    <string name="permissionSettingsLocationDialogMessage">Dacă alegi „Nu permite niciodată”, nu vei putea utiliza anumite funcționalități de pe site-uri, cum ar fi indicațiile de orientare pe hărți sau magazinele din apropiere.</string>
+    <string name="permissionSettingsCameraDialogTitle">Permite site-urilor să solicite permisiunea pentru cameră</string>
+    <string name="permissionSettingsCameraDialogMessage">Dacă alegi „Nu permite niciodată”, nu vei putea folosi funcții precum chatul video pe site-uri.</string>
+    <string name="permissionSettingsMicrophoneDialogTitle">Permite ca site-urile să solicite permisiunea pentru microfon</string>
+    <string name="permissionSettingsMicrophoneDialogMessage">Dacă alegi „Nu permite niciodată”, nu vei putea utiliza funcționalități precum chatul vocal pe site-uri.</string>
+    <string name="permissionSettingsDrmDialogTitle">Permite site-urilor să solicite permisiunea pentru administrarea drepturilor digitale (DRM)</string>
+    <string name="permissionSettingsDrmTitle" instruction="Name of a permission setting for playing protected video content">Administrarea drepturilor digitale (DRM)</string>
+    <string name="permissionsPerWebsiteRedesignHeader" instruction="Placeholder is the name of a website">Permisiuni pentru %1$s</string>
+    <string name="permissionsPerWebsiteRemovePermissions" instruction="Button that removes all saved permissions for the website shown on the screen">Elimină permisiunile</string>
+    <string name="permissionsRemovedForSiteSnackbar" instruction="Placeholder is the name of a website">Permisiuni eliminate pentru &lt;b&gt;%1$s&lt;/b&gt;</string>
+    <string name="permissionsRemovedForAllSitesSnackbar">Permisiuni eliminate pentru toate site-urile</string>
+    <string name="permissionSettingsDrmDialogMessage">Dacă alegi „Nu permite niciodată”, videoclipurile de pe site ar putea deveni imposibil de redat.</string>
+
+</resources>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.AutoconsentSettingsActivity">
+
+    <include
+        android:id="@+id/includeToolbar"
+        layout="@layout/include_default_toolbar" />
+
+    <ScrollView
+        android:id="@+id/contentScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:ignore="Overdraw">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/keyline_5">
+
+            <ImageView
+                android:id="@+id/autoconsentHeaderImage"
+                android:layout_width="128dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="@dimen/keyline_5"
+                android:importantForAccessibility="no"
+                app:srcCompat="@drawable/cookie_popups_check_128" />
+
+            <com.duckduckgo.common.ui.view.text.DaxTextView
+                android:id="@+id/autoconsentTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/keyline_5"
+                android:layout_marginTop="@dimen/keyline_2"
+                android:gravity="center"
+                android:text="@string/autoconsentTitle"
+                app:typography="h2" />
+
+            <com.duckduckgo.common.ui.view.StatusIndicatorView
+                android:id="@+id/autoconsentStatusIndicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/keyline_1"
+                android:layout_gravity="center" />
+
+            <com.duckduckgo.common.ui.view.text.DaxTextView
+                android:id="@+id/autoconsentDescriptionNew"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/keyline_5"
+                android:layout_marginTop="@dimen/keyline_2"
+                android:layout_marginBottom="@dimen/keyline_6"
+                android:gravity="center"
+                android:text="@string/autoconsentCookiePopUpPreferenceHeaderDescription"
+                app:textType="secondary"
+                app:typography="body2" />
+
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:fullWidth="true" />
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                android:id="@+id/autoconsentToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/autoconsentToggle"
+                app:primaryTextTruncated="false"
+                app:showSwitch="true" />
+
+            <LinearLayout
+                android:id="@+id/cookiePopUpPreferenceContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/autoManageCookiePopUpsToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/autoconsentAutoManageToggle"
+                    app:primaryTextTruncated="false"
+                    app:showSwitch="true" />
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/autoManageCookiePopUpsDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="@dimen/keyline_4"
+                    android:paddingBottom="@dimen/keyline_4"
+                    android:text="@string/autoconsentAutoManageDescription"
+                    app:textType="secondary"
+                    app:typography="body2" />
+
+                <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/popUpsWithoutOptOutsToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/autoconsentPopUpsWithoutOptOutsToggle"
+                    app:primaryTextTruncated="false"
+                    app:showSwitch="true" />
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/popUpsWithoutOptOutsDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="@dimen/keyline_4"
+                    android:paddingBottom="@dimen/keyline_4"
+                    android:text="@string/autoconsentPopUpsWithoutOptOutsDescription"
+                    app:textType="secondary"
+                    app:typography="body2" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

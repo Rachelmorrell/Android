@@ -17,91 +17,45 @@
 package com.duckduckgo.app.di
 
 import android.app.Application
-import com.duckduckgo.app.browser.autocomplete.BrowserAutoCompleteModule
-import com.duckduckgo.app.browser.certificates.CertificateTrustedStoreModule
-import com.duckduckgo.app.browser.di.BrowserModule
-import com.duckduckgo.app.browser.favicon.FaviconModule
-import com.duckduckgo.app.browser.rating.di.RatingModule
-import com.duckduckgo.app.email.di.EmailModule
 import com.duckduckgo.app.global.DuckDuckGoApplication
-import com.duckduckgo.app.global.exception.UncaughtExceptionModule
-import com.duckduckgo.app.onboarding.di.OnboardingModule
-import com.duckduckgo.app.onboarding.di.WelcomePageModule
-import com.duckduckgo.app.surrogates.di.ResourceSurrogateModule
-import com.duckduckgo.app.trackerdetection.di.TrackerDetectionModule
-import com.duckduckgo.app.usage.di.AppUsageModule
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.duckduckgo.widget.EmptyFavoritesWidgetService
-import com.duckduckgo.widget.FavoritesWidgetService
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.widget.EmptyFavoritesWidgetItemFactory
+import com.duckduckgo.widget.FavoritesWidgetItemFactory
 import com.duckduckgo.widget.SearchAndFavoritesWidget
+import com.duckduckgo.widget.SearchOnlyWidget
 import com.duckduckgo.widget.SearchWidget
-import com.squareup.anvil.annotations.MergeComponent
-import dagger.BindsInstance
-import dagger.Component
-import dagger.android.AndroidInjector
-import dagger.android.support.AndroidSupportInjectionModule
+import dev.zacsweers.metro.DependencyGraph
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import retrofit2.Retrofit
 import javax.inject.Named
-import javax.inject.Singleton
 
-@Singleton
-@MergeComponent(
-    scope = AppObjectGraph::class,
-    modules = [
-        ApplicationModule::class,
-        WorkerModule::class,
-        AndroidSupportInjectionModule::class,
-        NetworkModule::class,
-        AppConfigurationDownloaderModule::class,
-        StoreModule::class,
-        DatabaseModule::class,
-        DaoModule::class,
-        JsonModule::class,
-        SystemComponentsModule::class,
-        BrowserModule::class,
-        BrowserAutoCompleteModule::class,
-        ResourceSurrogateModule::class,
-        TrackerDetectionModule::class,
-        NotificationModule::class,
-        OnboardingModule::class,
-        VariantModule::class,
-        FaviconModule::class,
-        PrivacyModule::class,
-        WidgetModule::class,
-        RatingModule::class,
-        AppUsageModule::class,
-        FileModule::class,
-        UncaughtExceptionModule::class,
-        CoroutinesModule::class,
-        CertificateTrustedStoreModule::class,
-        WelcomePageModule::class,
-        EmailModule::class
-    ]
-)
-interface AppComponent : AndroidInjector<DuckDuckGoApplication> {
+@SingleIn(AppScope::class)
+@DependencyGraph(scope = AppScope::class)
+interface AppComponent {
 
-    @Component.Builder
-    interface Builder {
+    fun inject(instance: DuckDuckGoApplication)
 
-        @BindsInstance
-        fun application(application: Application): Builder
-
-        @BindsInstance
-        fun applicationCoroutineScope(@AppCoroutineScope applicationCoroutineScope: CoroutineScope): Builder
-
-        fun build(): AppComponent
+    @DependencyGraph.Factory
+    interface Factory {
+        fun create(
+            @Provides application: Application,
+            @Provides @AppCoroutineScope applicationCoroutineScope: CoroutineScope,
+        ): AppComponent
     }
 
     fun inject(searchWidget: SearchWidget)
 
-    fun inject(searchAndFavsWidget: SearchAndFavoritesWidget)
+    fun inject(searchOnlyWidget: SearchOnlyWidget)
 
-    fun inject(favoritesWidgetItemFactory: FavoritesWidgetService.FavoritesWidgetItemFactory)
+    fun inject(searchAndFavoritesWidget: SearchAndFavoritesWidget)
 
-    fun inject(emptyFavoritesWidgetItemFactory: EmptyFavoritesWidgetService.EmptyFavoritesWidgetItemFactory)
+    fun inject(favoritesWidgetItemFactory: FavoritesWidgetItemFactory)
 
-    // accessor to Retrofit instance for test only only for test
+    fun inject(emptyFavoritesWidgetItemFactory: EmptyFavoritesWidgetItemFactory)
+
+    // accessor to Retrofit instance for test only
     @Named("api")
     fun retrofit(): Retrofit
 }

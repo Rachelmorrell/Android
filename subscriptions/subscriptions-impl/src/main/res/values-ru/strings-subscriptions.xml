@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Отменить</string>
+    <string name="ok">Хорошо</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">Подписка DuckDuckGo</string>
+    <string name="manageEmail">Управление электронной почтой</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Назад к настройкам</string>
+    <string name="somethingWentWrong">Что-то пошло не так</string>
+    <string name="somethingWentWrongDescription">Сервису Google Play не удалось обработать вашу покупку. Повторите попытку позже.</string>
+    <string name="youAreSet">Всё готово!</string>
+    <string name="viewPlans">Просмотреть тарифы</string>
+    <string name="subscriptionNotFound">Подписка не найдена</string>
+    <string name="subscriptionNotFoundDescription">Подписка, закрепленная за этой учетной записью Google Play, утратила активный статус.</string>
+    <string name="purchaseRestored">Ваши покупки восстановлены.</string>
+    <string name="restoreSubscriptionTitle">Добавьте подписку на это устройство</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Добавление через Google Play</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Чтобы восстановить подписку на устройствах Android, используйте учетную запись Google Play.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Восстановить покупку</string>
+    <string name="restoreSubscriptionEmailTitle">Добавление через электронную почту</string>
+    <string name="restoreSubscriptionEmailDescription">Чтобы добавить подписку на это устройство, привяжите к ней адрес электронной почты.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Приступим!</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Удалить подписку</string>
+    <string name="subscriptionRemoved">Ваша подписка удалена с этого устройства</string>
+    <string name="removeFromDevice">Удалить с этого устройства?</string>
+    <string name="removeFromDeviceDescription">Вы утратите доступ к преимуществам подписки на этом устройстве. Сама же подписка не отменяется и по-прежнему будет работать на других устройствах.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Ваша ежемесячная подписка %1$s %2$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Ваша годовая подписка %1$s %2$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Срок действия вашей подписки истек %1$s.</string>
+    <string name="monthlySubscription">Ежемесячная подписка</string>
+    <string name="yearlySubscription">Годовая подписка</string>
+    <string name="renews">продлится</string>
+    <string name="expires">завершится</string>
+    <string name="activateOnOtherDevices">Добавление подписки на другие устройства</string>
+    <string name="addToDevicePrimaryText">Добавление на устройство</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Подписку можно добавить на другие устройства через магазин приложений Google Play или путем привязки адреса электронной почты.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">Чтобы добавить подписку на другие устройства, введите указанный выше адрес электронной почты в приложении DuckDuckGo. Для этого посетите раздел «Настройки &gt; Настройки подписки &gt; У меня уже есть подписка».</string>
+    <string name="editEmailPrimaryText">Изменить адрес почты</string>
+    <string name="learnMore">Узнать больше</string>
+    <string name="privacyProFaq">Нужна помощь с подпиской?</string>
+    <string name="privacyProFaqSecondary">На страницах справочного раздела вы найдете ответы на распространенные вопросы, а также контактную информацию по тарифам. Доступность функций зависит от страны.</string>
+    <string name="subscriptionStatusSubscribed">Подписка оформлена</string>
+    <string name="privacyPolicyAndTermsOfService">Политика конфиденциальности и условия обслуживания</string>
+    <string name="subscriptionStatusFreeTrial">Бесплатный пробный доступ активирован</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Ваш бесплатный пробный период завершится %1$s. В тот же день вы автоматически перейдете на платную ежемесячную подписку.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Ваш бесплатный пробный период завершится %1$s. В тот же день вы автоматически перейдете на платную годовую подписку.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Ваш бесплатный пробный период завершится %1$s без перехода на платную подписку.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Настройки подписки</string>
+    <string name="subscriptionSettingSubscribe">Защита соединения и личных данных по одной подписке</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Подписка открывает доступ к VPN, а также функциям удаления личной информации и восстановления после кражи данных.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Подписка открывает доступ к VPN и функции восстановления после кражи данных.</string>
+
+    <string name="subscriptionSettingGet">Подписаться на DuckDuckGo</string>
+    <string name="subscriptionSettingTryFreeTrial">Попробуйте бесплатно</string>
+    <string name="subscriptionSettingRestore">У меня уже есть подписка</string>
+    <string name="subscriptionSettingExpired">Срок действия вашей подписки DuckDuckGo истек.</string>
+    <string name="subscriptionSettingExpiredViewPlans">Просмотреть тарифы</string>
+    <string name="subscriptionSettingSectionSubscription">По подписке</string>
+    <string name="subscriptionSettingRemoveFromDevice">Удалить с этого устройства</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Справка и поддержка</string>
+    <string name="subscriptionSettingSendFeedback">Отправить отзыв</string>
+    <string name="subscriptionSettingActivating">Выполняется активация</string>
+    <string name="subscriptionSettingManagePlan">Управление оплатой</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Все готово!</string>
+    <string name="purchaseCompletedText">Ваша покупка оформлена.</string>
+    <string name="purchaseRecoveredText">У вас уже была подписка, и теперь мы ее восстановили.</string>
+    <string name="purchaseErrorTitle">Что-то пошло не так</string>
+    <string name="purchaseError">Возникли проблемы с подключением. Повторите попытку позже.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Изменить или отменить подписку</string>
+    <string name="changePlanDescription">Подписка приобретена в магазине приложений Apple App Store. Чтобы изменить тарифный план или платежные параметры, откройте раздел «Настройки &gt; Аккаунт Apple &gt; Подписки» на устройстве, где выполнен вход в ту же учетную запись Apple, через которую была оформлена подписка.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Открыть</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Не удается открыть файл. Попробуйте найти совместимое приложение.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Отправить отзыв</string>
+    <string name="feedbackActionHeader">ВЫБЕРИТЕ КАТЕГОРИЮ</string>
+    <string name="feedbackActionReportIssue">Отчет о проблеме</string>
+    <string name="feedbackActionGeneralFeedback">Общий комментарий</string>
+    <string name="feedbackActionFeatureRequest">Запрос функции</string>
+
+    <string name="feedbackGeneralHeader">ВЫБЕРИТЕ КАТЕГОРИЮ</string>
+    <string name="feedbackGeneralBrowser">Отзыв о браузере</string>
+    <string name="feedbackGeneralPpro">Privacy Pro</string>
+
+    <string name="feedbackCategoryHeader">ВЫБЕРИТЕ КАТЕГОРИЮ</string>
+    <string name="feedbackCategorySubscription">Подписки и платежи</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">ВЫБЕРИТЕ КАТЕГОРИЮ</string>
+
+    <string name="feedbackSubCategoryVpnConnection">VPN не подключается</string>
+    <string name="feedbackSubCategoryVpnSlow">Слишком медленное соединение по VPN</string>
+    <string name="feedbackSubCategoryVpnOtherApps">VPN вызывает проблемы с другими приложениями или сайтами</string>
+    <string name="feedbackSubCategoryVpnIot">VPN не дает подключиться к локальному устройству</string>
+    <string name="feedbackSubCategoryVpnCrash">VPN приводит к сбою или зависанию браузера</string>
+    <string name="feedbackSubCategoryVpnOther">Дополнительные настройки</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">Информация не найдена на конкретном сайте</string>
+    <string name="feedbackSubCategoryPirNotMe">Данные принадлежат другому лицу</string>
+    <string name="feedbackSubCategoryPirScanStuck">Поиск застопорился</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Процесс удаления застопорился</string>
+    <string name="feedbackSubCategoryPirOther">Дополнительные настройки</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Проблема с кодом доступа</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Невозможно связаться с консультантом</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Мало толку от звонка консультанту</string>
+    <string name="feedbackSubCategoryItrOther">Дополнительные настройки</string>
+
+    <string name="feedbackSubCategorySubsOtp">Проблема с одноразовым паролем</string>
+    <string name="feedbackSubCategorySubsOther">Что-то другое</string>
+
+    <string name="feedbackSubmitVpnHeader">Столкнулись с проблемой, которая не затронута в нашем <annotation type="faqs_link">справочном центре</annotation>? Мы просто обязаны о ней знать.</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Сообщите нам, что происходит...</string>
+    <string name="feedbackSubmitVpnDisclaimer">"Помимо указанных выше данных, вместе с отзывом отправляется следующая обезличенная информация:\n\n• сведения о том, были ли активированы те или иные функции браузера;\n• обобщенные результаты диагностики приложений (например, коды ошибок).\n\nНажимая кнопку «Отправить», вы разрешаете DuckDuckGo использовать отправленную информацию для улучшения работы приложения."</string>
+    <string name="feedbackSubmitVpnSubmit">Подтвердить</string>
+    <string name="feedbackSubmitCompletedMessage">Спасибо! Ваш отзыв отправлен.</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Оставьте комментарий здесь...</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Какую функцию вы хотели бы увидеть?</string>
+    <string name="feedbackSubmitContactSupport">Нужна помощь? <annotation type="support_link">Обращайтесь в службу поддержки</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Подписки</string>
+    <string name="activitySubscriptionSettings">Настройки подписки</string>
+    <string name="activityActivateSubscription">У меня уже есть подписка</string>
+    <string name="activitySendFeedback">Отправить отзыв</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Подписка открывает доступ к VPN, продвинутым моделям ИИ в Duck.ai, а также функциям удаления личной информации и восстановления после кражи данных.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Подписка открывает доступ к VPN, продвинутым моделям ИИ в Duck.ai и функции восстановления после кражи данных.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Нет доступа к моделям Duck.ai, предоставляемым только по подписке</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Не могу воспользоваться Duck.ai по подписке в других браузерах</string>
+    <string name="feedbackSubCategoryDuckAiOther">Другие отзывы о Duck.ai</string>
+
+    <string name="subscriptionSettingSectionTitle">Подписка DuckDuckGo</string>
+    <string name="subscriptionSettingSubscribeSecure">Безопасный Wi-Fi и приватные чаты с продвинутыми моделями ИИ</string>
+
+    <string name="feedbackGeneralSubscription">По подписке</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Нет доступа к функциям уровня Plus или Pro</string>
+    <string name="subscriptionsProUpgradeTitle">Перейти на Pro</string>
+    <string name="subscriptionsProUpgradeMessage">Повышение тарифа открывает больше возможностей ИИ</string>
+    <string name="subscriptionSettingSectionManageSubscription">Управление подпиской</string>
+    <string name="subscriptionSettingViewAllPlans">Посмотреть все тарифы</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Управление оплатой или Отмена</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">%2$s ваш план будет понижен до %1$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">%2$s ваш план будет повышен до %1$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">%2$s ваш план будет понижен до %1$s.</string>
+    <string name="planNamePlusMonthly">Plus с оплатой раз в месяц</string>
+    <string name="planNamePlusYearly">Plus с оплатой раз в год</string>
+    <string name="planNameProMonthly">Pro с оплатой раз в месяц</string>
+    <string name="planNameProYearly">Pro с оплатой раз в год</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Срок действия подписки истек</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Подписка активна</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Отказаться от договора</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">Ты можешь отказаться и получить полный возврат средств до %1$s</string>
+    <string name="subscriptionWithdrawDialogTitle">Отменить подписку?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">Подписка %1$s сразу же закончится, и в течение 14 дней тебе вернут %2$s тем же способом оплаты.\n\nVPN, функция Personal Information Removal и продвинутые модели Duck.ai перестанут работать, как только ты подтвердишь.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Подтвердить вывод</string>
+    <string name="subscriptionWithdrawDialogKeep">Оставить подписку</string>
+    <string name="subscriptionStatusNotSubscribed">Подписка не оформлена</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">Вы отказались от подписки %1$s.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">Возврат средств на сумму %1$s обрабатывается.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">Твой возврат средств обрабатывается.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">Не удалось автоматически обработать запрос на вывод средств. Перейдите на <annotation type="withdrawal_help_link">эту страницу</annotation>, чтобы завершить вывод средств.</string>
+
+</resources>

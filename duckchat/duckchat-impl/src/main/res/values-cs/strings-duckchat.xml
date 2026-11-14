@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2025 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="duck_chat_title">Duck.ai</string>
+    <string name="duck_chat_download_finished_action_name">Otevřít</string>
+    <string name="duck_chat_cannot_open_file_error_message">Soubor nejde otevřít. Zkus vyhledat kompatibilní aplikaci.</string>
+
+    <!-- Uploading an image from the camera or choosing to use existing image -->
+    <string name="imageCaptureCameraUnavailable">Nemáme přístup k fotoaparátu</string>
+    <string name="imageCaptureCameraGalleryDisambiguationTitle">Nahrát obrázek</string>
+    <string name="imageCaptureCameraGalleryDisambiguationGalleryOption">Vyber soubor</string>
+    <string name="imageCaptureCameraGalleryDisambiguationCameraOption">Vyfotit se</string>
+    <string name="imageCaptureCameraPermissionDeniedTitle">Povolit DuckDuckGo žádat na tomto zařízení o přístup k fotoaparátu</string>
+    <string name="imageCaptureCameraPermissionDeniedMessage">Weby můžou používat fotoaparát, jen když službě DuckDuckGo povolíš žádat o přístup.</string>
+    <string name="imageCaptureCameraPermissionDeniedPositiveButton">Otevřít nastavení</string>
+    <string name="imageCaptureCameraPermissionDeniedNegativeButton">Zrušit</string>
+
+    <!-- Content capture for upload -->
+    <string name="audioCaptureSoundRecorderUnavailable">Nemáme přístup k záznamu zvuku</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedTitle">Povolit DuckDuckGo žádat na tomto zařízení o přístup k záznamu zvuku</string>
+    <string name="audioCaptureSoundRecorderPermissionDeniedMessage">Weby můžou používat záznam zvuku, jen když službě DuckDuckGo povolíš žádat o přístup.</string>
+
+    <!-- Settings -->
+    <string name="duck_chat_ai_features_title">Funkce AI</string>
+    <string name="duck_chat_settings_activity_description">Funkce AI na DuckDuckGo jsou soukromé a volitelné.Tvoje data se nepoužívají k trénování umělé inteligence.\n<annotation type="learn_more_link">Další informace</annotation></string>
+    <string name="duck_chat_enable_duck_ai_setting">Duck.ai</string>
+    <string name="duck_chat_enable_duck_ai_setting_description">S populárními AI modely třetích stran můžeš chatovat soukromě</string>
+    <string name="duck_chat_visibility_setting">Menu prohlížeče</string>
+    <string name="duck_chat_address_bar_visibility_setting">Adresní řádek</string>
+    <string name="duck_chat_assist_settings_title">Nastavení vyhledávání s funkcí Assist</string>
+    <string name="duck_chat_assist_settings_description">Vyber, jak často chceš, aby se odpovědi s podporou umělé inteligence zobrazovaly ve tvých vyhledáváních</string>
+    <string name="duck_ai_shortcut_settings_title">Zkratky Duck.ai</string>
+    <string name="duck_ai_shortcut_settings_description">Vyber, které zkratky Duck.ai se mají zobrazit</string>
+
+    <!-- Default Toggle Position -->
+    <string name="duckAiDefaultTogglePositionTitle" instruction="&apos;Toggle&apos; refers to the UI tab switcher component (Search/Duck.ai), not the verb &apos;to toggle&apos;.">Umístění přepínače na nové kartě</string>
+    <string name="duckAiDefaultTogglePositionSearch">Vyhledávání</string>
+    <string name="duckAiDefaultTogglePositionDuckAi">Duck.ai</string>
+    <string name="duckAiDefaultTogglePositionLastUsed">Naposledy použité</string>
+
+    <!-- Duck AI Voice Search Shortcut Setting -->
+    <string name="duckAiVoiceSearchVisibilitySetting">Hlasové vyhledávání</string>
+
+    <!-- Input Screen  -->
+    <string name="input_screen_search_hint">Vyhledejte nebo zadejte adresu</string>
+    <string name="input_screen_search_only_hint">Vyhledávání</string>
+    <string name="input_screen_user_pref_without_ai">Jen vyhledávání</string>
+    <string name="input_screen_user_pref_with_ai">Vyhledávání a Duck.ai</string>
+    <string name="input_screen_user_pref_description">Vyzkoušej novou možnost zeptat se Duck.ai přímo z adresního řádku. <annotation type="share_feedback">Sdílet zpětnou vazbu</annotation></string>
+
+    <!-- Duck.ai Pro settings -->
+    <string name="duck_ai_paid_settings_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_title">Duck.ai</string>
+    <string name="duck_ai_paid_settings_page_description"><![CDATA[Chatuj soukromě s modely AI jen pro předplatitele.\n<a href=\"\">Další informace</a>]]></string>
+    <string name="duck_ai_paid_settings_open_duck_ai">Spustit Duck.ai</string>
+    <string name="duck_ai_paid_settings_learn_more_title">Více informací</string>
+
+    <!-- New Address Bar Option Bottom Sheet Dialog -->
+    <string name="newAddressBarOptionBottomSheetDialogTitle">Chceš mít soukromý AI chat hned po ruce?</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchText">Vyhledejte nebo zadejte adresu</string>
+    <string name="newAddressBarOptionBottomSheetDialogPrimaryButton">Potvrdit</string>
+    <string name="newAddressBarOptionBottomSheetDialogGhostButton">Teď ne</string>
+    <string name="newAddressBarOptionBottomSheetDialogFooter">Úpravy provedeš v Nastavení &gt; Funkce AI.</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchOnly">Jen vyhledávání</string>
+    <string name="newAddressBarOptionBottomSheetDialogSearchAndDuckAi">Vyhledávání a Duck.ai</string>
+    <string name="newAddressBarOptionBottomSheetDialogHeader">Možnost adresního řádku</string>
+
+    <!-- Duck AI SERP Settings Title -->
+    <string name="duckAiSerpSettingsTitle">Funkce AI</string>
+
+    <!-- Duck AI Search Section Header -->
+    <string name="duckAiSearchSettingsSectionHeader">Vyhledávání</string>
+
+    <!-- Duck AI Hide Generated Images Settings Option -->
+    <string name="duckAiHideAiGeneratedImagesTitle">Skrýt obrázky vygenerované umělou inteligencí</string>
+    <string name="duckAiHideAiGeneratedImagesDescription">Odstraní obrázky vytvořené umělou inteligencí z výsledků vyhledávání obrázků</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilitySubtitle">Vyber, jak často chceš, aby se odpovědi s podporou umělé inteligence zobrazovaly ve tvých vyhledáváních.</string>
+    <string name="duckAiSearchAssistVisibilityNever">Nikdy</string>
+    <string name="duckAiSearchAssistVisibilityOnDemand">Na vyžádání</string>
+    <string name="duckAiSearchAssistVisibilitySometimes">Někdy</string>
+    <string name="duckAiSearchAssistVisibilityOften">Často</string>
+
+    <!-- Duck AI Use Without AI Settings Option -->
+    <string name="duckAiUseWithoutAiTitle">Používat DuckDuckGo bez umělé inteligence</string>
+    <string name="duckAiUseWithoutAiDescription">Zakáže Duck.ai, skryje ve vyhledávání odpovědi generované AI a vyfiltruje známé weby s AI spamem z výsledků vyhledávání obrázků.</string>
+    <string name="duckAiUseWithoutAiDisabledDescription">AI je v prohlížeči momentálně zakázaná. Proto v něm neuvidíš odpovědi, které generovala umělá inteligence, a zobrazí se ti méně obrázků generovaných umělou inteligencí ve výsledcích vyhledávání obrázků.</string>
+
+    <!-- Duck AI Section in AI Feature Screen -->
+    <string name="input_screen_user_pref_toggle_between_search_and_ai">Přepínání mezi vyhledáváním a Duck.ai</string>
+    <string name="duckAiDialogHideAiGeneratedImagesTitle">Skrýt obrázky vygenerované AI</string>
+    <string name="duckAiDialogHideAiGeneratedImagesDescription">Vyfiltruje známé weby s AI spamem z výsledků vyhledávání obrázků. <annotation link="learn_more">Další informace</annotation></string>
+
+    <!-- Duck AI Paid Settings -->
+    <string name="duck_ai_paid_settings_enable_in_settings">Povolit v nastavení funkcí AI</string>
+    <string name="duck_ai_paid_settings_manage_in_settings">Spravovat v nastavení funkcí AI</string>
+    <string name="duck_ai_paid_settings_manage_secondary">Nakonfiguruj Duck.ai v nastavení funkcí AI.</string>
+
+    <!-- Duck.ai Contextual Bottom Sheet -->
+    <string name="duckAIContextualPromptSummarize">Shrnout tuhle stránku</string>
+    <string name="duckAIContextualAutomaticContextTitle">Automaticky odesílat obsah stránky</string>
+    <string name="duckAIContextualAutomaticContextMessage">Automaticky odesílat obsah stránky do Duck.ai</string>
+
+    <!-- Contextual sheet suggested prompts; native copy for PageSuggestionsCatalog.json entries, keyed by catalog id -->
+    <string name="duckAiSuggestionTranslatePageLabel" instruction="Suggested prompt chip: translate the current page">Přelož tuto stránku</string>
+    <string name="duckAiSuggestionTranslatePagePrompt" instruction="Suggested prompt submitted text: translate the page. %1$s is replaced with the name of the user&apos;s language.">Přelož tuto stránku do jazyka %1$s.</string>
+    <string name="duckAiSuggestionKeyTakeawaysLabel" instruction="Suggested prompt chip: key takeaways of an article">Jaké jsou hlavní body?</string>
+    <string name="duckAiSuggestionKeyTakeawaysPrompt" instruction="Suggested prompt submitted text: key takeaways of an article">Jaké jsou hlavní body tohoto článku?</string>
+    <string name="duckAiSuggestionExplainSimplyLabel" instruction="Suggested prompt chip: explain the content simply">Vysvětli to jednoduše</string>
+    <string name="duckAiSuggestionExplainSimplyPrompt" instruction="Suggested prompt submitted text: explain the content simply">Vysvětli to jednoduše a srozumitelně.</string>
+    <string name="duckAiSuggestionCounterargumentsLabel" instruction="Suggested prompt chip: counterarguments">Jaké jsou protiargumenty?</string>
+    <string name="duckAiSuggestionCounterargumentsPrompt" instruction="Suggested prompt submitted text: counterarguments">Jaké jsou proti tomu hlavní protiargumenty nebo kritika?</string>
+    <string name="duckAiSuggestionRelatedArticlesLabel" instruction="Suggested prompt chip: related articles">Navrhni související články k prozkoumání</string>
+    <string name="duckAiSuggestionRelatedArticlesPrompt" instruction="Suggested prompt submitted text: related articles">Navrhni související články nebo témata, která stojí za to prozkoumat.</string>
+    <string name="duckAiSuggestionShoppingListLabel" instruction="Suggested prompt chip: shopping list from a recipe">Vytvoř nákupní seznam</string>
+    <string name="duckAiSuggestionShoppingListPrompt" instruction="Suggested prompt submitted text: shopping list from a recipe">Vytvoř nákupní seznam s množstvími z tohoto receptu.</string>
+    <string name="duckAiSuggestionRecipeNutritionLabel" instruction="Suggested prompt chip: recipe nutrition">Odhadni nutriční hodnoty</string>
+    <string name="duckAiSuggestionRecipeNutritionPrompt" instruction="Suggested prompt submitted text: recipe nutrition">Odhadni nutriční informace pro tento recept.</string>
+    <string name="duckAiSuggestionScaleRecipeLabel" instruction="Suggested prompt chip: scale a recipe">Uprav porce</string>
+    <string name="duckAiSuggestionScaleRecipePrompt" instruction="Suggested prompt submitted text: scale a recipe">Přepiš tento recept pro jiný počet porcí.</string>
+    <string name="duckAiSuggestionProductProsConsLabel" instruction="Suggested prompt chip: product pros and cons">Jaké jsou výhody a nevýhody?</string>
+    <string name="duckAiSuggestionProductProsConsPrompt" instruction="Suggested prompt submitted text: product pros and cons">Jaké jsou výhody a nevýhody tohoto produktu?</string>
+    <string name="duckAiSuggestionFindAlternativesLabel" instruction="Suggested prompt chip: product alternatives">Najdi mi alternativy</string>
+    <string name="duckAiSuggestionFindAlternativesPrompt" instruction="Suggested prompt submitted text: product alternatives">Navrhni nějaké alternativy k tomuto produktu.</string>
+    <string name="duckAiSuggestionSummarizeVideoLabel" instruction="Suggested prompt chip: summarize a video">Shrň mi tohle video</string>
+    <string name="duckAiSuggestionSummarizeVideoPrompt" instruction="Suggested prompt submitted text: summarize a video">Shrň mi tohle video.</string>
+    <string name="duckAiSuggestionVideoKeyPointsLabel" instruction="Suggested prompt chip: video key points">Jaké jsou hlavní body?</string>
+    <string name="duckAiSuggestionVideoKeyPointsPrompt" instruction="Suggested prompt submitted text: video key points">Jaké jsou hlavní body tohohle videa?</string>
+    <string name="duckAiSuggestionTailorResumeLabel" instruction="Suggested prompt chip: tailor a resume to a job">Uprav můj životopis</string>
+    <string name="duckAiSuggestionTailorResumePrompt" instruction="Suggested prompt submitted text: tailor a resume to a job">Pomoz mi upravit můj životopis pro tuto pracovní pozici.</string>
+    <string name="duckAiSuggestionInterviewPrepLabel" instruction="Suggested prompt chip: interview prep">Pomoz mi s přípravou na pohovor</string>
+    <string name="duckAiSuggestionInterviewPrepPrompt" instruction="Suggested prompt submitted text: interview prep">Jaké otázky mohou být položeny u pohovoru na tuto pozici?</string>
+    <string name="duckAiSuggestionCoverLetterLabel" instruction="Suggested prompt chip: draft a cover letter">Napiš mi motivační dopis</string>
+    <string name="duckAiSuggestionCoverLetterPrompt" instruction="Suggested prompt submitted text: draft a cover letter">Napiš motivační dopis pro tuto pracovní pozici.</string>
+    <string name="duckAiSuggestionEventDetailsLabel" instruction="Suggested prompt chip: event details">Jaké jsou hlavní fakta?</string>
+    <string name="duckAiSuggestionEventDetailsPrompt" instruction="Suggested prompt submitted text: event details">Shrň mi hlavní fakta o téhle události.</string>
+    <string name="duckAiSuggestionWorthWatchingLabel" instruction="Suggested prompt chip: is a movie/show worth watching">Stojí to za zhlédnutí?</string>
+    <string name="duckAiSuggestionWorthWatchingPrompt" instruction="Suggested prompt submitted text: is a movie/show worth watching">Stojí to za zhlédnutí? Řekni mi tvůj názor bez spoilerů.</string>
+    <string name="duckAiSuggestionSimilarTitlesLabel" instruction="Suggested prompt chip: similar movies or shows">Doporuč mi podobné tituly</string>
+    <string name="duckAiSuggestionSimilarTitlesPrompt" instruction="Suggested prompt submitted text: similar movies or shows">Doporuč mi podobné filmy nebo pořady.</string>
+    <string name="duckAiSuggestionCastCrewLabel" instruction="Suggested prompt chip: cast and crew">Obsazení a štáb</string>
+    <string name="duckAiSuggestionCastCrewPrompt" instruction="Suggested prompt submitted text: cast and crew">Kdo tvoří hlavní obsazení a štáb a čím dalším jsou známí?</string>
+    <string name="duckAiSuggestionSummarizeBookLabel" instruction="Suggested prompt chip: summarize a book">Shrň mi tuhle knihu</string>
+    <string name="duckAiSuggestionSummarizeBookPrompt" instruction="Suggested prompt submitted text: summarize a book">Shrň mi tuhle knihu.</string>
+    <string name="duckAiSuggestionSimilarBooksLabel" instruction="Suggested prompt chip: similar books">Doporuč mi podobné knihy</string>
+    <string name="duckAiSuggestionSimilarBooksPrompt" instruction="Suggested prompt submitted text: similar books">Doporuč mi podobné knihy.</string>
+    <string name="duckAiSuggestionExplainPaperLabel" instruction="Suggested prompt chip: explain a research paper">Vysvětli tento článek</string>
+    <string name="duckAiSuggestionExplainPaperPrompt" instruction="Suggested prompt submitted text: explain a research paper">Vysvětli tento vědecký článek jednoduše.</string>
+    <string name="duckAiSuggestionPaperContributionsLabel" instruction="Suggested prompt chip: paper contributions">Jaké jsou hlavní přínosy?</string>
+    <string name="duckAiSuggestionPaperContributionsPrompt" instruction="Suggested prompt submitted text: paper contributions">Jaké jsou hlavní přínosy tohoto článku?</string>
+    <string name="duckAiSuggestionMenuHighlightsLabel" instruction="Suggested prompt chip: restaurant menu highlights">Co si mám objednat?</string>
+    <string name="duckAiSuggestionMenuHighlightsPrompt" instruction="Suggested prompt submitted text: restaurant menu highlights">Jaká jídla tady člověk prostě musí ochutnat?</string>
+    <string name="duckAiSuggestionPlaceHoursLabel" instruction="Suggested prompt chip: place hours and location">Jaká je otevírací doba a poloha?</string>
+    <string name="duckAiSuggestionPlaceHoursPrompt" instruction="Suggested prompt submitted text: place hours and location">Jaká je otevírací doba, poloha a kontaktní údaje tohoto podniku?</string>
+    <string name="duckAiSuggestionPlaceReviewsLabel" instruction="Suggested prompt chip: place reputation">Stojí to tady za něco?</string>
+    <string name="duckAiSuggestionPlaceReviewsPrompt" instruction="Suggested prompt submitted text: place reputation">Stojí to tady za něco? Shrň pověst podniku na základě recenzí a hodnocení.</string>
+    <string name="duckAiSuggestionSummarizeThreadLabel" instruction="Suggested prompt chip: summarize a discussion thread">Shrň mi tuhle diskuzi</string>
+    <string name="duckAiSuggestionSummarizeThreadPrompt" instruction="Suggested prompt submitted text: summarize a discussion thread">Shrň mi tohle diskuzní vlákno.</string>
+    <string name="duckAiSuggestionExplainRepoLabel" instruction="Suggested prompt chip: explain a code repository">Vysvětli tento repozitář</string>
+    <string name="duckAiSuggestionExplainRepoPrompt" instruction="Suggested prompt submitted text: explain a code repository">Vysvětli, co tento repozitář dělá a jak ho používat.</string>
+    <string name="duckAiSuggestionExplainAnswerLabel" instruction="Suggested prompt chip: explain the top answer">Vysvětli nejlepší odpověď</string>
+    <string name="duckAiSuggestionExplainAnswerPrompt" instruction="Suggested prompt submitted text: explain the top answer">Vysvětli uznanou odpověď jednoduchými slovy.</string>
+    <string name="duckAiSuggestionHowtoStepsLabel" instruction="Suggested prompt chip: how-to steps">Proveď mě jednotlivými kroky</string>
+    <string name="duckAiSuggestionHowtoStepsPrompt" instruction="Suggested prompt submitted text: how-to steps">Rozděl to na jasné, očíslované kroky.</string>
+    <string name="duckAiSuggestionHowtoMaterialsLabel" instruction="Suggested prompt chip: how-to materials">Co budu potřebovat?</string>
+    <string name="duckAiSuggestionHowtoMaterialsPrompt" instruction="Suggested prompt submitted text: how-to materials">Vypiš nástroje, materiály nebo předpoklady, které k tomu budu potřebovat.</string>
+    <string name="duckAiSuggestionCourseLearnLabel" instruction="Suggested prompt chip: course learning outcomes">Co se naučím?</string>
+    <string name="duckAiSuggestionCourseLearnPrompt" instruction="Suggested prompt submitted text: course learning outcomes">Co jsou ty hlavní věci, které se v tomto kurzu naučím?</string>
+    <string name="duckAiSuggestionCourseWorthLabel" instruction="Suggested prompt chip: is a course worth taking">Stojí za to?</string>
+    <string name="duckAiSuggestionCourseWorthPrompt" instruction="Suggested prompt submitted text: is a course worth taking">Stojí tento kurz za to, podle této stránky?</string>
+    <string name="duckAiSuggestionFaqAnswerLabel" instruction="Suggested prompt chip: what an FAQ page answers">Na co to odpovídá?</string>
+    <string name="duckAiSuggestionFaqAnswerPrompt" instruction="Suggested prompt submitted text: what an FAQ page answers">Na jaké hlavní otázky tato stránka odpovídá?</string>
+    <string name="duckAiSuggestionFaqSummaryLabel" instruction="Suggested prompt chip: summarize FAQ Q&amp;As">Shrň mi otázky a odpovědi</string>
+    <string name="duckAiSuggestionFaqSummaryPrompt" instruction="Suggested prompt submitted text: summarize FAQ Q&amp;As">Shrň mi otázky a odpovědi na této stránce.</string>
+    <string name="duckAiSuggestionReviewVerdictLabel" instruction="Suggested prompt chip: review verdict">Jaký je verdikt?</string>
+    <string name="duckAiSuggestionReviewVerdictPrompt" instruction="Suggested prompt submitted text: review verdict">Jaké je pro to celkový verdikt a hodnocení?</string>
+    <string name="duckAiSuggestionReviewSummaryLabel" instruction="Suggested prompt chip: summarize reviews">Shrň mi recenze</string>
+    <string name="duckAiSuggestionReviewSummaryPrompt" instruction="Suggested prompt submitted text: summarize reviews">Shrň mi, co říkají recenze.</string>
+    <string name="duckAiSuggestionWhoIsThisLabel" instruction="Suggested prompt chip: person background">Kdo je tato osoba?</string>
+    <string name="duckAiSuggestionWhoIsThisPrompt" instruction="Suggested prompt submitted text: person background">Řekni mi základní informace o této osobě.</string>
+    <string name="duckAiSuggestionPersonBackgroundLabel" instruction="Suggested prompt chip: summarize a person&apos;s background">Shrň mi základní informace</string>
+    <string name="duckAiSuggestionPersonBackgroundPrompt" instruction="Suggested prompt submitted text: summarize a person&apos;s background">Shrň mi základní informace a významná díla této osoby.</string>
+
+    <string name="contextualSheetChatsPopupRecentSection" instruction="Section header above the list of recent Duck.ai chats in the contextual sheet overflow menu.">Nedávné chaty</string>
+
+    <!-- duck.ai contextual fire button -->
+    <string name="duckAIContextualFireButtonContentDescription">Vymazat chat</string>
+
+    <!-- Content Descriptions -->
+    <string name="duckChatFireButtonContentDescription">Vymazat data</string>
+    <string name="duckChatBrowserMenuContentDescription">Další možnosti</string>
+
+    <!-- Duck AI Voice Chat Shortcut Setting -->
+    <string name="duckAiVoiceChatVisibilitySetting" instruction="Voice Chat is a feature that lets users talk to Duck.ai using their voice instead of typing.">Hlasový chat</string>
+
+    <!-- Duck.ai voice microphone foreground service notification -->
+    <string name="duckAiVoiceNotificationTitle" instruction="Title shown in the notification when Duck.ai Voice Chat is active and using the microphone.">Hlasový chat Duck.ai je aktivní</string>
+    <string name="duckAiVoiceNotificationMessage" instruction="Message shown in the notification explaining that the microphone is being used by Duck.ai.">Mikrofon právě používá Duck.ai</string>
+    <string name="duckAiVoiceNotificationChannelName" instruction="Name of the Android notification channel for the Duck.ai Voice Chat foreground service.">Hlasový chat Duck.ai</string>
+    <string name="duckAiVoiceNotificationActionOpenChat" instruction="Notification action button that opens the active Duck.ai chat.">Otevřít chat</string>
+    <string name="duckAiVoiceNotificationActionEndSession" instruction="Notification action button that ends the active Duck.ai voice chat session.">Ukončit chat</string>
+
+    <!-- Duck AI Chat Suggestions -->
+    <string name="duckAiChatHistoryViewAllChats">Zobrazit všechny chaty</string>
+
+    <!-- Duck.ai onboarding end CTA -->
+    <string name="duckAiEndCtaTitle">To zvládneš!</string>
+    <string name="duckAiEndCtaDescription"><![CDATA[Použij adresní řádek k vyhledávání a návštěvě webů nebo přepni na Duck.ai pro soukromý chat s umělou inteligencí.<br/><br/>Duck.ai můžeš používat odkudkoli, kde vidíš ikonu chatu.]]></string>
+    <string name="duckAiEndCtaButton">Hezky!</string>
+
+    <!-- Native Duck.ai chat history -->
+    <string name="duck_ai_chat_history_title">Chaty</string>
+    <string name="duck_ai_chat_history_section_pinned">Připnuté</string>
+    <string name="duck_ai_chat_history_section_recent">Nedávné</string>
+    <string name="duck_ai_chat_history_untitled">Chat bez názvu</string>
+    <string name="duck_ai_chat_history_empty_title">Zatím žádné chaty</string>
+    <string name="duck_ai_chat_history_more_options">Další možnosti</string>
+    <string name="duck_ai_chat_history_action_select">Zvolit</string>
+    <string name="duck_ai_chat_history_action_pin">Připnout</string>
+    <string name="duck_ai_chat_history_action_unpin">Odepnout</string>
+    <string name="duck_ai_chat_history_action_rename">Přejmenovat</string>
+    <string name="duck_ai_chat_history_action_download">Stáhnout</string>
+    <string name="duck_ai_chat_history_action_delete">Smazat</string>
+    <string name="duck_ai_chat_history_search_hint">Vyhledávání v chatech</string>
+    <string name="duck_ai_chat_history_action_search_content_description">Vyhledávání v chatech</string>
+    <string name="duck_ai_chat_history_search_close_content_description">Zavřít vyhledávání</string>
+    <string name="duck_ai_chat_history_search_clear_content_description">Vymazat vyhledávání</string>
+    <string name="duck_ai_chat_history_action_fire_content_description">Smazat chaty</string>
+    <string name="duck_ai_chat_history_action_new">Nová</string>
+    <string name="duck_ai_chat_history_action_download_selected_content_description">Stáhnout chaty</string>
+    <plurals name="duck_ai_chat_history_bulk_download_complete">
+        <item quantity="one" instruction="%1$d is the number of chats downloaded">Stahování dokončeno pro %1$d chat</item>
+        <item quantity="few">Stahování dokončeno pro %1$d chaty</item>
+        <item quantity="many">Stahování dokončeno pro %1$d chatů</item>
+        <item quantity="other" instruction="%1$d is the number of chats downloaded">Stahování dokončeno pro %1$d chatů</item>
+    </plurals>
+    <string name="duck_ai_chat_history_action_overflow_content_description">Otevřít rozbalovací menu</string>
+    <string name="duck_ai_chat_history_select_all">Vybrat vše</string>
+    <string name="duck_ai_chat_history_unselect_all">Zrušit výběr všech</string>
+    <string name="duck_ai_chat_history_row_selected_content_description">Vybráno</string>
+    <string name="duck_ai_chat_history_row_unselected_content_description">Nevybráno</string>
+    <string name="duck_ai_chat_history_exit_select_mode_content_description">Ukončit režim výběru</string>
+    <string name="duck_ai_chat_history_rename_title">Přejmenovat chat</string>
+    <string name="duck_ai_chat_history_rename_chat_title_hint">Název chatu</string>
+    <string name="duck_ai_chat_history_rename_confirm_title">Uložit</string>
+    <string name="duck_ai_chat_history_rename_confirm_content_description">Uložit název chatu</string>
+    <string name="duck_ai_chat_history_rename_error">Nelze přejmenovat chat</string>
+    <string name="duck_ai_chat_history_pin_snackbar">Chat je připnutý</string>
+    <string name="duck_ai_chat_history_unpin_snackbar">Chat je odepnutý</string>
+    <string name="duck_ai_chat_history_undo">Vrátit</string>
+    <string name="duck_ai_chat_history_download_complete" instruction="%1$s is the saved chat filename (e.g. \&apos;My Chat.txt\&apos;).">Dokončeno stahování souboru %1$s</string>
+    <string name="duck_ai_chat_history_download_view">Zobrazit</string>
+    <string name="duck_ai_chat_history_download_error">Nepodařilo se exportovat chat</string>
+    <string name="duck_ai_chat_history_bulk_download_error">Nepodařilo se exportovat chaty</string>
+
+    <string name="duckAiChatSearchDuckDuckGo">Hledat DuckDuckGo</string>
+    <string name="native_input_chat_hint">Zeptej se soukromě na cokoli…</string>
+    <string name="native_input_chat_duck_mode_hint">Odpovědět…</string>
+
+    <!-- Model Picker -->
+    <string name="duckAiModelPickerLabelEverydayUse" instruction="Subline under a model in the Duck.ai model picker, describing what that model suits.">Nejlepší pro každodenní použití</string>
+    <string name="duckAiModelPickerLabelUsesLimitsFaster" instruction="Subline under a model in the Duck.ai model picker. &apos;Limits&apos; means the user&apos;s usage allowance, which this model consumes more quickly.">Spolehlivý, ale dříve vyčerpá limit</string>
+    <string name="duckAiModelPickerTryFreeTrial" instruction="Header above the locked models in the Duck.ai model picker, shown when the user can still start a free trial.">Vyzkoušet zdarma</string>
+    <string name="duckAiModelPickerSubscriberExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when unlocking them requires a paid subscription.">Exkluzivně pro předplatitele</string>
+    <string name="duckAiModelPickerProExclusive" instruction="Header above the locked models in the Duck.ai model picker, shown when they require the Pro plan specifically. &apos;Pro&apos; is the plan name and stays untranslated.">Exkluzivně pro tarif Pro</string>
+    <string name="duckAiModelPickerPlusModels">Plus</string>
+    <string name="duckAiModelPickerProModels">Pro</string>
+
+    <!-- Reasoning Mode Picker -->
+    <string name="duckChatReasoningModeContentDescription">Režim uvažování</string>
+    <string name="duckChatReasoningModeFastTitle">Rychle</string>
+    <string name="duckChatReasoningModeFastSubtitle">Rychlé odpovědi</string>
+    <string name="duckChatReasoningModeReasoningTitle">Uvažování</string>
+    <string name="duckChatReasoningModeReasoningSubtitle">Pro složité úlohy</string>
+    <string name="duckChatReasoningModeExtendedTitle">Rozšířené uvažování</string>
+    <string name="duckChatReasoningModeExtendedSubtitle">Pro analytické úlohy</string>
+
+    <!-- Start chat icon content description -->
+    <string name="duckChatStartChatContentDescription">Zahájit chat</string>
+    <string name="duckChatStopStreamingContentDescription">Přestat generovat</string>
+
+    <!-- Image attachment -->
+    <string name="duckChatImageAttachmentRemoveContentDescription">Odstranit obrázek</string>
+
+    <!-- Image attachment limits -->
+    <string name="duckChatImageAttachmentLimitPerMessage" instruction="%1$d is the maximum number of images allowed per message.">Maximum obrázků, které jde přiložit najednou: %1$d.</string>
+    <string name="duckChatImageAttachmentLimitPerConversation" instruction="%1$d is the maximum number of images allowed in a single conversation.">Počet obrázků, které můžeš přiložit v jedné konverzaci: %1$d</string>
+
+    <!-- File/image attachment menu options -->
+    <string name="attachmentTakePhoto">Pořídit fotku</string>
+    <string name="attachmentAttachPhoto">Přidat obrázek</string>
+    <string name="attachmentAttachFile">Přidat soubor</string>
+
+    <!-- File attachment -->
+    <string name="duckChatFileAttachmentRemoveContentDescription">Odstranit soubor</string>
+    <string name="duckChatFileAttachmentLimitPerConversation" instruction="%1$d is the maximum number of files allowed in a single conversation.">Počet souborů, které můžeš v jedné konverzaci přiložit: %1$d</string>
+    <string name="duckChatFileAttachmentTooLarge" instruction="%1$d is the maximum file size in MB.">Soubor překračuje maximální velikost %1$d MB.</string>
+    <string name="duckChatFileAttachmentTooManyPages" instruction="%1$d is the maximum number of pages per file.">Jeden z přiložených souborů má více stránek, než kolik podporujeme. Maximální počet stránek v souboru: %1$d.</string>
+    <string name="duckChatFileAttachmentTotalSizeLimitExceeded" instruction="%1$d is the total size limit in MB.">Přiložené soubory překračují celkovou hranici velikosti %1$d MB.</string>
+    <string name="fileCaptureBrowseDisambiguationTitle">Nahraj soubor</string>
+
+    <!-- Options button -->
+    <string name="duckChatOptionsButtonContentDescription">Možnosti Duck.ai</string>
+    <string name="duckChatOptionsChipDismissContentDescription" instruction="%1$s is the name of the option being removed (e.g. Create Image).">Odstranit %1$s</string>
+    <string name="duckChatOptionsMenuCreateImage">Vytvořit obrázek</string>
+    <string name="duckChatOptionsMenuCreateImageSubtitle">Převést text na obrázky</string>
+    <string name="duckChatOptionsMenuWebSearch">Webové vyhledávání</string>
+    <string name="duckChatOptionsMenuWebSearchSubtitle">Vyhledávat odpovědi na webu</string>
+    <string name="duckChatOptionsMenuCustomizeResponses">Přizpůsobit odpovědi</string>
+    <string name="duckChatOptionsMenuCustomizeResponsesSubtitle">Nastavení tónu, délky a chování</string>
+
+    <!-- Duck.ai header -->
+    <string name="duckChatPlusButtonContentDescription">Otevřít nabídku Duck.ai</string>
+
+    <!-- Duck AI Duck.ai Section Header -->
+    <string name="duckAiDuckAiSectionHeader">Duck.ai</string>
+
+    <!-- Search Assist Visibility -->
+    <string name="duckAiSearchAssistVisibilityTitle">Search Assist</string>
+    <string name="duckAiSearchAssistSettingsTitle">Search Assist</string>
+
+    <!-- Settings -->
+    <string name="duckAiSettingsTitle">Nastavení Duck.ai</string>
+
+    <!-- File/image attachment menu options -->
+
+    <!-- Editing a message already sent to Duck.ai -->
+    <string name="duck_ai_edit_prompt_title" instruction="Screen title: the user is editing a message they already sent to Duck.ai">Upravit zprávu</string>
+    <string name="duck_ai_edit_prompt_lose_responses_warning" instruction="Warning shown while editing a sent message: the answer Duck.ai already gave will be discarded and answered again">Po úpravě se odpověď nahradí novou.</string>
+
+    <string name="duckChatContextualAskAboutPage">Zeptat se ohledně stránky</string>
+    <string name="duckChatContextualAskAboutSearch">Pokračovat v Duck.ai</string>
+    <string name="duckChatContextualOpenDuckAi">Otevřít Duck.ai</string>
+
+    <!-- Suggested prompts for text selection -->
+    <string name="duckAiSuggestionSummarizeSelectionLabel">Shrň mi tenhle výběr</string>
+    <string name="duckAiSuggestionSummarizeSelectionPrompt">Shrň mi tenhle výběr.</string>
+    <string name="duckAiSuggestionTranslateSelectionLabel">Přelož tenhle výběr</string>
+    <string name="duckAiSuggestionTranslateSelectionPrompt" instruction="%1$s is replaced with the name of the user&apos;s language.">Přelož tenhle výběr do jazyka %1$s.</string>
+
+    <!-- Name shown for an attached text selection in the Duck.ai -->
+    <string name="duckAiTextSelectionAttachmentTitle">Výběr textu</string>
+    <string name="duckAiTextSelectionLimitReached" instruction="%1$d is replaced with the maximum number of text selections.">Můžeš přidat maximálně %1$d vybraných textů. Pokud chceš přidat další, jeden odeber.</string>
+
+    <!-- Duck.ai text selection menu action -->
+    <string name="duckAiTextSelectionMenuItem">Zeptej se Duck.ai</string>
+
+    <!-- Prefix on the Duck.ai attachment chip for a text selection -->
+    <plurals name="duckAiTextSelectionWordCount">
+        <item quantity="one" instruction="%1$d is the number of words in the selection.">%1$d slovo</item>
+        <item quantity="few">%1$d slova</item>
+        <item quantity="many">%1$d slov</item>
+        <item quantity="other" instruction="%1$d is the number of words in the selection.">%1$d slov</item>
+    </plurals>
+
+    <!-- Duck.ai high-usage model footer -->
+    <string name="duckChatHighUsageModelFooterMessage" instruction="Placeholder is the selected model&apos;s short name">%1$s využívá limity až 2–5× rychleji než základní modely.</string>
+    <string name="duckChatUsageFooterDismissContentDescription">Odmítnout</string>
+
+    <!-- Duck.ai usage-limit footer -->
+    <string name="duckChatUsageLimitFooterApproachingDaily" instruction="Placeholder is the percentage of the daily allowance already used">%1$d%% z denního limitu</string>
+    <string name="duckChatUsageLimitFooterApproachingWeekly" instruction="Placeholder is the percentage of the weekly allowance already used">%1$d%% z týdenního limitu</string>
+    <string name="duckChatUsageLimitFooterDailyReached">Byl vyčerpán denní limit</string>
+    <string name="duckChatUsageLimitFooterWeeklyReachedFree">Byl vyčerpán týdenní limit</string>
+    <string name="duckChatUsageLimitFooterWeeklyReached">Byl vyčerpán týdenní limit využití</string>
+    <string name="duckChatUsageLimitFooterAdvancedModelsReached">Byl vyčerpán limit pro pokročilé modely AI</string>
+    <string name="duckChatUsageLimitFooterCtaSwitchModel">Přepnout model</string>
+    <string name="duckChatUsageLimitFooterCtaStartUsingWeeklyLimit">Začít vyžívat týdenní limit</string>
+    <string name="duckChatUsageLimitFooterCtaTryForFree">Vyzkoušet předplatné zdarma</string>
+    <string name="duckChatUsageLimitFooterCtaSubscribe">Odebírat novinky</string>
+    <string name="duckChatUsageLimitFooterResetsIn" instruction="Placeholder is a duration such as &apos;2 days&apos; or &apos;5 hours&apos;">Resetuje se za %1$s</string>
+    <plurals name="duckChatUsageLimitFooterDays">
+        <item quantity="one" instruction="%1$d is the number of whole days until the usage limit resets">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dní</item>
+        <item quantity="other" instruction="%1$d is the number of whole days until the usage limit resets">%1$d dní</item>
+    </plurals>
+    <plurals name="duckChatUsageLimitFooterHours">
+        <item quantity="one" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other" instruction="%1$d is the number of whole hours until the usage limit resets">%1$d hodin</item>
+    </plurals>
+    <string name="duckAIContextualPromptSummarizeDocument" instruction="Suggested prompt for Duck.ai to summarize the PDF document currently displayed in the browser">Shrň mi tenhle dokument</string>
+
+    <!-- Duck.ai ToS consent submit button -->
+    <string name="duckChatSubmitAskLabel" instruction="Label of the submit button while the Duck.ai terms are not yet accepted. Required wording from legal, tapping it is how the user accepts.">Zeptat se</string>
+    <!-- Duck.ai ToS consent footer -->
+    <string name="duckChatTermsFooterMessage" instruction="Disclaimer under the Duck.ai input. ^1 is the label of the submit button, so the sentence always names the button the user taps. The two annotated phrases are tappable links to the Privacy Policy and the Terms of Service.">DuckDuckGo anonymizuje tvoje chaty. Kliknutím na tlačítko „^1“ souhlasíš s našimi <annotation type="privacy_link">zásadami ochrany osobních údajů</annotation> a <annotation type="terms_link">podmínkami služby</annotation>.</string>
+    <!-- Duck.ai tab switcher card -->
+    <string name="duckAiTabCardChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a text or image chat, as opposed to a voice chat.">Chat</string>
+    <string name="duckAiTabCardThinkingTitle" instruction="Header on a tab switcher card for a Duck.ai chat whose question has been sent but whose reply has not started yet. The chat title, if any, is shown below it.">Přemýšlím...</string>
+    <string name="duckAiTabCardListeningTitle" instruction="Header on a tab switcher card for a Duck.ai tab with a voice chat in progress, shown while Duck.ai is listening to the user.">Poslouchám…</string>
+    <string name="duckAiTabCardVoiceChatTypeLabel" instruction="Label on a tab switcher card marking the Duck.ai tab as a voice chat, as opposed to a text chat.">Hlasový chat</string>
+    <string name="duckAiTabCardTranscriptTypeLabel" instruction="Label on a tab switcher card for a finished Duck.ai voice chat, whose preview shows the conversation transcript.">Přepis</string>
+    <!-- Duck.ai attachment privacy footer -->
+    <string name="duckChatAttachmentPrivacyFooterMessage" instruction="Disclaimer under the Duck.ai input while an image or file is attached. The annotated phrase is a tappable link to a help page.">Soubory jsou automaticky kontrolovány na přítomnost nelegálního obsahu. Označené chaty mají omezené uchovávání dat. <annotation type="learn_more_link">Další informace</annotation></string>
+    <!-- Duck.ai new chat hints -->
+    <string name="newChatHintDocuments" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens a picker to attach documents for the AI to analyze.">Analyzovat soubory</string>
+    <string name="newChatHintPhoto" instruction="Tappable suggestion shown on an empty new Duck.ai chat; opens the photo library to attach photos and ask the AI about them.">Zeptat se na fotky</string>
+    <string name="newChatHintImage" instruction="Tappable suggestion shown on an empty new Duck.ai chat; switches the chat to AI image generation.">Vytvořit obrázek</string>
+</resources>

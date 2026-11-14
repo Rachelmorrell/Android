@@ -1,0 +1,129 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.onboarding.ui.page
+
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import com.duckduckgo.app.browser.R
+import com.duckduckgo.mobile.android.R as CommonR
+
+sealed class ComparisonChartConfig(
+    @StringRes val titleRes: Int,
+    @StringRes val primaryCtaTextRes: Int,
+    @DrawableRes val headerLeftIconRes: Int,
+    val headerLeftIconSizeDp: Float,
+    @StringRes val headerLeftLabelRes: Int?,
+    val rows: List<Row>,
+) {
+    data class Row(
+        @DrawableRes val iconRes: Int,
+        @StringRes val textRes: Int,
+    )
+
+    data class Browser(private val isCustomAiCopy: Boolean) : ComparisonChartConfig(
+        titleRes = if (isCustomAiCopy) {
+            R.string.preOnboardingDaxDialog2TitleCustomAi
+        } else {
+            R.string.preOnboardingDaxDialog2Title
+        },
+        primaryCtaTextRes = R.string.preOnboardingDaxDialog2Button,
+        headerLeftIconRes = CommonR.drawable.ic_chrome,
+        headerLeftIconSizeDp = 32f, // the target size is 31.5dp but the icon already has some padding
+        headerLeftLabelRes = null,
+        rows = listOf(
+            Row(CommonR.drawable.vpn_color_24, R.string.preOnboardingComparisonChartItem1),
+            Row(CommonR.drawable.ai_chat_color_24, R.string.preOnboardingComparisonChartDuckAi),
+            Row(CommonR.drawable.shield_color_24, R.string.preOnboardingComparisonChartItem2),
+            Row(CommonR.drawable.identity_blocked_pir_color_24, R.string.preOnboardingComparisonChartAdAndCookiePopupBlocker),
+            Row(R.drawable.video_player_color_24, R.string.preOnboardingComparisonChartYoutubeAdBlocker),
+        ),
+    )
+
+    data object Ai : ComparisonChartConfig(
+        titleRes = R.string.preOnboardingDaxDialogAiTitle,
+        primaryCtaTextRes = R.string.preOnboardingAiComparisonChartButton,
+        headerLeftIconRes = CommonR.drawable.ic_ai_general_16,
+        headerLeftIconSizeDp = 18f,
+        headerLeftLabelRes = R.string.preOnboardingAiComparisonChartPopularAis,
+        rows = listOf(
+            Row(CommonR.drawable.shield_color_24, R.string.preOnboardingAiComparisonChartItem1),
+            Row(CommonR.drawable.ai_chat_color_24, R.string.preOnboardingAiComparisonChartItem2),
+            Row(CommonR.drawable.lock_color_24, R.string.preOnboardingAiComparisonChartItem3),
+            Row(CommonR.drawable.ic_ai_general_color_24, R.string.preOnboardingAiComparisonChartItem4),
+        ),
+    )
+
+    data object SegmentedSearchPath : ComparisonChartConfig(
+        titleRes = R.string.searchPathComparisonChartTitle,
+        primaryCtaTextRes = R.string.preOnboardingDaxDialog2Button,
+        headerLeftIconRes = CommonR.drawable.ic_chrome,
+        headerLeftIconSizeDp = 32f, // the target size is 31.5dp but the icon already has some padding
+        headerLeftLabelRes = null,
+        rows = listOf(
+            Row(CommonR.drawable.search_find_color_24, R.string.preOnboardingComparisonChartItem1),
+            Row(CommonR.drawable.shield_color_24, R.string.preOnboardingComparisonChartItem2),
+            Row(CommonR.drawable.fire_color_24, R.string.preOnboardingComparisonChartItem5),
+            Row(CommonR.drawable.ai_chat_color_24, R.string.preOnboardingComparisonChartDuckAi),
+            Row(CommonR.drawable.ads_blocked_color_24, R.string.preOnboardingComparisonChartAdAndCookiePopupBlocker),
+        ),
+    )
+
+    data object SegmentedAiPath : ComparisonChartConfig(
+        titleRes = R.string.aiPathComparisonChartTitle,
+        primaryCtaTextRes = R.string.preOnboardingDaxDialog2Button,
+        headerLeftIconRes = CommonR.drawable.ic_ai_general_16,
+        headerLeftIconSizeDp = 18f,
+        headerLeftLabelRes = R.string.preOnboardingAiComparisonChartPopularAis,
+        rows = listOf(
+            Row(CommonR.drawable.mask_color_24, R.string.preOnboardingAiComparisonChartItem1),
+            Row(CommonR.drawable.ai_chat_color_24, R.string.preOnboardingAiComparisonChartItem2),
+            Row(CommonR.drawable.lock_color_24, R.string.preOnboardingAiComparisonChartItem3),
+            Row(CommonR.drawable.ai_general_color_24, R.string.preOnboardingAiComparisonChartItem4),
+            Row(CommonR.drawable.shield_color_24, R.string.aiPathComparisonChartItem5),
+        ),
+    )
+
+    data object SegmentedNoAiPath : ComparisonChartConfig(
+        titleRes = R.string.noAiPathComparisonChartTitle,
+        primaryCtaTextRes = R.string.preOnboardingDaxDialog2Button,
+        headerLeftIconRes = CommonR.drawable.google_g_color_40,
+        headerLeftIconSizeDp = 31.5f,
+        headerLeftLabelRes = null,
+        rows = listOf(
+            Row(CommonR.drawable.search_find_color_24, R.string.preOnboardingComparisonChartItem1),
+            Row(CommonR.drawable.search_assist_strikethrough_color_24, R.string.noAiPathComparisonChartNoSearchAssist),
+            Row(CommonR.drawable.ai_images_strikethrough_color_24, R.string.noAiPathComparisonChartNoAiImages),
+            Row(CommonR.drawable.shield_color_24, R.string.preOnboardingComparisonChartItem2),
+            Row(CommonR.drawable.ads_blocked_color_24, R.string.preOnboardingComparisonChartAdAndCookiePopupBlocker),
+        ),
+    )
+
+    data object SegmentedBlockAdsPath : ComparisonChartConfig(
+        titleRes = R.string.blockAdsPathComparisonChartTitle,
+        primaryCtaTextRes = R.string.preOnboardingDaxDialog2Button,
+        headerLeftIconRes = CommonR.drawable.ic_chrome,
+        headerLeftIconSizeDp = 32f, // the target size is 31.5dp but the icon already has some padding
+        headerLeftLabelRes = null,
+        rows = listOf(
+            Row(CommonR.drawable.ads_blocked_color_24, R.string.preOnboardingComparisonChartAdAndCookiePopupBlocker),
+            Row(CommonR.drawable.video_player_color_24, R.string.preOnboardingComparisonChartYoutubeAdBlocker),
+            Row(CommonR.drawable.search_find_color_24, R.string.preOnboardingComparisonChartItem1),
+            Row(CommonR.drawable.ai_chat_color_24, R.string.preOnboardingComparisonChartDuckAi),
+            Row(CommonR.drawable.shield_color_24, R.string.preOnboardingComparisonChartItem2),
+        ),
+    )
+}

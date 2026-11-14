@@ -1,0 +1,567 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.store
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.duckduckgo.common.test.CoroutineTestRule
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class SharedPreferencesDuckChatDataStoreTest {
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
+    private val testDataStore: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(
+            scope = coroutineRule.testScope,
+            produceFile = { context.preferencesDataStoreFile("duck_chat_store") },
+        )
+
+    private val testee: DuckChatDataStore =
+        SharedPreferencesDuckChatDataStore(
+            testDataStore,
+            coroutineRule.testDispatcherProvider,
+            true,
+            coroutineRule.testScope,
+        )
+
+    companion object {
+        val DUCK_CHAT_USER_PREFERENCES = stringPreferencesKey("DUCK_CHAT_USER_PREFERENCES")
+    }
+
+    @Test
+    fun whenFetchAndClearUserPreferencesAndPreferencesExistThenReturnAndClearPreferences() = runTest {
+        val storedPreferences = "userPreferences"
+        testDataStore.updateData { current ->
+            current.toMutablePreferences().apply {
+                this[DUCK_CHAT_USER_PREFERENCES] = storedPreferences
+            }
+        }
+
+        val result = testee.fetchAndClearUserPreferences()
+
+        assertEquals(storedPreferences, result)
+        assertFalse(testDataStore.data.first().contains(DUCK_CHAT_USER_PREFERENCES))
+        assertNull(testee.fetchAndClearUserPreferences())
+    }
+
+    @Test
+    fun whenFetchAndClearUserPreferencesAndNoPreferencesExistThenReturnNull() = runTest {
+        val result = testee.fetchAndClearUserPreferences()
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenUpdateUserPreferencesThenStoreProvidedPreferences() = runTest {
+        val newPreferences = "newUserPreferences"
+
+        testee.updateUserPreferences(newPreferences)
+
+        assertEquals(newPreferences, testDataStore.data.first()[DUCK_CHAT_USER_PREFERENCES])
+    }
+
+    @Test
+    fun whenUpdateUserPreferencesWithNullThenStoreNullPreferences() = runTest {
+        testee.updateUserPreferences(null)
+
+        assertFalse(testDataStore.data.first().contains(DUCK_CHAT_USER_PREFERENCES))
+    }
+
+    @Test
+    fun whenIsDuckChatUserEnabledDefaultThenReturnTrue() = runTest {
+        assertTrue(testee.isDuckChatUserEnabled())
+    }
+
+    @Test
+    fun whenGetShowInBrowserMenuDefaultThenReturnTrue() = runTest {
+        assertTrue(testee.getShowInBrowserMenu())
+    }
+
+    @Test
+    fun whenGetShowInAddressBarDefaultThenFollowMenuDefault() = runTest {
+        assertTrue(testee.getShowInBrowserMenu())
+        assertTrue(testee.getShowInAddressBar())
+    }
+
+    @Test
+    fun whenGetShowInVoiceSearchDefaultThenReturnTrue() = runTest {
+        assertTrue(testee.getShowInVoiceSearch())
+    }
+
+    @Test
+    fun whenGetShowInVoiceChatDefaultThenReturnTrue() = runTest {
+        assertTrue(testee.getShowInVoiceChat())
+    }
+
+    @Test
+    fun `when isInputScreenUserSettingEnabled then return default value`() = runTest {
+        assertFalse(testee.isInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun whenMenuFlagChangesLaterThenAddressBarRemainsUnchanged() = runTest {
+        assertTrue(testee.getShowInBrowserMenu())
+        assertTrue(testee.getShowInAddressBar())
+
+        testee.setShowInBrowserMenu(false)
+
+        assertFalse(testee.getShowInBrowserMenu())
+        assertTrue(testee.getShowInAddressBar())
+    }
+
+    @Test
+    fun whenSetDuckChatUserEnabledThenIsDuckChatUserEnabledThenReturnValue() = runTest {
+        testee.setDuckChatUserEnabled(false)
+        assertFalse(testee.isDuckChatUserEnabled())
+    }
+
+    @Test
+    fun whenSetShowInBrowserMenuThenGetShowInBrowserMenuThenReturnValue() = runTest {
+        testee.setShowInBrowserMenu(false)
+        assertFalse(testee.getShowInBrowserMenu())
+    }
+
+    @Test
+    fun whenSetShowInAddressBarThenGetShowInAddressBarThenReturnValue() = runTest {
+        testee.setShowInAddressBar(false)
+        assertFalse(testee.getShowInAddressBar())
+    }
+
+    @Test
+    fun whenSetShowInVoiceSearchThenGetShowInVoiceSearchThenReturnValue() = runTest {
+        testee.setShowInVoiceSearch(false)
+        assertFalse(testee.getShowInVoiceSearch())
+    }
+
+    @Test
+    fun whenSetShowInVoiceChatThenGetShowInVoiceChatThenReturnValue() = runTest {
+        testee.setShowInVoiceChat(false)
+        assertFalse(testee.getShowInVoiceChat())
+    }
+
+    @Test
+    fun `when setInputScreenUserSetting then return value`() = runTest {
+        testee.setInputScreenUserSetting(false)
+        assertFalse(testee.isInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun `when setCosmeticInputScreenUserSetting then cosmetic value is stored`() = runTest {
+        testee.setCosmeticInputScreenUserSetting(true)
+        assertTrue(testee.isCosmeticInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun `when cosmetic is true and actual is true then isInputScreenUserSettingEnabled returns true`() = runTest {
+        testee.setInputScreenUserSetting(true)
+        testee.setCosmeticInputScreenUserSetting(true)
+        assertTrue(testee.isInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun `when cosmetic is false and actual is false then isInputScreenUserSettingEnabled returns false`() = runTest {
+        testee.setInputScreenUserSetting(false)
+        testee.setCosmeticInputScreenUserSetting(false)
+        assertFalse(testee.isInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun `when cosmetic is false and actual is true then isInputScreenUserSettingEnabled returns true`() = runTest {
+        testee.setInputScreenUserSetting(true)
+        testee.setCosmeticInputScreenUserSetting(false)
+        assertTrue(testee.isInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun `when setInputScreenUserSetting then cosmetic setting is cleared`() = runTest {
+        testee.setCosmeticInputScreenUserSetting(true)
+        assertTrue(testee.isCosmeticInputScreenUserSettingEnabled())
+
+        testee.setInputScreenUserSetting(false)
+        assertFalse(testee.isCosmeticInputScreenUserSettingEnabled())
+    }
+
+    @Test
+    fun whenObserveDuckChatUserEnabledThenReceiveUpdates() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeDuckChatUserEnabled()
+                .take(2)
+                .toList(results)
+        }
+        testee.setDuckChatUserEnabled(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun whenObserveShowInBrowserMenuThenReceiveUpdates() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeShowInBrowserMenu()
+                .take(2)
+                .toList(results)
+        }
+        testee.setShowInBrowserMenu(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun whenObserveShowInAddressBarThenReceiveUpdates() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeShowInAddressBar()
+                .take(2)
+                .toList(results)
+        }
+        testee.setShowInAddressBar(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun `when observeInputScreenUserSettingEnabled then receive updates`() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeInputScreenUserSettingEnabled()
+                .take(2)
+                .toList(results)
+        }
+        testee.setInputScreenUserSetting(true)
+        job.join()
+
+        assertEquals(listOf(false, true), results)
+    }
+
+    @Test
+    fun whenObserveShowInVoiceSearchThenReceiveUpdates() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeShowInVoiceSearch()
+                .take(2)
+                .toList(results)
+        }
+        testee.setShowInVoiceSearch(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun whenObserveShowInVoiceChatThenReceiveUpdates() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeShowInVoiceChat()
+                .take(2)
+                .toList(results)
+        }
+        testee.setShowInVoiceChat(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun `when observeCosmeticInputScreenUserSettingEnabled then receive updates`() = runTest {
+        val results = mutableListOf<Boolean?>()
+        val job = launch {
+            testee.observeCosmeticInputScreenUserSettingEnabled()
+                .take(3)
+                .toList(results)
+        }
+        testee.setCosmeticInputScreenUserSetting(true)
+        testee.setCosmeticInputScreenUserSetting(false)
+        job.join()
+
+        assertEquals(listOf(null, true, false), results)
+    }
+
+    @Test
+    fun `when observeCosmeticInputScreenUserSettingEnabled and setInputScreenUserSetting then cosmetic is updated`() = runTest {
+        testee.setCosmeticInputScreenUserSetting(true)
+        val results = mutableListOf<Boolean?>()
+        val job = launch {
+            testee.observeCosmeticInputScreenUserSettingEnabled()
+                .take(2)
+                .toList(results)
+        }
+        testee.setInputScreenUserSetting(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun `when observeAutomaticContextAttachmentUserSettingEnabled then receive updates`() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeAutomaticContextAttachmentUserSettingEnabled()
+                .take(2)
+                .toList(results)
+        }
+
+        testee.setAutomaticPageContextAttachment(true)
+        job.join()
+
+        assertEquals(listOf(false, true), results)
+    }
+
+    @Test
+    fun whenRegisterOpenedThenWasOpenedBeforeThenReturnTrue() = runTest {
+        assertFalse(testee.wasOpenedBefore())
+        testee.registerOpened()
+        assertTrue(testee.wasOpenedBefore())
+    }
+
+    @Test
+    fun `when setChatSuggestionsUserSetting then observe receives updates`() = runTest {
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeChatSuggestionsUserSettingEnabled()
+                .take(2)
+                .toList(results)
+        }
+        testee.setChatSuggestionsUserSetting(false)
+        job.join()
+
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
+    fun `when setChatSuggestionsUserSetting to true then observe emits true`() = runTest {
+        testee.setChatSuggestionsUserSetting(false)
+
+        val results = mutableListOf<Boolean>()
+        val job = launch {
+            testee.observeChatSuggestionsUserSettingEnabled()
+                .take(2)
+                .toList(results)
+        }
+        testee.setChatSuggestionsUserSetting(true)
+        job.join()
+
+        assertEquals(listOf(false, true), results)
+    }
+
+    @Test
+    fun `when hasUserAcceptedTerms default then return false`() = runTest {
+        assertFalse(testee.hasUserAcceptedTerms())
+    }
+
+    @Test
+    fun `when setUserAcceptedTerms then hasUserAcceptedTerms returns true`() = runTest {
+        testee.setUserAcceptedTerms()
+        assertTrue(testee.hasUserAcceptedTerms())
+    }
+
+    @Test
+    fun `when hasSubmittedPromptBefore default then return false`() = runTest {
+        assertFalse(testee.hasSubmittedPromptBefore())
+    }
+
+    @Test
+    fun `when setPromptSubmitted then hasSubmittedPromptBefore returns true`() = runTest {
+        testee.setPromptSubmitted()
+        assertTrue(testee.hasSubmittedPromptBefore())
+    }
+
+    @Test
+    fun `when observeDefaultTogglePosition then receive updates`() = runTest {
+        val results = mutableListOf<String?>()
+        val job = launch {
+            testee.observeDefaultTogglePosition()
+                .take(2)
+                .toList(results)
+        }
+        testee.setDefaultTogglePosition("DUCK_AI")
+        job.join()
+
+        assertEquals(listOf(null, "DUCK_AI"), results)
+    }
+
+    @Test
+    fun `when getDefaultTogglePosition default then return null`() = runTest {
+        assertNull(testee.getDefaultTogglePosition())
+    }
+
+    @Test
+    fun `when setDefaultTogglePosition then getDefaultTogglePosition returns value`() = runTest {
+        testee.setDefaultTogglePosition("DUCK_AI")
+        assertEquals("DUCK_AI", testee.getDefaultTogglePosition())
+    }
+
+    @Test
+    fun `when getLastUsedTogglePosition default then return null`() = runTest {
+        assertNull(testee.getLastUsedTogglePosition())
+    }
+
+    @Test
+    fun `when setLastUsedTogglePosition then getLastUsedTogglePosition returns value`() = runTest {
+        testee.setLastUsedTogglePosition("DUCK_AI")
+        assertEquals("DUCK_AI", testee.getLastUsedTogglePosition())
+    }
+
+    @Test
+    fun `when setLastUsedTogglePosition then observeLastUsedTogglePosition receives update`() = runTest {
+        val results = mutableListOf<String?>()
+        val job = launch {
+            testee.observeLastUsedTogglePosition()
+                .take(2)
+                .toList(results)
+        }
+        testee.setLastUsedTogglePosition("DUCK_AI")
+        job.join()
+
+        assertEquals(listOf(null, "DUCK_AI"), results)
+    }
+
+    @Test
+    fun whenNoModelStoredThenGetSelectedModelReturnsNull() = runTest {
+        assertNull(testee.getSelectedModel())
+    }
+
+    @Test
+    fun whenModelStoredThenGetSelectedModelReturnsIt() = runTest {
+        testee.setSelectedModel(SelectedModel("id", "model"))
+
+        val result = testee.getSelectedModel()
+        assertEquals("id", result?.id)
+        assertEquals("model", result?.shortName)
+    }
+
+    @Test
+    fun whenNullModelStoredThenGetSelectedModelReturnsNull() = runTest {
+        testee.setSelectedModel(SelectedModel("id", "model"))
+        testee.setSelectedModel(null)
+
+        assertNull(testee.getSelectedModel())
+    }
+
+    @Test
+    fun whenModelOverwrittenThenGetSelectedModelReturnsLatest() = runTest {
+        testee.setSelectedModel(SelectedModel("id1", "model1"))
+        testee.setSelectedModel(SelectedModel("id2", "model2"))
+
+        val result = testee.getSelectedModel()
+        assertEquals("id2", result?.id)
+        assertEquals("model2", result?.shortName)
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled returns false when setting was never changed`() = runTest {
+        assertFalse(testee.isInputScreenEverEnabled())
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled returns true after setInputScreenUserSetting enabled`() = runTest {
+        testee.setInputScreenUserSetting(enabled = true)
+        assertTrue(testee.isInputScreenEverEnabled())
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled stays true after setInputScreenUserSetting disabled again`() = runTest {
+        testee.setInputScreenUserSetting(enabled = true)
+        testee.setInputScreenUserSetting(enabled = false)
+        assertTrue(testee.isInputScreenEverEnabled())
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled returns true and backfills when user setting key is present and true (existing user who enabled)`() = runTest {
+        val inputScreenKey = booleanPreferencesKey("DUCK_AI_INPUT_SCREEN_USER_SETTING")
+        testDataStore.edit { it[inputScreenKey] = true }
+        assertTrue(testee.isInputScreenEverEnabled())
+        assertTrue(testee.isInputScreenEverEnabled()) // backfilled — second read also true
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled returns true and backfills when user setting key is present and false`() = runTest {
+        val inputScreenKey = booleanPreferencesKey("DUCK_AI_INPUT_SCREEN_USER_SETTING")
+        testDataStore.edit { it[inputScreenKey] = false }
+        assertTrue(testee.isInputScreenEverEnabled())
+        assertTrue(testee.isInputScreenEverEnabled()) // backfilled — second read also true
+    }
+
+    @Test
+    fun `isInputScreenEverEnabled returns false when user setting key is absent (user never touched the setting)`() = runTest {
+        // No writes at all — DUCK_AI_INPUT_SCREEN_USER_SETTING key is absent
+        assertFalse(testee.isInputScreenEverEnabled())
+    }
+
+    @Test
+    fun whenSelectedReasoningModeNotSetThenReturnNull() = runTest {
+        assertNull(testee.getSelectedReasoningMode())
+    }
+
+    @Test
+    fun whenSetSelectedReasoningModeThenStoredValueReturned() = runTest {
+        testee.setSelectedReasoningMode("reasoning")
+        assertEquals("reasoning", testee.getSelectedReasoningMode())
+    }
+
+    @Test
+    fun whenSetSelectedReasoningModeNullThenStoredValueCleared() = runTest {
+        testee.setSelectedReasoningMode("fast")
+        testee.setSelectedReasoningMode(null)
+        assertNull(testee.getSelectedReasoningMode())
+    }
+
+    @Test
+    fun `when storeAddressBarPickerSelectedAt then getAddressBarPickerSelectedAt returns stored value`() = runTest {
+        testee.storeAddressBarPickerSelectedAt(12345L)
+
+        assertEquals(12345L, testee.getAddressBarPickerSelectedAt())
+    }
+
+    @Test
+    fun `when nothing stored then getAddressBarPickerSelectedAt returns null`() = runTest {
+        assertNull(testee.getAddressBarPickerSelectedAt())
+    }
+
+    @Test
+    fun `when clearAddressBarPickerSelectedAt then getAddressBarPickerSelectedAt returns null`() = runTest {
+        testee.storeAddressBarPickerSelectedAt(12345L)
+
+        testee.clearAddressBarPickerSelectedAt()
+
+        assertNull(testee.getAddressBarPickerSelectedAt())
+    }
+}

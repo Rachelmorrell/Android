@@ -17,9 +17,8 @@
 package com.duckduckgo.widget
 
 import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Test
-
 import org.junit.Assert.*
+import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -42,7 +41,10 @@ class SearchAndFavoritesGridCalculatorKtTest {
         }
 
         companion object {
-            data class TestCase(val expectedColumns: Int, val width: Int)
+            data class TestCase(
+                val expectedColumns: Int,
+                val width: Int,
+            )
 
             @JvmStatic
             @Parameterized.Parameters(name = "Test case: {index} - {0}")
@@ -50,13 +52,13 @@ class SearchAndFavoritesGridCalculatorKtTest {
                 return arrayOf(
                     TestCase(2, 100),
                     TestCase(2, 144),
-                    TestCase(3, 212),
+                    TestCase(2, 212),
                     TestCase(3, 279),
-                    TestCase(4, 280),
-                    TestCase(5, 348),
-                    TestCase(6, 416),
-                    TestCase(7, 484),
-                    TestCase(8, 552)
+                    TestCase(3, 280),
+                    TestCase(4, 348),
+                    TestCase(4, 416),
+                    TestCase(4, 484),
+                    TestCase(4, 552),
                 )
             }
         }
@@ -77,7 +79,10 @@ class SearchAndFavoritesGridCalculatorKtTest {
         }
 
         companion object {
-            data class TestCase(val expectedRows: Int, val width: Int)
+            data class TestCase(
+                val expectedRows: Int,
+                val width: Int,
+            )
 
             @JvmStatic
             @Parameterized.Parameters(name = "Test case: {index} - {0}")
@@ -85,14 +90,14 @@ class SearchAndFavoritesGridCalculatorKtTest {
                 return arrayOf(
                     TestCase(1, 100),
                     TestCase(1, 172),
-                    TestCase(2, 270),
-                    TestCase(3, 368),
+                    TestCase(1, 270),
+                    TestCase(2, 368),
                     TestCase(3, 465),
-                    TestCase(4, 466),
+                    TestCase(3, 466),
                     TestCase(4, 564),
                     TestCase(4, 662),
                     TestCase(4, 760),
-                    TestCase(4, 858)
+                    TestCase(4, 858),
                 )
             }
         }

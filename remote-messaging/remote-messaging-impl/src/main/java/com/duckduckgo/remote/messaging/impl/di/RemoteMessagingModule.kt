@@ -1,0 +1,192 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.remote.messaging.impl.di
+
+import android.content.Context
+import androidx.room.Room
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.api.AppProperties
+import com.duckduckgo.browser.api.UserBrowserProperties
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.remote.messaging.api.AttributeMatcherPlugin
+import com.duckduckgo.remote.messaging.api.JsonToMatchingAttributeMapper
+import com.duckduckgo.remote.messaging.api.MessageActionMapperPlugin
+import com.duckduckgo.remote.messaging.impl.*
+import com.duckduckgo.remote.messaging.impl.RemoteMessagingRepository
+import com.duckduckgo.remote.messaging.impl.mappers.MessageMapper
+import com.duckduckgo.remote.messaging.impl.mappers.RemoteMessagingConfigJsonMapper
+import com.duckduckgo.remote.messaging.impl.matchers.AndroidAppAttributeMatcher
+import com.duckduckgo.remote.messaging.impl.matchers.DeviceAttributeMatcher
+import com.duckduckgo.remote.messaging.impl.matchers.UserAttributeMatcher
+import com.duckduckgo.remote.messaging.impl.network.RemoteMessagingService
+import com.duckduckgo.remote.messaging.impl.store.GlideRemoteMessageImageStore
+import com.duckduckgo.remote.messaging.impl.store.RemoteMessageImageStore
+import com.duckduckgo.remote.messaging.store.LocalRemoteMessagingConfigRepository
+import com.duckduckgo.remote.messaging.store.RemoteMessagesDao
+import com.duckduckgo.remote.messaging.store.RemoteMessagingCohortStore
+import com.duckduckgo.remote.messaging.store.RemoteMessagingCohortStoreImpl
+import com.duckduckgo.remote.messaging.store.RemoteMessagingConfigRepository
+import com.duckduckgo.remote.messaging.store.RemoteMessagingDatabase
+import com.duckduckgo.remote.messaging.store.RemoteMessagingDatabase.Companion.ALL_MIGRATIONS
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+
+@BindingContainer
+@ContributesTo(AppScope::class)
+object DomainModule {
+
+    @Provides
+    fun providesRemoteMessagingConfigDownloader(
+        remoteConfig: RemoteMessagingService,
+        remoteMessagingConfigProcessor: RemoteMessagingConfigProcessor,
+    ): RemoteMessagingConfigDownloader {
+        return RealRemoteMessagingConfigDownloader(remoteConfig, remoteMessagingConfigProcessor)
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideImagePrefetcher(
+        context: Context,
+        dispatcherProvider: DispatcherProvider,
+    ): RemoteMessageImageStore {
+        return GlideRemoteMessageImageStore(context, dispatcherProvider)
+    }
+}
+
+@BindingContainer
+@ContributesTo(AppScope::class)
+object DataSourceModule {
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagingConfigProcessor(
+        remoteMessagingConfigJsonMapper: RemoteMessagingConfigJsonMapper,
+        remoteMessagingConfigRepository: RemoteMessagingConfigRepository,
+        remoteMessagingRepository: RemoteMessagingRepository,
+        remoteMessagingConfigMatcher: RemoteMessagingConfigMatcher,
+        remoteMessagingFeatureToggles: RemoteMessagingFeatureToggles,
+        remoteMessageImageStore: RemoteMessageImageStore,
+    ): RemoteMessagingConfigProcessor {
+        return RealRemoteMessagingConfigProcessor(
+            remoteMessagingConfigJsonMapper,
+            remoteMessagingConfigRepository,
+            remoteMessagingRepository,
+            remoteMessagingConfigMatcher,
+            remoteMessageImageStore,
+            remoteMessagingFeatureToggles,
+        )
+    }
+
+    @Provides
+    fun providesRemoteMessagingRepository(
+        remoteMessagingConfigRepository: RemoteMessagingConfigRepository,
+        remoteMessagesDao: RemoteMessagesDao,
+        messageMapper: MessageMapper,
+        remoteMessageImageStore: RemoteMessageImageStore,
+        currentTimeProvider: CurrentTimeProvider,
+        autoDismissEvaluator: RemoteMessageAutoDismissEvaluator,
+    ): RemoteMessagingRepository {
+        return AppRemoteMessagingRepository(
+            remoteMessagingConfigRepository,
+            remoteMessagesDao,
+            messageMapper,
+            remoteMessageImageStore,
+            currentTimeProvider,
+            autoDismissEvaluator,
+        )
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagesDao(
+        remoteMessagingDatabase: RemoteMessagingDatabase,
+    ): RemoteMessagesDao {
+        return remoteMessagingDatabase.remoteMessagesDao()
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagingConfigJsonMapper(
+        matchingAttributeMappers: Set<JsonToMatchingAttributeMapper>,
+        actionMappers: Set<MessageActionMapperPlugin>,
+        appBuildConfig: AppBuildConfig,
+        remoteMessagingFeatureToggles: RemoteMessagingFeatureToggles,
+    ): RemoteMessagingConfigJsonMapper {
+        return RemoteMessagingConfigJsonMapper(appBuildConfig, matchingAttributeMappers, actionMappers, remoteMessagingFeatureToggles)
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagingConfigMatcher(
+        matchers: Set<AttributeMatcherPlugin>,
+        remoteMessagingRepository: RemoteMessagingRepository,
+        remoteMessagingCohortStore: RemoteMessagingCohortStore,
+    ): RemoteMessagingConfigMatcher {
+        return RemoteMessagingConfigMatcher(matchers, remoteMessagingRepository, remoteMessagingCohortStore)
+    }
+
+    @Provides
+    @IntoSet
+    fun providesAndroidAppAttributeMatcher(
+        appProperties: AppProperties,
+        appBuildConfig: AppBuildConfig,
+    ): AttributeMatcherPlugin {
+        return AndroidAppAttributeMatcher(appProperties, appBuildConfig)
+    }
+
+    @Provides
+    @IntoSet
+    fun providesDeviceAttributeMatcher(
+        appBuildConfig: AppBuildConfig,
+        appProperties: AppProperties,
+    ): AttributeMatcherPlugin {
+        return DeviceAttributeMatcher(appBuildConfig, appProperties)
+    }
+
+    @Provides
+    @IntoSet
+    fun providesUserAttributeMatcher(
+        userBrowserProperties: UserBrowserProperties,
+    ): AttributeMatcherPlugin {
+        return UserAttributeMatcher(userBrowserProperties)
+    }
+
+    @Provides
+    fun providesRemoteMessagingConfigRepository(database: RemoteMessagingDatabase): RemoteMessagingConfigRepository {
+        return LocalRemoteMessagingConfigRepository(database)
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagingDatabase(context: Context): RemoteMessagingDatabase {
+        return Room.databaseBuilder(context, RemoteMessagingDatabase::class.java, "remote_messaging.db")
+            .fallbackToDestructiveMigration()
+            .addMigrations(*ALL_MIGRATIONS)
+            .build()
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesRemoteMessagingUserDataStore(database: RemoteMessagingDatabase, dispatchers: DispatcherProvider): RemoteMessagingCohortStore {
+        return RemoteMessagingCohortStoreImpl(database, dispatchers)
+    }
+}

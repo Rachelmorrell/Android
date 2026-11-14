@@ -1,0 +1,251 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.ui.nativeinput.views
+
+import android.content.Context
+import android.util.AttributeSet
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.ScrollView
+import androidx.core.view.isVisible
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.findViewTreeViewModelStoreOwner
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.menu.applyMenuRadiusClipping
+import com.duckduckgo.common.ui.view.divider.HorizontalDivider
+import com.duckduckgo.common.ui.view.text.DaxTextView
+import com.duckduckgo.common.utils.ViewViewModelFactory
+import com.duckduckgo.di.android.support.AndroidSupportInjection
+import com.duckduckgo.di.scopes.ViewScope
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState.InputContext
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStateProvider
+import com.duckduckgo.duckchat.impl.DuckChatConstants.DUCK_AI_FEATURE_PAGE
+import com.duckduckgo.duckchat.impl.R
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionPurchase
+import com.duckduckgo.subscriptions.api.SubscriptionScreens.SubscriptionUpgrade
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import javax.inject.Inject
+
+@InjectWith(ViewScope::class)
+class ReasoningModePickerView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0,
+) : FrameLayout(context, attrs, defStyle), CompactableControl {
+
+    @Inject lateinit var viewModelFactory: ViewViewModelFactory
+
+    @Inject lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject lateinit var nativeInputStateProvider: NativeInputStateProvider
+
+    private val viewModel by lazy {
+        ViewModelProvider(findViewTreeViewModelStoreOwner()!!, viewModelFactory)[ReasoningModePickerViewModel::class.java]
+    }
+
+    private val button: ImageView by lazy { findViewById(R.id.reasoningModePickerButton) }
+    private var stateJob: Job? = null
+    private var inputContextJob: Job? = null
+    private var commandJob: Job? = null
+    private var popupWindow: PopupWindow? = null
+
+    // Mirrors the input context from the per-tab native input state so currentSurface() can be
+    // read synchronously from popup callbacks. Updated by observeInputContext().
+    private var lastInputContext: InputContext = InputContext.BROWSER
+    private var lastNativeInputState: NativeInputState? = null
+
+    var isEditMode: Boolean = false
+
+    init {
+        inflate(context, R.layout.view_reasoning_mode_picker, this)
+    }
+
+    override fun setCompactLevel(level: Int) = Unit
+
+    // A fixed-size button that only comes and goes with the selected model.
+    override fun worstCaseWidth(level: Int): Int = resources.getDimensionPixelSize(R.dimen.nativeInputButtonSize)
+
+    override fun onAttachedToWindow() {
+        AndroidSupportInjection.inject(this)
+        super.onAttachedToWindow()
+        button.setOnClickListener { showMenu() }
+        observeState()
+        observeInputContext()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        stateJob?.cancel()
+        stateJob = null
+        inputContextJob?.cancel()
+        inputContextJob = null
+        commandJob?.cancel()
+        commandJob = null
+        lastNativeInputState = null
+        dismissPopup()
+    }
+
+    private fun observeInputContext() {
+        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        inputContextJob?.cancel()
+        inputContextJob = nativeInputStateProvider.state
+            .onEach { state ->
+                lastInputContext = state.inputContext
+                lastNativeInputState = state
+                applyVisibility(viewModel.state.value.visible)
+            }
+            .launchIn(scope)
+    }
+
+    private fun applyVisibility(pickerVisible: Boolean) {
+        val show = shouldShowReasoningPicker(lastNativeInputState, pickerVisible, isEditMode)
+        isVisible = show
+        (parent as? View)?.isVisible = show
+        // Popup is positioned by screen coordinates, not parented to the button. Dismiss
+        // it explicitly when picker hides or stale rows stay tappable for the new chat.
+        if (!show) dismissPopup()
+    }
+
+    private fun observeState() {
+        val scope = findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        stateJob?.cancel()
+        stateJob = viewModel.state
+            .onEach { state ->
+                applyVisibility(state.visible)
+                state.displayedMode?.let { mode ->
+                    button.setImageResource(viewModel.iconResFor(mode))
+                }
+            }
+            .launchIn(scope)
+
+        commandJob?.cancel()
+        commandJob = viewModel.commands
+            .onEach { processCommand(it) }
+            .launchIn(scope)
+    }
+
+    private fun processCommand(command: UpsellCommand) {
+        when (command) {
+            is UpsellCommand.LaunchPurchase ->
+                globalActivityStarter.start(context, SubscriptionPurchase(origin = command.origin, featurePage = DUCK_AI_FEATURE_PAGE))
+            is UpsellCommand.LaunchUpgrade ->
+                globalActivityStarter.start(context, SubscriptionUpgrade(origin = command.origin))
+        }
+    }
+
+    private fun currentSurface(): PickerSurface =
+        when (lastInputContext) {
+            InputContext.DUCK_AI, InputContext.DUCK_AI_CONTEXTUAL -> PickerSurface.REASONING_PICKER_DUCK_AI_TAB
+            InputContext.BROWSER -> PickerSurface.REASONING_PICKER_ADDRESS_BAR
+        }
+
+    private fun showMenu() {
+        // Guard against a re-tap opening an already-showing popup.
+        if (popupWindow?.isShowing == true) return
+        val state = viewModel.state.value
+        if (!state.visible) return
+
+        viewModel.onPickerShown(currentSurface())
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val popup = PopupWindow(
+            ScrollView(context).apply {
+                addView(container)
+                setBackgroundResource(com.duckduckgo.mobile.android.R.drawable.popup_menu_bg)
+                applyMenuRadiusClipping()
+                isVerticalScrollBarEnabled = false
+            },
+            resources.getDimensionPixelSize(R.dimen.nativeInputMenuWidth),
+            LayoutParams.WRAP_CONTENT,
+            false,
+        ).apply {
+            elevation = resources.getDimension(R.dimen.modelPickerMenuElevation)
+            isOutsideTouchable = true
+            setOnDismissListener { popupWindow = null }
+        }
+        populate(container, popup, state)
+        popupWindow = popup
+        showAtPosition(popup)
+    }
+
+    private fun populate(container: LinearLayout, popup: PopupWindow, state: ReasoningModePickerState) {
+        state.sections.forEachIndexed { index, section ->
+            if (index > 0) container.addView(HorizontalDivider(context))
+            section.headerRes?.let { container.addSectionHeader(context.getString(it)) }
+            section.rows.forEach { row ->
+                val item = pickerMenuItem(
+                    parent = container,
+                    title = context.getString(row.titleRes),
+                    leadingIconRes = row.iconRes,
+                    subtitle = context.getString(row.subtitleRes),
+                    selected = row.selected,
+                    // Only the gated section carries a header, and its rows open an upsell.
+                    showsFollowUpEllipsis = section.headerRes != null,
+                ) {
+                    viewModel.onModeTapped(row.mode, currentSurface())
+                    popup.dismiss()
+                }
+                container.addView(item)
+            }
+        }
+    }
+
+    private fun LinearLayout.addSectionHeader(title: String) {
+        val header = LayoutInflater.from(context).inflate(R.layout.view_model_picker_section_header, this, false) as DaxTextView
+        header.text = title
+        addView(header)
+    }
+
+    private fun showAtPosition(popup: PopupWindow) {
+        val loc = IntArray(2).also { button.getLocationOnScreen(it) }
+        val x = resources.displayMetrics.widthPixels - (loc[0] + button.width)
+        val y = resources.displayMetrics.heightPixels - loc[1] + resources.getDimensionPixelSize(com.duckduckgo.mobile.android.R.dimen.keyline_1)
+        popup.showAtLocation(rootView, Gravity.BOTTOM or Gravity.END, x, y)
+    }
+
+    private fun dismissPopup() {
+        popupWindow?.let {
+            it.setOnDismissListener(null)
+            if (it.isShowing) it.dismiss()
+        }
+        popupWindow = null
+    }
+}
+
+/**
+ * The reasoning mode picker follows the same visibility rule as the other plugin controls:
+ * derived purely from [NativeInputState] plus its own visibility flag, so it is unit-testable
+ * without Robolectric.
+ */
+internal fun shouldShowReasoningPicker(
+    nativeInputState: NativeInputState?,
+    pickerVisible: Boolean,
+    isEditMode: Boolean,
+): Boolean = pickerVisible && nativeInputState?.shouldShowPluginControls(isEditing = isEditMode) == true

@@ -1,0 +1,212 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.api
+
+import android.net.Uri
+import kotlinx.coroutines.flow.Flow
+
+/**
+ * DuckChat interface provides a set of methods for interacting and controlling DuckChat.
+ */
+interface DuckChat {
+    /**
+     * Checks whether DuckChat is enabled based on remote config flag and user preference.
+     * Uses a cached value - does not perform disk I/O.
+     *
+     * @return true if DuckChat is enabled, false otherwise.
+     */
+    fun isEnabled(): Boolean
+
+    /**
+     * Opens Duck.ai from [entryPoint].
+     */
+    fun openDuckChat(entryPoint: DuckChatEntryPoint)
+
+    /**
+     * Opens Duck.ai from [entryPoint] and automatically submits [query].
+     * [voice] identifies a dictated prompt without changing its entry source.
+     */
+    fun openDuckChatWithAutoPrompt(query: String, entryPoint: DuckChatEntryPoint, voice: Boolean = false)
+
+    /**
+     * Opens Duck.ai from [entryPoint] with [query] prefilled but not submitted.
+     */
+    fun openDuckChatWithPrefill(query: String, entryPoint: DuckChatEntryPoint)
+
+    /**
+     * Records a Duck.ai entry performed through navigation that bypasses the open methods.
+     *
+     * @param entryPoint the surface that initiated the entry.
+     * @param opensNewTab whether the entry opens a new browser tab.
+     * @param hasPrompt whether a non-blank prompt is automatically submitted on entry.
+     * @param voice whether this entry uses voice, including dictated text prompts.
+     */
+    fun reportDuckChatEntry(
+        entryPoint: DuckChatEntryPoint,
+        opensNewTab: Boolean,
+        hasPrompt: Boolean,
+        voice: Boolean = false,
+    )
+
+    /**
+     * Returns the Duck Chat URL to be used
+     */
+    fun getDuckChatUrl(query: String, autoPrompt: Boolean, sidebar: Boolean = false): String
+
+    /**
+     * Returns the Duck.ai URL that opens with the settings panel open (e.g. https://duck.ai?settings=open),
+     * using the configured Duck.ai host. Used to reach Duck.ai settings from outside the Duck.ai web view.
+     */
+    fun getDuckChatSettingsUrl(): String
+
+    /**
+     * Determines whether a given [Uri] is a DuckChat URL.
+     * There are two Duck Chat URLs
+     * Legacy: https://duckduckgo.com/?q=DuckDuckGo+AI+Chat&ia=chat&duckai=5
+     * After Migration: https://duck.ai/chat?q=DuckDuckGo+AI+Chat&duckai=5&atb=v520-1ru&ko=-1&t=ddg_android&migration=native-import
+     * https://app.asana.com/1/137249556945/task/1210497696306780
+     * @return true if it is a DuckChat URL, false otherwise.
+     */
+    fun isDuckChatUrl(uri: Uri): Boolean
+
+    /**
+     * Returns `true` if Duck Chat was ever opened before.
+     */
+    suspend fun wasOpenedBefore(): Boolean
+
+    /**
+     * Set user setting to determine whether dedicated Duck.ai input screen with a mode switch should be used.
+     */
+    suspend fun setInputScreenUserSetting(enabled: Boolean)
+
+    /**
+     * Returns `true` if the user has ever interacted with the Duck.ai input screen toggle — enabled it
+     * explicitly, or had a value written implicitly (e.g. the onboarding selection). Sticky once set.
+     */
+    suspend fun isInputScreenEverEnabled(): Boolean
+
+    /**
+     * Cosmetically sets the input screen user setting.
+     */
+    suspend fun setCosmeticInputScreenUserSetting(enabled: Boolean)
+
+    /**
+     * Observes whether Duck.ai input screen with a mode switch is enabled or disabled.
+     */
+    fun observeInputScreenUserSettingEnabled(): Flow<Boolean>
+
+    /**
+     * Observes the cosmetic value for the input screen user setting.
+     * Returns null if the cosmetic value has not been set before.
+     */
+    fun observeCosmeticInputScreenUserSettingEnabled(): Flow<Boolean?>
+
+    /**
+     * Observes the value for the automatic context attachment for Contextual Mode
+     */
+    fun observeAutomaticContextAttachmentUserSettingEnabled(): Flow<Boolean>
+
+    /**
+     * Observes whether the Duck.ai native chat input integration is enabled.
+     * Emits `true` only when the `nativeChatInput` feature flag is enabled
+     * (and the widget is not suppressed). When `false`,
+     * Duck.ai contextual and full modes fall back to the web input.
+     */
+    fun observeNativeChatInputEnabled(): Flow<Boolean>
+
+    /**
+     * Observes whether the native input top nav bar feature flag is enabled.
+     * This is only the flag; callers still gate on the input mode (Search & Duck.ai).
+     */
+    fun observeNativeInputNavBarEnabled(): Flow<Boolean>
+
+    suspend fun isStandaloneMigrationCompleted(): Boolean
+
+    /**
+     * Set user preference for whether chat suggestions are shown in the input screen.
+     */
+    suspend fun setChatSuggestionsUserSetting(enabled: Boolean)
+
+    /**
+     * Observes whether the user has enabled chat suggestions.
+     */
+    fun observeChatSuggestionsUserSettingEnabled(): Flow<Boolean>
+
+    /**
+     * Opens Duck.ai directly in voice mode (duck.ai/?mode=voice-mode).
+     */
+    fun openVoiceDuckChat(entryPoint: DuckChatEntryPoint)
+
+    /**
+     * Returns `true` if a voice session is currently active on the tab with the given [tabId].
+     */
+    fun isVoiceChatSessionActive(tabId: String): Boolean
+
+    /**
+     * Emits the set of tab IDs that currently have an active voice session.
+     */
+    val activeVoiceChatSessions: Flow<Set<String>>
+
+    /**
+     * Emits the tab id whenever an end-voice-session action is requested (e.g. from the
+     * foreground service notification). Tabs should collect this flow and dispatch the
+     * end-voice-session JS event when their id is emitted.
+     */
+    fun observeTriggerVoiceChatSessionEnd(): Flow<String>
+
+    /**
+     * Requests that the active voice session on the tab with the given [tabId] end. This drives the web
+     * frontend to tear down the session (stop recording, release the mic) and report it ended, which in
+     * turn releases the native voice resources.
+     */
+    fun endVoiceChatSession(tabId: String)
+
+    /**
+     * Returns `true` when the native Duck.ai chat history surface is enabled by all gating feature flags.
+     * Suspending because the underlying feature-flag reads must not block the main thread.
+     */
+    suspend fun isChatHistoryAvailable(): Boolean
+
+    /**
+     * Returns `true` when the user enabled Duck.ai chat history in settings.
+     */
+    suspend fun hasUserEnabledChatHistory(): Boolean
+
+    /**
+     * Emits whether the most recent Chat Tab suggestions fetch returned any entries, reflecting the
+     * currently displayed suggestions for the latest query.
+     *
+     * Caution: the cached value is cleared when the Chat Tab is torn down, so no value is emitted
+     * until the current presentation performs its first fetch.
+     */
+    fun observeHasChatSuggestions(): Flow<Boolean>
+
+    /**
+     * Records that the user selected the "Search + Duck.ai" option on the new address bar picker, so the
+     * first prompt submitted from the Duck.ai toggle input field within the attribution window can be
+     * attributed back to the picker.
+     */
+    suspend fun onAddressBarPickerDuckAiSelected()
+
+    /**
+     * Opens Duck.ai in a new chat tab from [entryPoint] with the image-generation tool preselected on
+     * the native input. When the currently selected model can't generate images, first switches the
+     * (global) model selection to an available image-capable model; falls back to a normal new chat when
+     * no accessible model supports image generation.
+     */
+    fun openDuckChatImageGeneration(entryPoint: DuckChatEntryPoint)
+}

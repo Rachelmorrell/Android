@@ -14,35 +14,24 @@
   ~ limitations under the License.
   -->
 
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="com.duckduckgo.app.privacy.ui.TrackerNetworksActivity">
+    android:layout_height="match_parent">
 
     <include
-        android:id="@+id/includeToolbar"
-        layout="@layout/include_toolbar" />
+            android:id="@+id/includeToolbar"
+            layout="@layout/include_default_toolbar"/>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="@dimen/changeAppIconPadding"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:ignore="Overdraw">
-
-        <androidx.recyclerview.widget.RecyclerView
+    <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/appIconsList"
+            android:paddingHorizontal="@dimen/keyline_5"
+            android:paddingVertical="@dimen/keyline_4"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:nestedScrollingEnabled="false"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            tools:listitem="@layout/item_app_icon"
+            tools:spanCount="3" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</LinearLayout>

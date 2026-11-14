@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity
+            android:name=".promotion.SyncGetOnOtherPlatformsActivity"
+            android:exported="false"
+            android:label="@string/syncGetAppsOnOtherPlatformsActivityTitle"
+            android:parentActivityName=".ui.dashboard.SyncActivity" />
+
+        <activity
+            android:name=".ui.DeviceUnsupportedActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName="com.duckduckgo.app.settings.SettingsActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            tools:replace="screenOrientation" />
+
+        <activity
+            android:name=".ui.dashboard.SyncActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName="com.duckduckgo.app.settings.SettingsActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.setup.SyncThisDeviceActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.recoverycode.RecoveryCodeActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.devices.EditDeviceActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.pairing.read.ReadSyncCodeActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DuckDuckGo.Dark" />
+
+        <activity
+            android:name=".ui.pairing.show.DisplayQrCodeActivity"
+            android:exported="false"
+            android:label="@string/sync_simplified_qr_code_screen_title"
+            android:parentActivityName=".ui.pairing.read.ReadSyncCodeActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DuckDuckGo.Dark" />
+
+        <activity
+            android:name=".ui.pairing.process.ProcessSyncCodeActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.pairing.read.ReadSyncCodeActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.pairing.recover.RecoverSyncedDataActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ui.setup.PreviousSessionReadyActivity"
+            android:exported="false"
+            android:label="@string/sync_screen_title"
+            android:parentActivityName=".ui.dashboard.SyncActivity"
+            android:screenOrientation="portrait" />
+    </application>
+</manifest>

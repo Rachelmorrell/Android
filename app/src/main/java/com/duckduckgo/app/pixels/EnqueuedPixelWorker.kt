@@ -1,0 +1,194 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.pixels
+
+import android.content.Context
+import androidx.lifecycle.LifecycleOwner
+import androidx.work.*
+import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserDetector
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.fire.UnsentForgetAllPixelStore
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter.DEFAULT_BROWSER
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter.IS_DUCKDUCKGO_PACKAGE
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter.WEBVIEW_FULL_VERSION
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter.WEBVIEW_VERSION
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.api.WebViewVersionProvider
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.codegen.annotations.ContributesWorker
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.customtabs.api.CustomTabDetector
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.verifiedinstallation.IsVerifiedPlayStoreInstall
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import logcat.LogPriority.INFO
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<MainProcessLifecycleObserver>(),
+)
+@SingleIn(AppScope::class)
+class EnqueuedPixelWorker @Inject constructor(
+    private val workManager: WorkManager,
+    private val pixel: () -> Pixel,
+    private val unsentForgetAllPixelStore: UnsentForgetAllPixelStore,
+    private val appReturnPixelSender: AppReturnPixelSender,
+    private val webViewVersionProvider: WebViewVersionProvider,
+    private val defaultBrowserDetector: DefaultBrowserDetector,
+    private val customTabDetector: CustomTabDetector,
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+    private val isVerifiedPlayStoreInstall: IsVerifiedPlayStoreInstall,
+    private val appBuildConfig: AppBuildConfig,
+    private val dispatchers: DispatcherProvider,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+) : MainProcessLifecycleObserver {
+
+    private var launchedByFireAction: Boolean = false
+
+    override fun onCreate(owner: LifecycleOwner) {
+        scheduleWorker(workManager)
+        launchedByFireAction = appReturnPixelSender.isLaunchByFireAction()
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        logcat { "onStart called" }
+
+        if (launchedByFireAction) {
+            // skip the next on_start if branch
+            logcat(INFO) { "Suppressing app launch pixel" }
+            launchedByFireAction = false
+            return
+        }
+
+        appCoroutineScope.launch(dispatchers.io()) {
+            sendAppLaunchPixel()
+        }
+    }
+
+    private suspend fun sendAppLaunchPixel() {
+        logcat(INFO) { "Sending app launch pixel" }
+        val collectWebViewFullVersion =
+            androidBrowserConfigFeature.self().isEnabled() && androidBrowserConfigFeature.collectFullWebViewVersion().isEnabled()
+
+        val paramsMap = mutableMapOf<String, String>().apply {
+            put(WEBVIEW_VERSION, webViewVersionProvider.getMajorVersion())
+            put(DEFAULT_BROWSER, defaultBrowserDetector.isDefaultBrowser().toString())
+            put(IS_DUCKDUCKGO_PACKAGE, isDuckDuckGoAppPackage(appBuildConfig.applicationId))
+            if (collectWebViewFullVersion) {
+                put(WEBVIEW_FULL_VERSION, webViewVersionProvider.getFullVersion())
+            }
+        }.toMap()
+
+        // app launch pixel
+        pixel().fire(
+            pixel = AppPixelName.APP_LAUNCH,
+            parameters = paramsMap,
+        )
+        pixel().fire(
+            pixel = AppPixelName.PRODUCT_TELEMETRY_SURFACE_DAU,
+        )
+        pixel().fire(
+            pixel = AppPixelName.PRODUCT_TELEMETRY_SURFACE_DAU_DAILY,
+            type = Pixel.PixelType.Daily(),
+        )
+
+        // verified app launch pixel
+        if (isVerifiedPlayStoreInstall() && !customTabDetector.isCustomTab()) {
+            pixel().fire(
+                pixel = AppPixelName.APP_LAUNCH_VERIFIED_INSTALL,
+                parameters = paramsMap,
+            )
+        }
+    }
+
+    private fun isDuckDuckGoAppPackage(applicationId: String): String {
+        return (applicationId == "com.duckduckgo.mobile.android" || applicationId == "com.duckduckgo.mobile.android.debug").toString()
+    }
+
+    suspend fun submitUnsentFirePixels() {
+        withContext(dispatchers.io()) {
+            val pendingPixelCounts = unsentForgetAllPixelStore.pendingPixelCountsClearData
+            logcat(INFO) { "Found ${pendingPixelCounts.values.sum()} unsent clear data pixels" }
+            if (pendingPixelCounts.values.any { it > 0 }) {
+                pixel().fire(
+                    AppPixelName.FORGET_ALL_EXECUTED_DAILY,
+                    type = Pixel.PixelType.Daily(),
+                )
+            }
+            pendingPixelCounts.forEach { (mode, count) ->
+                if (count <= 0) return@forEach
+                val params = mapOf(Pixel.PixelParameter.BROWSER_MODE to mode.name.lowercase())
+                for (i in 1..count) {
+                    pixel().fire(AppPixelName.FORGET_ALL_EXECUTED, params)
+                }
+                val dailyPixel = when (mode) {
+                    BrowserMode.REGULAR -> AppPixelName.FORGET_ALL_EXECUTED_REGULAR_DAILY
+                    BrowserMode.FIRE -> AppPixelName.FORGET_ALL_EXECUTED_FIRE_DAILY
+                }
+                pixel().fire(dailyPixel, type = Pixel.PixelType.Daily())
+                unsentForgetAllPixelStore.resetCount(mode)
+            }
+        }
+    }
+
+    companion object {
+        private const val WORKER_SEND_ENQUEUED_PIXELS = "com.duckduckgo.pixels.enqueued.worker"
+
+        private fun scheduleWorker(workManager: WorkManager) {
+            logcat(VERBOSE) { "Scheduling the EnqueuedPixelWorker" }
+
+            val request = PeriodicWorkRequestBuilder<RealEnqueuedPixelWorker>(2, TimeUnit.HOURS)
+                .addTag(WORKER_SEND_ENQUEUED_PIXELS)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+                .build()
+
+            workManager.enqueueUniquePeriodicWork(WORKER_SEND_ENQUEUED_PIXELS, ExistingPeriodicWorkPolicy.KEEP, request)
+        }
+    }
+}
+
+@ContributesWorker(AppScope::class)
+class RealEnqueuedPixelWorker(
+    val context: Context,
+    parameters: WorkerParameters,
+) : CoroutineWorker(context, parameters) {
+    @Inject
+    lateinit var pixel: Pixel
+
+    @Inject
+    lateinit var enqueuedPixelWorker: EnqueuedPixelWorker
+
+    override suspend fun doWork(): Result {
+        logcat(VERBOSE) { "Sending enqueued pixels" }
+
+        enqueuedPixelWorker.submitUnsentFirePixels()
+
+        return Result.success()
+    }
+}

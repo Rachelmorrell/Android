@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">Neizdevās lejupielādēt. Pārbaudi interneta savienojumu.</string>
+
+    <string name="notificationChannelFileDownloading">Failu lejupielāde</string>
+    <string name="notificationChannelFileDownloaded">Fails lejupielādēts</string>
+
+    <string name="downloadInProgress">Lejupielāde</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">%1$s lejupielāde sākta</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">%1$s lejupielāde pabeigta</string>
+    <string name="downloadsDownloadGenericErrorMessage">Neizdevās lejupielādēt.</string>
+    <string name="downloadsCancel">Atcelt</string>
+    <string name="downloadsRetry">Mēģināt vēlreiz</string>
+    <string name="notificationDownloadComplete">Lejupielāde pabeigta.</string>
+    <string name="notificationDownloadFailed">Neizdevās lejupielādēt.</string>
+
+    <string name="downloadConfirmationContinue">Lejupielādēt</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">No: %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Dzēst visus</string>
+    <string name="downloadsActivityNoItemsDescription">Vēl nav lejupielādēts neviens fails</string>
+    <string name="downloadsActivityTitle">Lejupielādes</string>
+    <string name="downloadsAllFilesDeletedMessage">Visi faili izdzēsti</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Nevar atvērt failu. Pārbaudīt saderīgu lietotni.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">Izdzēsts %1$s</string>
+    <string name="downloadsFileNotFoundErrorMessage">Fails vairs nepastāv</string>
+    <string name="downloadsItemMenuCancel">Atcelt</string>
+    <string name="downloadsItemMenuDelete">Dzēst</string>
+    <string name="downloadsItemMenuShare">Kopīgot</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">Citas iespējas %1$s</string>
+    <string name="downloadsNotifyMeSubtitle">Saņem paziņojumu, kad lejupielāde ir pabeigta.</string>
+    <string name="downloadsNotifyMeTitle">Uzzini, kad lejupielādes ir gatavas</string>
+    <string name="downloadsShareTitle">Kopīgot ar…</string>
+    <string name="downloadsStateInProgress">Notiek...</string>
+    <string name="downloadsUndoActionName">Atsaukt</string>
+    <string name="downloadsSearchHint">Meklēt</string>
+</resources>

@@ -1,0 +1,90 @@
+/*
+ * Copyright (c) 2023 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.browser.api.ui
+
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+
+/**
+ * Model that represents the Browser Screens hosted inside :app module that can be launched from other modules.
+ */
+sealed class BrowserScreens {
+
+    /**
+     * Use this model to launch the standalone WebView
+     */
+    data class WebViewActivityWithParams(
+        val url: String,
+        val screenTitle: String,
+        val supportNewWindows: Boolean = false,
+    ) : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the Bookmarks screen
+     */
+    data object BookmarksScreenNoParams : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the Settings screen
+     */
+    data object SettingsScreenNoParams : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the New Tab Settings screen
+     */
+    data object NewTabSettingsScreenNoParams : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the PrivateSearch screen
+     */
+    data object PrivateSearchScreenNoParams : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the Tab Switcher screen
+     */
+    data object TabSwitcherScreenNoParams : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the Tab Switcher screen in a specific [browserMode]. When [browserMode]
+     * differs from the active mode, the Tab Switcher switches to it on open. Use [TabSwitcherScreenNoParams]
+     * to open in the current mode.
+     */
+    data class TabSwitcherScreenWithParams(val browserMode: BrowserMode) : GlobalActivityStarter.ActivityParams
+
+    /**
+     * Use this model to launch the standalone PDF viewer for a PDF at [cachedFileUri], displaying [fileName]
+     * in the toolbar. Check [com.duckduckgo.browser.api.pdf.PdfViewerAvailability] before launching this screen.
+     *
+     * [source] identifies where the open came from: it gates the external-open pixels (fired only for
+     * [PdfViewerSource.EXTERNAL_INTENT]) and the back-navigation target (external opens land in the browser,
+     * in-app opens return to the launching screen).
+     */
+    data class PdfViewerActivityParams(
+        val cachedFileUri: String,
+        val fileName: String,
+        val source: PdfViewerSource,
+    ) : GlobalActivityStarter.ActivityParams
+
+    /** Where a [PdfViewerActivityParams] open originated. */
+    enum class PdfViewerSource {
+        /** Opened from another app via the system "Open with" handler. */
+        EXTERNAL_INTENT,
+
+        /** Opened in-app from the Downloads screen. */
+        DOWNLOADS,
+    }
+}

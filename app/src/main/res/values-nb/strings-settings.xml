@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="showExperimentalBrowserMenu">Eksperimentell nettlesermeny</string>
+
+    <!-- Inactivity timeout -->
+    <string name="afterInactivityOptionTitle">Etter inaktivitet</string>
+    <string name="afterInactivityTimeoutTitle">Inaktivitetstidtaker</string>
+    <string name="afterInactivityScreenDescription">Velg hva du vil se når du kommer tilbake til DuckDuckGo etter inaktivitet</string>
+    <string name="afterInactivityOptionMessage" instruction="&apos;%1$s&apos; is a placeholder and will be replaced with the number of minutes, e.g. &apos;after 5 minutes of inactivity&apos;">Velg hva du vil se når du kommer tilbake etter %1$s minutter med inaktivitet.</string>
+    <string name="afterInactivityTimeoutAlways">Alltid</string>
+    <string name="afterInactivityTimeout1Minute">1 minutt</string>
+    <string name="afterInactivityTimeoutXMinutes" instruction="&apos;%1$d&apos; is a placeholder and will be replaced with the number of minutes, e.g. &apos;5 minutes&apos;">%1$d minutter</string>
+    <string name="afterInactivityTimeout1Hour">1 time</string>
+    <string name="afterInactivityTimeoutXHours" instruction="&apos;%1$d&apos; is a placeholder and will be replaced with the number of hours, e.g. &apos;2 hours&apos;">%1$d timer</string>
+    <string name="returnToLastTabShortcutSettingTitle">«Gå tilbake til»-snarvei</string>
+    <string name="returnToLastTabShortcutSettingSubtitle">Viser en lenke for å gå tilbake til den sist brukte fanen når du åpner appen igjen etter inaktivitet.</string>
+</resources>

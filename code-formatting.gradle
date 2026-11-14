@@ -1,0 +1,25 @@
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+    ratchetFrom 'origin/develop'
+    kotlin {
+        target 'src/*/kotlin/**/*.kt', 'src/*/java/**/*.kt'
+        ktlint("0.50.0")
+            .setEditorConfigPath("$rootDir/.editorconfig")
+        trimTrailingWhitespace()
+        leadingTabsToSpaces()
+    }
+    java {
+        target 'src/*/java/**/*.java'
+        googleJavaFormat('1.22.0').aosp()
+        targetExclude("**/FragmentStateAdapter.java") // temporary
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        leadingTabsToSpaces()
+    }
+    format 'xml', {
+        target '**/*.xml'
+        leadingTabsToSpaces()
+        trimTrailingWhitespace()
+    }
+}

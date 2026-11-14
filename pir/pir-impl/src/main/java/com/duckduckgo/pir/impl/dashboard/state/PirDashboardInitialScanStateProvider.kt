@@ -1,0 +1,222 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.dashboard.state
+
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.pir.impl.checker.PirRunMode
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.checker.runModeOrNull
+import com.duckduckgo.pir.impl.common.BrokerStepsParser
+import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider.DashboardBrokerWithStatus
+import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider.DashboardBrokerWithStatus.Status.COMPLETED
+import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider.DashboardBrokerWithStatus.Status.IN_PROGRESS
+import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider.DashboardBrokerWithStatus.Status.NOT_STARTED
+import com.duckduckgo.pir.impl.freemium.PirFreeScanBrokerFilter
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord.ScanJobStatus
+import com.duckduckgo.pir.impl.scan.PirForegroundScanServiceMonitor
+import com.duckduckgo.pir.impl.scan.PirScanScheduler
+import com.duckduckgo.pir.impl.store.PirFreemiumDataStore
+import com.duckduckgo.pir.impl.store.PirRepository
+import com.duckduckgo.pir.impl.store.PirSchedulingRepository
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import javax.inject.Inject
+
+interface PirDashboardInitialScanStateProvider {
+    /**
+     * Returns the total number of active brokers (including only currently extant mirrorSites),
+     */
+    suspend fun getActiveBrokersAndMirrorSitesTotal(): Int
+
+    /**
+     * Returns the number of brokers whose all scan jobs have completed
+     * This also includes their currently extant mirrorSites,
+     */
+    suspend fun getFullyCompletedBrokersTotal(): Int
+
+    /**
+     * Returns the brokers that either have:
+     *  - all scan jobs have completed, or
+     *  - at least one scan job completed
+     *
+     *  This also includes currently extant mirrorSites,
+     */
+    suspend fun getAllScannedBrokersStatus(): List<DashboardBrokerWithStatus>
+
+    /**
+     * Returns all results which could either be:
+     * - a valid ExtractedProfile from a scan for an active Broker x ProfileQuery
+     * - a valid ExtractedProfile for a MirrorSite
+     */
+    suspend fun getScanResults(): List<DashboardExtractedProfileResult>
+
+    /**
+     * Checks if the initial foreground scan needs to be restarted. This can happen if
+     * it was interrupted (e.g., by app kill) and there are remaining brokers to scan.
+     */
+    suspend fun shouldRestartInitialScan(): Boolean
+
+    data class DashboardBrokerWithStatus(
+        val broker: DashboardBroker,
+        val status: Status,
+        val firstScanDateInMillis: Long = 0L,
+    ) {
+        /**
+         * A broker is:
+         * - [NOT_STARTED] if no scan has been run for it
+         * - [IN_PROGRESS] if at least one scan has been run for it, but not all scans have completed
+         * - [COMPLETED] if all scans have been run and completed for it
+         */
+        enum class Status(val statusName: String) {
+            NOT_STARTED("not-started"),
+            IN_PROGRESS("in-progress"),
+            COMPLETED("completed"),
+        }
+    }
+}
+
+@ContributesBinding(
+    scope = ActivityScope::class,
+    binding = binding<PirDashboardInitialScanStateProvider>(),
+)
+@SingleIn(ActivityScope::class)
+class RealPirDashboardInitialScanStateProvider @Inject constructor(
+    private val dispatcherProvider: DispatcherProvider,
+    private val currentTimeProvider: CurrentTimeProvider,
+    private val pirRepository: PirRepository,
+    private val pirSchedulingRepository: PirSchedulingRepository,
+    private val brokerStepsParser: BrokerStepsParser,
+    private val pirForegroundScanServiceMonitor: PirForegroundScanServiceMonitor,
+    private val pirScanScheduler: PirScanScheduler,
+    private val pirWorkHandler: PirWorkHandler,
+    private val pirFreeScanBrokerFilter: PirFreeScanBrokerFilter,
+    private val pirFreemiumDataStore: PirFreemiumDataStore,
+) : PirDashboardStateProvider(currentTimeProvider, pirRepository, pirSchedulingRepository),
+    PirDashboardInitialScanStateProvider {
+    override suspend fun getActiveBrokersAndMirrorSitesTotal(): Int = withContext(dispatcherProvider.io()) {
+        val currentTime = currentTimeProvider.currentTimeMillis()
+        val scannableBrokerNames = getScannableActiveBrokerNames()
+        // Take all extant mirror sites whose parent broker can actually be scanned
+        val activeMirrorSites = getAllExtantMirrorSites(currentTime).filter {
+            scannableBrokerNames.contains(it.parentSite)
+        }
+
+        return@withContext scannableBrokerNames.size + activeMirrorSites.size
+    }
+
+    private suspend fun getScannableActiveBrokerNames(): Set<String> {
+        if (pirWorkHandler.canRunPir().firstOrNull().runModeOrNull == PirRunMode.SCAN_ONLY) {
+            return pirFreeScanBrokerFilter.freeScannableBrokerNames()
+        }
+
+        return pirRepository.getAllActiveBrokerObjects().mapNotNullTo(hashSetOf()) { broker ->
+            // Only count brokers whose scan step can actually be parsed and executed. Brokers with unknown
+            // actions in their scan step are silently skipped at scan time, so including them in the total
+            // would cause the dashboard to report the initial scan as incomplete forever.
+            val stepsJson = pirRepository.getBrokerScanSteps(broker.name) ?: return@mapNotNullTo null
+            if (brokerStepsParser.parseStep(broker, stepsJson).isNotEmpty()) broker.name else null
+        }
+    }
+
+    override suspend fun getFullyCompletedBrokersTotal(): Int {
+        return getAllScannedBrokersStatus().filter {
+            it.status == COMPLETED
+        }.size
+    }
+
+    override suspend fun getAllScannedBrokersStatus(): List<DashboardBrokerWithStatus> {
+        // A scan-only user's terminal records for now-gated brokers (e.g. a lapsed subscriber) must not
+        // count here, or progress can exceed the scannable total this same set drives.
+        val runMode = pirWorkHandler.canRunPir().firstOrNull().runModeOrNull
+        val scannableBrokerNames = if (runMode == PirRunMode.SCAN_ONLY) getScannableActiveBrokerNames() else null
+        return getBrokersAndMirrorSitesWithProgressStatus(scannableBrokerNames)
+    }
+
+    override suspend fun getScanResults(): List<DashboardExtractedProfileResult> {
+        return getAllExtractedProfileResults(includeResultsForDeprecatedProfileQueries = false)
+    }
+
+    override suspend fun shouldRestartInitialScan(): Boolean {
+        // Don't resume if a foreground scan is already running
+        if (pirForegroundScanServiceMonitor.isRunning()) {
+            logcat { "PIR-WEB: Scan is already running, no need to resume initial scan" }
+            return false
+        }
+
+        // Don't resume if a scheduled background scan worker is currently running
+        if (pirScanScheduler.isScheduledScanRunning()) {
+            logcat { "PIR-WEB: Scheduled scan worker is running, no need to resume initial scan" }
+            return false
+        }
+
+        // A NOT_EXECUTED record for a broker that can't be scanned (gated for a scan-only user, inactive, or with an
+        // unparseable scan step) never runs, so it must not count here or every dashboard open would resume a scan.
+        val scannableBrokerNames = getScannableActiveBrokerNames()
+        val scanJobs = pirSchedulingRepository.getAllValidScanJobRecords()
+
+        val notExecutedJobs = scanJobs.filter { record ->
+            record.status == ScanJobStatus.NOT_EXECUTED &&
+                record.lastScanDateInMillis == 0L &&
+                record.brokerName in scannableBrokerNames
+        }
+
+        if (notExecutedJobs.isNotEmpty()) {
+            logcat { "PIR-WEB: Found ${notExecutedJobs.size} NOT_EXECUTED jobs, should resume initial scan" }
+            return true
+        }
+
+        if (hasScannableBrokersWithoutScanJobs(scanJobs, scannableBrokerNames)) {
+            logcat { "PIR-WEB: Scannable brokers have no scan jobs, should resume initial scan" }
+            return true
+        }
+
+        logcat { "PIR-WEB: No NOT_EXECUTED jobs found, initial scan is complete" }
+        return false
+    }
+
+    /**
+     * Brokers can count toward the dashboard total with no scan job to resume: a free scan creates none for
+     * subscription-gated brokers, which a free user who subscribes can then scan, and a broker data update can add brokers
+     * after the scan created its jobs. A free user's scan worker is retired once their initial scan finishes, so nothing
+     * else ever scans those brokers. A paid user who never ran a free scan is skipped, as their scheduled scan picks up
+     * added brokers. A profile with no jobs at all is skipped, as the scan that creates its jobs creates them all at once
+     * and is about to run.
+     */
+    private suspend fun hasScannableBrokersWithoutScanJobs(
+        scanJobs: List<ScanJobRecord>,
+        scannableBrokerNames: Set<String>,
+    ): Boolean {
+        if (!pirFreemiumDataStore.didActivate) {
+            return false
+        }
+
+        if (pirWorkHandler.canRunPir().firstOrNull().runModeOrNull == null) {
+            return false
+        }
+
+        return scanJobs.groupBy { it.userProfileId }.values.any { jobsForProfile ->
+            !jobsForProfile.mapTo(hashSetOf()) { it.brokerName }.containsAll(scannableBrokerNames)
+        }
+    }
+}

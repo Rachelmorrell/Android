@@ -18,34 +18,41 @@ package com.duckduckgo.app.surrogates
 
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.LifecycleOwner
 import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.surrogates.store.ResourceSurrogateDataStore
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import timber.log.Timber
+import logcat.LogPriority.VERBOSE
+import logcat.LogPriority.WARN
+import logcat.asLog
+import logcat.logcat
 import java.io.ByteArrayInputStream
 import javax.inject.Inject
 
 @WorkerThread
-@ContributesMultibinding(AppObjectGraph::class)
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<MainProcessLifecycleObserver>(),
+)
 class ResourceSurrogateLoader @Inject constructor(
     @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
     private val resourceSurrogates: ResourceSurrogates,
-    private val surrogatesDataStore: ResourceSurrogateDataStore
-) : LifecycleObserver {
+    private val surrogatesDataStore: ResourceSurrogateDataStore,
+    private val dispatcherProvider: DispatcherProvider,
+) : MainProcessLifecycleObserver {
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    fun onApplicationCreated() {
-        appCoroutineScope.launch { loadData() }
+    override fun onCreate(owner: LifecycleOwner) {
+        appCoroutineScope.launch(dispatcherProvider.io()) { loadData() }
     }
 
     fun loadData() {
-        Timber.v("Loading surrogate data")
+        logcat(VERBOSE) { "Loading surrogate data" }
         if (surrogatesDataStore.hasData()) {
             val bytes = surrogatesDataStore.loadData()
             resourceSurrogates.loadSurrogates(convertBytes(bytes))
@@ -57,7 +64,7 @@ class ResourceSurrogateLoader @Inject constructor(
         return try {
             parse(bytes)
         } catch (e: Throwable) {
-            Timber.w(e, "Failed to parse surrogates file; file may be corrupt or badly formatted")
+            logcat(WARN) { "Failed to parse surrogates file; file may be corrupt or badly formatted: ${e.asLog()}" }
             emptyList()
         }
     }
@@ -74,13 +81,11 @@ class ResourceSurrogateLoader @Inject constructor(
         val functionBuilder = StringBuilder()
 
         existingLines.forEach {
-
             if (it.startsWith("#")) {
                 return@forEach
             }
 
             if (nextLineIsNewRule) {
-
                 with(it.split(" ")) {
                     ruleName = this[0]
                     mimeType = this[1]
@@ -88,7 +93,7 @@ class ResourceSurrogateLoader @Inject constructor(
                 with(ruleName.split("/")) {
                     scriptId = this.last()
                 }
-                Timber.d("Found new surrogate rule: $scriptId - $ruleName - $mimeType")
+                logcat { "Found new surrogate rule: $scriptId - $ruleName - $mimeType" }
                 nextLineIsNewRule = false
                 return@forEach
             }
@@ -99,8 +104,8 @@ class ResourceSurrogateLoader @Inject constructor(
                         scriptId = scriptId,
                         name = ruleName,
                         mimeType = mimeType,
-                        jsFunction = functionBuilder.toString()
-                    )
+                        jsFunction = functionBuilder.toString(),
+                    ),
                 )
 
                 functionBuilder.setLength(0)
@@ -113,7 +118,7 @@ class ResourceSurrogateLoader @Inject constructor(
             functionBuilder.append("\n")
         }
 
-        Timber.d("Processed ${surrogates.size} surrogates")
+        logcat { "Processed ${surrogates.size} surrogates" }
         return surrogates
     }
 

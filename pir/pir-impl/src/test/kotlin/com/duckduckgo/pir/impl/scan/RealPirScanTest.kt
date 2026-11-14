@@ -1,0 +1,500 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.scan
+
+import android.content.Context
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.pir.impl.PirConstants.DEFAULT_PROFILE_QUERIES
+import com.duckduckgo.pir.impl.PirRemoteFeatures
+import com.duckduckgo.pir.impl.callbacks.PirCallbacks
+import com.duckduckgo.pir.impl.common.BrokerStepsParser
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.ScanStep
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStepActions.ScanStepActions
+import com.duckduckgo.pir.impl.common.PirJob.RunType
+import com.duckduckgo.pir.impl.common.PirWebViewCountProvider
+import com.duckduckgo.pir.impl.common.PirWebViewDataCleaner
+import com.duckduckgo.pir.impl.common.RealPirActionsRunner
+import com.duckduckgo.pir.impl.common.RealPirWorkDistributor
+import com.duckduckgo.pir.impl.models.Broker
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord.ScanJobStatus
+import com.duckduckgo.pir.impl.scripts.PirCssScriptLoader
+import com.duckduckgo.pir.impl.store.PirEventsRepository
+import com.duckduckgo.pir.impl.store.PirRepository
+import kotlinx.coroutines.test.runTest
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
+
+class RealPirScanTest {
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private lateinit var testee: RealPirScan
+
+    private val mockRepository: PirRepository = mock()
+    private val mockEventsRepository: PirEventsRepository = mock()
+    private val mockBrokerStepsParser: BrokerStepsParser = mock()
+    private val mockPirCssScriptLoader: PirCssScriptLoader = mock()
+    private val mockPirActionsRunnerFactory: RealPirActionsRunner.Factory = mock()
+    private val mockCurrentTimeProvider: CurrentTimeProvider = mock()
+    private val mockCallbacks: PluginPoint<PirCallbacks> = mock()
+    private val mockPirRemoteFeatures: PirRemoteFeatures = mock()
+    private val mockWorkQueueToggle: Toggle = mock()
+    private val mockContext: Context = mock()
+    private val mockPirActionsRunner: RealPirActionsRunner = mock()
+    private val mockWebViewDataCleaner: PirWebViewDataCleaner = mock()
+    private val mockPirWebViewCountProvider: PirWebViewCountProvider = mock()
+
+    @Before
+    fun setUp() {
+        whenever(mockCallbacks.getPlugins()).thenReturn(emptyList())
+        kotlinx.coroutines.runBlocking { whenever(mockPirWebViewCountProvider.getMaxWebViewCount()).thenReturn(20) }
+
+        whenever(mockPirRemoteFeatures.workQueueScheduling()).thenReturn(mockWorkQueueToggle)
+        whenever(mockWorkQueueToggle.isEnabled()).thenReturn(true)
+
+        testee = RealPirScan(
+            repository = mockRepository,
+            eventsRepository = mockEventsRepository,
+            brokerStepsParser = mockBrokerStepsParser,
+            pirCssScriptLoader = mockPirCssScriptLoader,
+            pirActionsRunnerFactory = mockPirActionsRunnerFactory,
+            currentTimeProvider = mockCurrentTimeProvider,
+            dispatcherProvider = coroutineRule.testDispatcherProvider,
+            pirWorkDistributor = RealPirWorkDistributor(mockPirRemoteFeatures),
+            callbacks = mockCallbacks,
+            webViewDataCleaner = mockWebViewDataCleaner,
+            pirWebViewCountProvider = mockPirWebViewCountProvider,
+        )
+    }
+
+    // Test data
+    private val testCurrentTime = 1000L
+    private val testBrokerName = "test-broker"
+    private val testBrokerName2 = "test-broker-2"
+    private val testScript = "test-script-content"
+    private val testStepsJson = """{"stepType":"scan","actions":[]}"""
+
+    private val testBroker1 = Broker(
+        name = testBrokerName,
+        fileName = "test-broker-1.json",
+        url = "https://test-broker-1.com",
+        version = "1.0",
+        parent = null,
+        addedDatetime = testCurrentTime,
+        removedAt = 0L,
+    )
+
+    private val testBroker2 = testBroker1.copy(
+        name = testBrokerName2,
+    )
+    private val testProfileQuery = ProfileQuery(
+        id = 123L,
+        firstName = "John",
+        lastName = "Doe",
+        city = "New York",
+        state = "NY",
+        addresses = emptyList(),
+        birthYear = 1990,
+        fullName = "John Doe",
+        age = 33,
+        deprecated = false,
+    )
+
+    private val testProfileQuery2 = ProfileQuery(
+        id = 456L,
+        firstName = "Jane",
+        lastName = "Smith",
+        city = "Chicago",
+        state = "IL",
+        addresses = emptyList(),
+        birthYear = 1985,
+        fullName = "Jane Smith",
+        age = 38,
+        deprecated = false,
+    )
+
+    private val testUserProfileQueries = listOf(testProfileQuery, testProfileQuery2)
+
+    private val testScanJobRecord = ScanJobRecord(
+        brokerName = testBrokerName,
+        userProfileId = testProfileQuery.id,
+        status = ScanJobStatus.NOT_EXECUTED,
+        lastScanDateInMillis = 0L,
+    )
+
+    private val testScanJobRecord2 = ScanJobRecord(
+        brokerName = testBrokerName2,
+        userProfileId = testProfileQuery2.id,
+        status = ScanJobStatus.NOT_EXECUTED,
+        lastScanDateInMillis = 0L,
+    )
+
+    private val testScanStep = ScanStep(
+        broker = testBroker1,
+        step = ScanStepActions(
+            stepType = "scan",
+            actions = emptyList(),
+            scanType = "data",
+        ),
+    )
+
+    private val testScanStep2 = ScanStep(
+        broker = testBroker2,
+        step = ScanStepActions(
+            stepType = "scan",
+            actions = emptyList(),
+            scanType = "data",
+        ),
+    )
+
+    @Test
+    fun whenEmptyJobRecordsThenDontCreateRunners() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(emptyList(), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockBrokerStepsParser)
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenNoBrokerScanStepsThenDontCreateRunners() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(null)
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenBrokerStepsParsingReturnsEmptyThenDontCreateRunners() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(emptyList())
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenNoRelevantProfilesThenDontCreateRunners() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(emptyList())
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenNoRelevantProfilesUsesDefaultProfileQueries() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL)).thenReturn(mockPirActionsRunner)
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        val jobRecordWithDefaultProfile = testScanJobRecord.copy(userProfileId = DEFAULT_PROFILE_QUERIES[0].id)
+
+        // When
+        testee.executeScanForJobs(listOf(jobRecordWithDefaultProfile), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verify(mockPirCssScriptLoader).getScript()
+        verify(mockPirActionsRunnerFactory).create(mockContext, testScript, RunType.MANUAL)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenJobRecordHasNoMatchingProfileThenSkipsRecord() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        val unknownProfileJobRecord = testScanJobRecord.copy(userProfileId = 999L)
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(unknownProfileJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenJobRecordHasNoMatchingBrokerStepThenSkipsRecord() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        val unknownBrokerJobRecord = testScanJobRecord.copy(brokerName = "unknown-broker")
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps("unknown-broker")).thenReturn(null)
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(0)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(unknownBrokerJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verifyNoInteractions(mockPirCssScriptLoader)
+        verifyNoInteractions(mockPirActionsRunnerFactory)
+        verifyNoInteractions(mockPirActionsRunner)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenValidJobRecordThenExecutesScan() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL)).thenReturn(mockPirActionsRunner)
+        whenever(mockPirActionsRunner.execute(testProfileQuery, testScanStep)).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verify(mockPirCssScriptLoader).getScript()
+        verify(mockPirActionsRunnerFactory).create(mockContext, testScript, RunType.MANUAL)
+        verify(mockPirActionsRunner).execute(testProfileQuery, testScanStep)
+        verify(mockPirActionsRunner).stop()
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenFreeScanThenRunnerExecutesScanStepMarkedAsFree() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL)).thenReturn(mockPirActionsRunner)
+        val freeScanStep = testScanStep.copy(isFreeScan = true)
+        whenever(mockPirActionsRunner.execute(testProfileQuery, freeScanStep)).thenReturn(Result.success(Unit))
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = true)
+
+        // Then
+        verify(mockPirActionsRunner).execute(testProfileQuery, freeScanStep)
+    }
+
+    @Test
+    fun whenMultipleValidJobRecordsThenExecutesAllScans() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1, testBroker2))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName2)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockBrokerStepsParser.parseStep(testBroker2, testStepsJson)).thenReturn(listOf(testScanStep2))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL))
+            .thenReturn(mockPirActionsRunner, mock<RealPirActionsRunner>())
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(2)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord, testScanJobRecord2), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verify(mockRepository).getBrokerScanSteps(testBrokerName)
+        verify(mockRepository).getBrokerScanSteps(testBrokerName2)
+        verify(mockBrokerStepsParser).parseStep(testBroker1, testStepsJson)
+        verify(mockBrokerStepsParser).parseStep(testBroker2, testStepsJson)
+        verify(mockPirCssScriptLoader).getScript()
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenDuplicateBrokerNamesThenParsesBrokerStepsOnlyOnce() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        val duplicateJobRecord = testScanJobRecord.copy(userProfileId = testProfileQuery2.id)
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL))
+            .thenReturn(mockPirActionsRunner, mock<RealPirActionsRunner>())
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(2)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord, duplicateJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        // Verify broker steps parsed only once for the same broker name
+        verify(mockRepository).getBrokerScanSteps(testBrokerName)
+        verify(mockBrokerStepsParser).parseStep(testBroker1, testStepsJson)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenExecuteScanForJobsWithScheduledRunTypeThenUsesScheduledPixels() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.SCHEDULED)).thenReturn(mockPirActionsRunner)
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.SCHEDULED, isFreeScan = false)
+
+        // Then
+        verify(mockPirActionsRunnerFactory).create(mockContext, testScript, RunType.SCHEDULED)
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenExecuteScanForJobsThenCleansUpPreviousRun() = runTest {
+        // Given
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL)).thenReturn(mockPirActionsRunner)
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+
+        // Then
+        verify(mockEventsRepository).deleteAllScanResults()
+        verify(mockWebViewDataCleaner).cleanWebViewData()
+    }
+
+    @Test
+    fun whenStopThenCallsStopOnAllRunners() = runTest {
+        whenever(mockRepository.getAllActiveBrokerObjects()).thenReturn(listOf(testBroker1))
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(testCurrentTime)
+        whenever(mockRepository.getBrokerScanSteps(testBrokerName)).thenReturn(testStepsJson)
+        whenever(mockBrokerStepsParser.parseStep(testBroker1, testStepsJson)).thenReturn(listOf(testScanStep))
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(testUserProfileQueries)
+        whenever(mockPirCssScriptLoader.getScript()).thenReturn(testScript)
+        whenever(mockPirActionsRunnerFactory.create(mockContext, testScript, RunType.MANUAL)).thenReturn(mockPirActionsRunner)
+        whenever(mockPirActionsRunner.execute(any(), any())).thenReturn(Result.success(Unit))
+
+        whenever(mockEventsRepository.getScanSuccessResultsCount()).thenReturn(1)
+        whenever(mockEventsRepository.getScanErrorResultsCount()).thenReturn(0)
+
+        // When
+        testee.executeScanForJobs(listOf(testScanJobRecord), mockContext, RunType.MANUAL, isFreeScan = false)
+        testee.stop()
+
+        verify(mockPirActionsRunner, times(2)).stop()
+        verify(mockWebViewDataCleaner, times(2)).cleanWebViewData()
+    }
+}

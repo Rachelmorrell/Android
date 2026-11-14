@@ -1,0 +1,166 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.survey.rmf
+
+import com.duckduckgo.app.global.install.AppInstallStore
+import com.duckduckgo.app.global.install.daysInstalled
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.duckduckgo.app.survey.ui.SurveyActivity.Companion.SurveySource.IN_APP
+import com.duckduckgo.app.usage.app.AppDaysUsedRepository
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.feature.toggles.api.FeatureTogglesInventory
+import com.duckduckgo.history.api.HistoryEntry
+import com.duckduckgo.history.api.NavigationHistory
+import com.duckduckgo.survey.api.SurveyParameterPlugin
+import dev.zacsweers.metro.ContributesIntoSet
+import kotlinx.coroutines.flow.firstOrNull
+import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+
+@ContributesIntoSet(AppScope::class)
+class AtbSurveyParameterPlugin @Inject constructor(
+    private val statisticsStore: StatisticsDataStore,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "atb"
+
+    override suspend fun evaluate(paramKey: String): String = statisticsStore.atb?.version ?: ""
+}
+
+@ContributesIntoSet(AppScope::class)
+class AtbVariantSurveyParameterPlugin @Inject constructor(
+    private val statisticsStore: StatisticsDataStore,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "var"
+
+    override suspend fun evaluate(paramKey: String): String = statisticsStore.variant ?: ""
+}
+
+@ContributesIntoSet(AppScope::class)
+class DaysInstalledSurveyParameterPlugin @Inject constructor(
+    private val appInstallStore: AppInstallStore,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "delta"
+
+    override suspend fun evaluate(paramKey: String): String = "${appInstallStore.daysInstalled()}"
+}
+
+@ContributesIntoSet(AppScope::class)
+class AndroidVersionSurveyParameterPlugin @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "av"
+
+    override suspend fun evaluate(paramKey: String): String = "${appBuildConfig.sdkInt}"
+}
+
+@ContributesIntoSet(AppScope::class)
+class AppVersionSurveyParameterPlugin @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "ddgv"
+
+    override suspend fun evaluate(paramKey: String): String = appBuildConfig.versionName
+}
+
+@ContributesIntoSet(AppScope::class)
+class ManufacturerSurveyParameterPlugin @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "man"
+
+    override suspend fun evaluate(paramKey: String): String = appBuildConfig.manufacturer
+}
+
+@ContributesIntoSet(AppScope::class)
+class ModelSurveyParameterPlugin @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "mo"
+
+    override suspend fun evaluate(paramKey: String): String = appBuildConfig.model
+}
+
+@ContributesIntoSet(AppScope::class)
+class SourceSurveyParameterPlugin @Inject constructor() : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "src"
+
+    override suspend fun evaluate(paramKey: String): String = IN_APP.name.lowercase()
+}
+
+@ContributesIntoSet(AppScope::class)
+class LastActiveDateSurveyParameterPlugin @Inject constructor(
+    private val appDaysUsedRepository: AppDaysUsedRepository,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "da"
+
+    override suspend fun evaluate(paramKey: String): String = appDaysUsedRepository.getLastActiveDay()
+}
+
+@ContributesIntoSet(AppScope::class)
+class LocaleSurveyParameterPlugin @Inject constructor(
+    private val appBuildConfig: AppBuildConfig,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "locale"
+
+    override suspend fun evaluate(paramKey: String): String = "${appBuildConfig.deviceLocale.language}-${appBuildConfig.deviceLocale.country}"
+}
+
+@ContributesIntoSet(AppScope::class)
+class CohortSurveyParameterPlugin @Inject constructor(
+    private val featureTogglesInventory: FeatureTogglesInventory,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey.contains("cohort_")
+
+    override suspend fun evaluate(paramKey: String): String {
+        val experimentName = paramKey.split("_").getOrNull(1)
+        if (experimentName.isNullOrBlank()) return ""
+
+        val matchingExperiment = featureTogglesInventory
+            .getAllActiveExperimentToggles()
+            .firstOrNull { it.featureName().name == experimentName }
+
+        return matchingExperiment?.let {
+            "${it.featureName().name}_${it.getCohort()?.name}"
+        }.orEmpty()
+    }
+}
+
+@ContributesIntoSet(AppScope::class)
+class LastSearchStateSurveyParameterPlugin @Inject constructor(
+    private val navigationHistory: NavigationHistory,
+    private val currentTimeProvider: CurrentTimeProvider,
+) : SurveyParameterPlugin {
+    override fun matches(paramKey: String): Boolean = paramKey == "last_search_state"
+
+    override suspend fun evaluate(paramKey: String): String {
+        val history = navigationHistory.getHistory().firstOrNull() ?: return "none"
+        val mostRecentSearch = history
+            .filterIsInstance<HistoryEntry.VisitedSERP>()
+            .flatMap { it.visits }
+            .maxOrNull() ?: return "none"
+
+        val daysSinceLastSearch = ChronoUnit.DAYS.between(mostRecentSearch, currentTimeProvider.localDateTimeNow())
+
+        return when {
+            daysSinceLastSearch < 2 -> "day"
+            daysSinceLastSearch <= 7 -> "week"
+            else -> "none"
+        }
+    }
+}

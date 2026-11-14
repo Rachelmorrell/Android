@@ -19,26 +19,29 @@ package com.duckduckgo.app.di
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.app.job.JobWorkItem
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesTo
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
 @ContributesTo(
-    scope = AppObjectGraph::class,
-    replaces = [JobsModule::class]
+    scope = AppScope::class,
+    replaces = [JobsModule::class],
 )
 class StubJobSchedulerModule {
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
     fun providesJobScheduler(): JobScheduler {
         return object : JobScheduler() {
-            override fun enqueue(job: JobInfo, work: JobWorkItem): Int = JobScheduler.RESULT_SUCCESS
+            override fun enqueue(
+                job: JobInfo,
+                work: JobWorkItem,
+            ): Int = RESULT_SUCCESS
 
-            override fun schedule(job: JobInfo): Int = JobScheduler.RESULT_SUCCESS
+            override fun schedule(job: JobInfo): Int = RESULT_SUCCESS
 
             override fun cancel(jobId: Int) {}
 
@@ -47,7 +50,6 @@ class StubJobSchedulerModule {
             override fun getAllPendingJobs(): MutableList<JobInfo> = mutableListOf()
 
             override fun getPendingJob(jobId: Int): JobInfo? = null
-
         }
     }
 }

@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Tühista</string>
+    <string name="ok">OK</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">DuckDuckGo tellimus</string>
+    <string name="manageEmail">Halda e-posti</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Tagasi seadete juurde</string>
+    <string name="somethingWentWrong">Midagi läks valesti</string>
+    <string name="somethingWentWrongDescription">Google Play ei suutnud su ostu töödelda. Proovi hiljem uuesti.</string>
+    <string name="youAreSet">Kõik on valmis.</string>
+    <string name="viewPlans">Kuva plaane</string>
+    <string name="subscriptionNotFound">Tellimust ei leitud</string>
+    <string name="subscriptionNotFoundDescription">Selle Google Play kontoga seotud tellimus ei ole enam aktiivne.</string>
+    <string name="purchaseRestored">Sinu ostud on taastatud.</string>
+    <string name="restoreSubscriptionTitle">Lisa oma tellimus sellele seadmele</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Lisa Google Play konto kaudu</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Taastage oma tellimus Android-seadmetes, kasutades oma Google Play kontot.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Taasta ost</string>
+    <string name="restoreSubscriptionEmailTitle">Lisa e-posti kaudu</string>
+    <string name="restoreSubscriptionEmailDescription">Seo e-posti aadress oma tellimusega, et lisada see sellesse seadmesse.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Alustage</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Eemalda tellimus</string>
+    <string name="subscriptionRemoved">Sinu tellimus on sellest seadmest eemaldatud</string>
+    <string name="removeFromDevice">Kas soovid sellest seadmest eemaldada?</string>
+    <string name="removeFromDeviceDescription">Sa ei pääse enam selles seadmes oma tellimusele ligi. See ei tühista su tellimust ja see jääb teistel seadmetel aktiivseks.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Sinu igakuine tellimus %1$s kuupäeval %2$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Sinu aastane tellimus %1$s kuupäeval %2$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Sinu tellimus aegus kuupäeval %1$s.</string>
+    <string name="monthlySubscription">Igakuine tellimus</string>
+    <string name="yearlySubscription">Aastane tellimus</string>
+    <string name="renews">uueneb</string>
+    <string name="expires">aegub</string>
+    <string name="activateOnOtherDevices">Lisage oma tellimus teistele seadmetele</string>
+    <string name="addToDevicePrimaryText">Lisa seadmele</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Lisa oma tellimus oma teistesse seadmetesse Google Play kaudu või e-posti aadressi sidumisega.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">Kasutage ülaltoodud e-posti aadressi, et lisada oma tellimus teistesse seadmetesse DuckDuckGo rakenduses. Mine jaotisse Seaded &gt; Tellimisseaded &gt; Mul on tellimus.</string>
+    <string name="editEmailPrimaryText">Muuda e-posti</string>
+    <string name="learnMore">Loe edasi</string>
+    <string name="privacyProFaq">Kas vajad abi oma tellimusega?</string>
+    <string name="privacyProFaqSecondary">Saa vastused korduma kippuvatele küsimustele või võta ühendust tellimuse toega meie abilehtedelt. Funktsioonide kättesaadavus varieerub riigiti.</string>
+    <string name="subscriptionStatusSubscribed">Tellitud</string>
+    <string name="privacyPolicyAndTermsOfService">Privaatsuspoliitika ja teenusetingimused</string>
+    <string name="subscriptionStatusFreeTrial">Tasuta prooviperiood aktiveeritud</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Teie tasuta prooviperiood lõpeb %1$s ja muutub sel päeval automaatselt tasuliseks kuutellimuseks.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Teie tasuta prooviperiood lõpeb %1$s ja muutub sel päeval automaatselt tasuliseks aastatellimuseks.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Teie tasuta prooviperiood lõpeb %1$s ega muutu tasuliseks tellimuseks.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Tellimuse seaded</string>
+    <string name="subscriptionSettingSubscribe">Kaitse oma ühendust ja identiteeti ühe tellimusega.</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Tellijad saavad meie VPN-i ja teenused Personal Information Removal ning Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Tellijad saavad meie VPN-i ja teenuse Identity Theft Restoration.</string>
+
+    <string name="subscriptionSettingGet">Telli DuckDuckGo</string>
+    <string name="subscriptionSettingTryFreeTrial">Proovi tasuta</string>
+    <string name="subscriptionSettingRestore">Mul on tellimus</string>
+    <string name="subscriptionSettingExpired">Sinu DuckDuckGo tellimus aegus</string>
+    <string name="subscriptionSettingExpiredViewPlans">Kuva plaane</string>
+    <string name="subscriptionSettingSectionSubscription">Püsitellimus</string>
+    <string name="subscriptionSettingRemoveFromDevice">Eemalda sellest seadmest</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Abi ja tugi</string>
+    <string name="subscriptionSettingSendFeedback">Saada tagasisidet</string>
+    <string name="subscriptionSettingActivating">Aktiveerimine</string>
+    <string name="subscriptionSettingManagePlan">Makse haldamine</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Kõik on valmis.</string>
+    <string name="purchaseCompletedText">Sinu ost oli edukas.</string>
+    <string name="purchaseRecoveredText">Sul oli juba tellimus ja oleme selle sinu jaoks taastanud.</string>
+    <string name="purchaseErrorTitle">Midagi läks valesti</string>
+    <string name="purchaseError">Meil on probleeme ühenduse loomisega. Proovi hiljem uuesti.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Uuenda plaani või loobu</string>
+    <string name="changePlanDescription">Teie tellimus osteti Apple\'i App Store\'i kaudu. Paketi või arvelduse seadistuste muutmiseks avage jaotis Seaded &gt; Apple\'i konto &gt; Tellimused seadmel, mis on sisse logitud sama Apple\'i kontoga, millelt ostsite oma tellimuse.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Avatud</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Faili ei saa avada. Otsi ühilduvat rakendust.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Saada tagasisidet</string>
+    <string name="feedbackActionHeader">VALI KATEGOORIA</string>
+    <string name="feedbackActionReportIssue">Teata probleemist</string>
+    <string name="feedbackActionGeneralFeedback">Üldine tagasiside</string>
+    <string name="feedbackActionFeatureRequest">Funktsiooni taotlemine</string>
+
+    <string name="feedbackGeneralHeader">VALI KATEGOORIA</string>
+    <string name="feedbackGeneralBrowser">Brauseri tagasiside</string>
+    <string name="feedbackGeneralPpro">Privacy Pro</string>
+
+    <string name="feedbackCategoryHeader">VALI KATEGOORIA</string>
+    <string name="feedbackCategorySubscription">Tellimused ja maksed</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">VALI KATEGOORIA</string>
+
+    <string name="feedbackSubCategoryVpnConnection">VPN ei suuda ühendust luua</string>
+    <string name="feedbackSubCategoryVpnSlow">VPN-ühendus on liiga aeglane</string>
+    <string name="feedbackSubCategoryVpnOtherApps">VPN tekitab probleeme teiste rakenduste või veebisaitidega</string>
+    <string name="feedbackSubCategoryVpnIot">VPN ei lase mul kohaliku seadmega ühendada</string>
+    <string name="feedbackSubCategoryVpnCrash">VPN põhjustab veebilehitseja kokkujooksmise või hangumise</string>
+    <string name="feedbackSubCategoryVpnOther">Muu</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">Teave pole konkreetsel saidil</string>
+    <string name="feedbackSubCategoryPirNotMe">Kirjed ei kuulu kasutajale</string>
+    <string name="feedbackSubCategoryPirScanStuck">Skannimine on takerdunud</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Eemaldamine on takerdunud</string>
+    <string name="feedbackSubCategoryPirOther">Muu</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Probleem pääsukoodiga</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Ei saa kontakteeruda nõustajaga</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Nõustajale helistamine ei aita</string>
+    <string name="feedbackSubCategoryItrOther">Muu</string>
+
+    <string name="feedbackSubCategorySubsOtp">Probleem ühekordse parooliga</string>
+    <string name="feedbackSubCategorySubsOther">Midagi muud</string>
+
+    <string name="feedbackSubmitVpnHeader">Kas leidsid probleemi, mida meie <annotation type="faqs_link">abikeskuses</annotation> ei käsitleta? Me tahame sellest kindlasti teada saada.</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Ütle meile, mis toimub...</string>
+    <string name="feedbackSubmitVpnDisclaimer">"Lisaks eespool sisestatud andmetele saadame koos sinu tagasisidega ka mõned anonüümsed andmed:\n\n• Kas mõned brauseri funktsioonid on aktiivsed\n• Rakenduse koonddiagnostika (nt veakoodid)\n\nVajutades nuppu Saada, nõustud, et DuckDuckGo võib kasutada esitatud teavet rakenduse täiustamiseks."</string>
+    <string name="feedbackSubmitVpnSubmit">Esita</string>
+    <string name="feedbackSubmitCompletedMessage">Aitäh! Tagasiside on esitatud.</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Palun anna meile tagasisidet...</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Millist funktsiooni soovid näha?</string>
+    <string name="feedbackSubmitContactSupport">Kas vajad abi? <annotation type="support_link">Võta ühendust tugiteenusega</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Tellimused</string>
+    <string name="activitySubscriptionSettings">Tellimuse seaded</string>
+    <string name="activityActivateSubscription">Mul on tellimus</string>
+    <string name="activitySendFeedback">Saada tagasisidet</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Tellijad saavad meie VPN-i, täiustatud tehisintellekti mudelid Duck.ai-s ja teenused Personal Information Removal ning Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Tellijad saavad meie VPN-i, täiustatud tehisintellekti mudelid Duck.ai-s ja teenuse Identity Theft Restoration.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Ei pääse ainult tellijatele mõeldud Duck.ai mudelitele ligi</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Ei pääse Duck.ai-le teistes brauserites oma tellimusega ligi</string>
+    <string name="feedbackSubCategoryDuckAiOther">Muu Duck.ai tagasiside</string>
+
+    <string name="subscriptionSettingSectionTitle">DuckDuckGo tellimus</string>
+    <string name="subscriptionSettingSubscribeSecure">Muuda oma Wi-Fi turvaliseks ja vestle privaatselt täiustatud tehisintellekti mudelitega</string>
+
+    <string name="feedbackGeneralSubscription">Püsitellimus</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Ei saa Plus või Pro taseme funktsioonidele ligi pääseda</string>
+    <string name="subscriptionsProUpgradeTitle">Mine üle Pro-le</string>
+    <string name="subscriptionsProUpgradeMessage">Vabasta võimsam tehisintellekt</string>
+    <string name="subscriptionSettingSectionManageSubscription">Tellimuse haldamine</string>
+    <string name="subscriptionSettingViewAllPlans">Vaata kõiki plaane</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Makse haldamine või tühistamine</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">Sinu pakett alandatakse plaanile %1$s kuupäeval %2$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Sinu plaan uuendatakse plaanile %1$s kuupäeval %2$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Sinu pakett alandatakse plaanile %1$s kuupäeval %2$s.</string>
+    <string name="planNamePlusMonthly">Plus Monthly</string>
+    <string name="planNamePlusYearly">Plus Yearly</string>
+    <string name="planNameProMonthly">Pro Monthly</string>
+    <string name="planNameProYearly">Pro Yearly</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Tellimus on aegunud</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Tellimus on aktiivne</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Tagane lepingust</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">Sa võid taganeda ja saada kogu raha tagasi kuni %1$s</string>
+    <string name="subscriptionWithdrawDialogTitle">Kas soovid tellimusest loobuda?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">Sinu %1$s tellimus lõpeb kohe ja %2$s tagastatakse 14 päeva jooksul sinu algsele makseviisile.\n\nVPN, Personal Information Removal ja Duck.ai täiustatud mudelid lakkavad töötamast, kui oled kinnitanud.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Kinnita väljamakse</string>
+    <string name="subscriptionWithdrawDialogKeep">Jäta tellimus alles</string>
+    <string name="subscriptionStatusNotSubscribed">Pole tellitud</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">Sa taganesid %1$s.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">Sinu %1$s tagasimakset töödeldakse.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">Sinu tagasimakset töödeldakse.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">Me ei saanud sinu taganemisavaldust automaatselt töödelda. Palun mine <annotation type="withdrawal_help_link">sellele lehele</annotation>, et taganemine lõpule viia.</string>
+
+</resources>

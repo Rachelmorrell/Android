@@ -16,45 +16,39 @@
 
 package com.duckduckgo.app.di
 
-import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.WorkManager
-import com.duckduckgo.app.email.db.EmailDataStore
+import com.duckduckgo.app.fire.AutomaticDataClearing
+import com.duckduckgo.app.notification.*
 import com.duckduckgo.app.notification.AndroidNotificationScheduler
-import com.duckduckgo.app.notification.AppNotificationSender
-import com.duckduckgo.app.notification.NotificationFactory
 import com.duckduckgo.app.notification.NotificationScheduler
-import com.duckduckgo.app.notification.NotificationSender
 import com.duckduckgo.app.notification.db.NotificationDao
 import com.duckduckgo.app.notification.model.ClearDataNotification
 import com.duckduckgo.app.notification.model.PrivacyProtectionNotification
-import com.duckduckgo.app.notification.model.WaitlistCodeNotification
+import com.duckduckgo.app.notification.model.SchedulableNotificationPlugin
 import com.duckduckgo.app.privacy.db.PrivacyProtectionCountDao
-import com.duckduckgo.app.settings.db.SettingsDataStore
-import com.duckduckgo.app.statistics.pixels.Pixel
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module(includes = [DaoModule::class])
-class NotificationModule {
-
-    @Provides
-    @Singleton
-    fun provideNotificationManager(context: Context): NotificationManager {
-        return context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    }
+@BindingContainer
+@ContributesTo(AppScope::class)
+object NotificationModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun provideNotificationManagerCompat(context: Context): NotificationManagerCompat {
         return NotificationManagerCompat.from(context)
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun provideLocalBroadcastManager(context: Context): LocalBroadcastManager {
         return LocalBroadcastManager.getInstance(context)
     }
@@ -63,58 +57,61 @@ class NotificationModule {
     fun provideClearDataNotification(
         context: Context,
         notificationDao: NotificationDao,
-        settingsDataStore: SettingsDataStore
+        automaticDataClearing: AutomaticDataClearing,
+        dispatcherProvider: DispatcherProvider,
     ): ClearDataNotification {
-        return ClearDataNotification(context, notificationDao, settingsDataStore)
+        return ClearDataNotification(
+            context,
+            notificationDao,
+            automaticDataClearing,
+            dispatcherProvider,
+        )
     }
 
     @Provides
     fun providePrivacyProtectionNotification(
         context: Context,
         notificationDao: NotificationDao,
-        privacyProtectionCountDao: PrivacyProtectionCountDao
+        privacyProtectionCountDao: PrivacyProtectionCountDao,
     ): PrivacyProtectionNotification {
         return PrivacyProtectionNotification(context, notificationDao, privacyProtectionCountDao)
     }
 
     @Provides
-    fun provideWaitlistCodeNotification(
-        context: Context,
-        notificationDao: NotificationDao,
-        emailDataStore: EmailDataStore
-    ): WaitlistCodeNotification {
-        return WaitlistCodeNotification(context, notificationDao, emailDataStore)
-    }
-
-    @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun providesNotificationScheduler(
         workManager: WorkManager,
+        notificationManager: NotificationManagerCompat,
         clearDataNotification: ClearDataNotification,
-        privacyProtectionNotification: PrivacyProtectionNotification
+        privacyProtectionNotification: PrivacyProtectionNotification,
     ): AndroidNotificationScheduler {
         return NotificationScheduler(
             workManager,
+            notificationManager,
             clearDataNotification,
-            privacyProtectionNotification
+            privacyProtectionNotification,
         )
     }
 
     @Provides
-    @Singleton
-    fun providesNotificationFactory(context: Context, manager: NotificationManagerCompat): NotificationFactory {
+    @SingleIn(AppScope::class)
+    fun providesNotificationFactory(
+        context: Context,
+        manager: NotificationManagerCompat,
+    ): NotificationFactory {
         return NotificationFactory(context, manager)
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun providesNotificationSender(
         context: Context,
-        pixel: Pixel,
         manager: NotificationManagerCompat,
         factory: NotificationFactory,
-        notificationDao: NotificationDao
+        notificationDao: NotificationDao,
+        pluginPoint: PluginPoint<SchedulableNotificationPlugin>,
+        launchIntentBuilder: NotificationLaunchIntentBuilder,
     ): NotificationSender {
-        return AppNotificationSender(context, pixel, manager, factory, notificationDao)
+        return AppNotificationSender(context, manager, factory, notificationDao, pluginPoint, launchIntentBuilder)
     }
 }

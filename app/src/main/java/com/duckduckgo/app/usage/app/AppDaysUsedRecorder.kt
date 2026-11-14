@@ -16,22 +16,30 @@
 
 package com.duckduckgo.app.usage.app
 
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.LifecycleOwner
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import timber.log.Timber
+import logcat.LogPriority.INFO
+import logcat.logcat
+import javax.inject.Inject
 
-class AppDaysUsedRecorder(
+@ContributesIntoSet(AppScope::class)
+@SingleIn(AppScope::class)
+class AppDaysUsedRecorder @Inject constructor(
     private val appDaysUsedRepository: AppDaysUsedRepository,
-    private val appCoroutineScope: CoroutineScope
-) : LifecycleObserver {
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider,
+) : MainProcessLifecycleObserver {
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onAppStart() {
-        appCoroutineScope.launch {
-            Timber.i("Recording app used today")
+    override fun onStart(owner: LifecycleOwner) {
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            logcat(INFO) { "Recording app used today" }
             appDaysUsedRepository.recordAppUsedToday()
         }
     }

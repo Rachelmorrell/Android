@@ -24,46 +24,39 @@ import com.bumptech.glide.annotation.GlideModule
 import com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader
 import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.module.AppGlideModule
-import com.duckduckgo.app.browser.certificates.rootstore.IsrgRootX1
-import com.duckduckgo.app.browser.certificates.rootstore.IsrgRootX2
+import com.duckduckgo.app.browser.BuildConfig
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.tls.HandshakeCertificates
-import timber.log.Timber
 import java.io.InputStream
-import java.security.cert.X509Certificate
 
 @GlideModule
 class GlobalGlideModule : AppGlideModule() {
-    override fun registerComponents(context: Context, glide: Glide, registry: Registry) {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1) {
-            try {
-                Timber.d("Registering OkHttp-based ModelLoader for GlideUrl")
+    override fun registerComponents(
+        context: Context,
+        glide: Glide,
+        registry: Registry,
+    ) {
+        val okHttpClientBuilder = OkHttpClient.Builder()
+            .addInterceptor { chain: Interceptor.Chain ->
+                val request = chain.request()
 
-                val isrgRootX1 = IsrgRootX1(context)
-                val isrgRootX2 = IsrgRootX2(context)
-
-                val handshakeCertificates = HandshakeCertificates.Builder()
-                    .addTrustedCertificate(isrgRootX1.certificate() as X509Certificate)
-                    .addTrustedCertificate(isrgRootX2.certificate() as X509Certificate)
-                    .addPlatformTrustedCertificates()
-                    .build()
-
-                val okHttpClient = OkHttpClient.Builder()
-                    .sslSocketFactory(handshakeCertificates.sslSocketFactory(), handshakeCertificates.trustManager)
-                    .build()
-
-                // use our custom okHttp instead of default HTTPUrlConnection
-                registry.replace(
-                    GlideUrl::class.java,
-                    InputStream::class.java,
-                    OkHttpUrlLoader.Factory(okHttpClient)
-                )
-            } catch (t: Throwable) {
-                Timber.d("Error registering GlideModule for GlideUrl: $t")
-                super.registerComponents(context, glide, registry)
+                return@addInterceptor request.newBuilder()
+                    .header("User-Agent", getGlideUserAgent(context))
+                    .build().run {
+                        chain.proceed(this)
+                    }
             }
-        } else {
-            super.registerComponents(context, glide, registry)
-        }
+
+        // use our custom okHttp instead of default HTTPUrlConnection
+        registry.replace(
+            GlideUrl::class.java,
+            InputStream::class.java,
+            OkHttpUrlLoader.Factory(okHttpClientBuilder.build()),
+        )
+    }
+
+    private fun getGlideUserAgent(context: Context): String {
+        return "DuckDuckGo/${BuildConfig.VERSION_NAME.split(".").first()} " +
+            "(${context.applicationInfo.packageName}; Android API ${Build.VERSION.SDK_INT})"
     }
 }

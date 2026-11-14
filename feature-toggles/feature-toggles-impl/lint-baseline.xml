@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.8.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.3)" variant="all" version="8.8.2">
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="    val cohort = toggle.getRawStoredState()?.assignedCohort?.name.orEmpty()"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/duckduckgo/feature/toggles/impl/RealMetricsPixelSender.kt"
+            line="110"
+            column="18"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="    val enrollmentDateET = toggle.getRawStoredState()?.assignedCohort?.enrollmentDateET?.let {"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/duckduckgo/feature/toggles/impl/RealMetricsPixelSender.kt"
+            line="111"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="Use ContributesRemoteFeature instead fo create features"
+        errorLine1="            plugin.isEnabled(featureName, defaultValue)?.let { return it }"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/duckduckgo/feature/toggles/impl/RealFeatureTogglesImpl.kt"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.experimentFooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="167"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.fooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="175"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.experimentFooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="193"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.fooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="200"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.experimentFooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="219"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.fooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="227"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.experimentFooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="246"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.fooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="253"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.experimentFooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="269"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="DenyListedApi"
+        message="If you find yourself using this API in production, you&apos;re doing something wrong!!"
+        errorLine1="        testFeature.fooFeature().setRawStoredState("
+        errorLine2="        ^">
+        <location
+            file="src/test/java/com/duckduckgo/feature/toggles/impl/metrics/RetentionMetricsAtbLifecyclePluginTest.kt"
+            line="277"
+            column="9"/>
+    </issue>
+
+</issues>

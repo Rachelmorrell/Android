@@ -18,12 +18,14 @@ package com.duckduckgo.app.global.job
 
 import android.content.Context
 import androidx.work.*
-import com.duckduckgo.app.global.plugins.worker.WorkerInjectorPlugin
 import com.duckduckgo.app.job.ConfigurationDownloader
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.codegen.annotations.ContributesWorker
+import com.duckduckgo.di.scopes.AppScope
 import io.reactivex.Single
-import timber.log.Timber
+import logcat.LogPriority.INFO
+import logcat.LogPriority.WARN
+import logcat.asLog
+import logcat.logcat
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -44,35 +46,25 @@ class AppConfigurationSyncWorkRequestBuilder @Inject constructor() {
     }
 }
 
-class AppConfigurationWorker(context: Context, workerParams: WorkerParameters) : RxWorker(context, workerParams) {
+@ContributesWorker(AppScope::class)
+class AppConfigurationWorker(
+    context: Context,
+    workerParams: WorkerParameters,
+) : RxWorker(context, workerParams) {
 
     @Inject
     lateinit var appConfigurationDownloader: ConfigurationDownloader
 
     override fun createWork(): Single<Result> {
-        Timber.i("Running app config sync")
+        logcat(INFO) { "Running app config sync" }
         return appConfigurationDownloader.downloadTask()
             .toSingle {
-                Timber.i("App configuration sync was successful")
+                logcat(INFO) { "App configuration sync was successful" }
                 Result.success()
             }
             .onErrorReturn {
-                Timber.w(it, "App configuration sync work failed")
+                logcat(WARN) { "App configuration sync work failed: ${it.asLog()}" }
                 Result.retry()
             }
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class AppConfigurationWorkerInjectorPlugin @Inject constructor(
-    private val configurationDownloader: ConfigurationDownloader
-) : WorkerInjectorPlugin {
-
-    override fun inject(worker: ListenableWorker): Boolean {
-        if (worker is AppConfigurationWorker) {
-            worker.appConfigurationDownloader = configurationDownloader
-            return true
-        }
-        return false
     }
 }

@@ -17,38 +17,43 @@
 package com.duckduckgo.app.browser.cookies
 
 import android.content.Context
-import android.webkit.CookieManager
 import android.webkit.WebView
 import androidx.core.net.toUri
 import androidx.room.Room
 import androidx.test.annotation.UiThreadTest
 import androidx.test.platform.app.InstrumentationRegistry
-import com.duckduckgo.app.CoroutineTestRule
-import com.duckduckgo.app.browser.cookies.AppThirdPartyCookieManager.Companion.USER_ID_COOKIE
 import com.duckduckgo.app.browser.cookies.db.AuthCookiesAllowedDomainsDao
 import com.duckduckgo.app.browser.cookies.db.AuthCookiesAllowedDomainsRepository
 import com.duckduckgo.app.global.db.AppDatabase
-import com.duckduckgo.app.runBlocking
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.cookies.api.ThirdPartyCookieNames
+import com.duckduckgo.cookies.impl.DefaultCookieManagerProvider
+import com.duckduckgo.duckchat.api.DuckAiHostProvider
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
-@ExperimentalCoroutinesApi
 class AppThirdPartyCookieManagerTest {
 
     @get:Rule
     var coroutinesTestRule = CoroutineTestRule()
 
-    private val cookieManager = CookieManager.getInstance()
+    private val cookieManagerProvider = DefaultCookieManagerProvider(mock())
+    private val cookieManager = cookieManagerProvider.forMode(BrowserMode.REGULAR)!!
     private lateinit var db: AppDatabase
     private lateinit var authCookiesAllowedDomainsDao: AuthCookiesAllowedDomainsDao
     private lateinit var authCookiesAllowedDomainsRepository: AuthCookiesAllowedDomainsRepository
     private lateinit var testee: AppThirdPartyCookieManager
     private lateinit var webView: WebView
+    private val thirdPartyCookieNamesMock: ThirdPartyCookieNames = mock()
+    private val mockDuckAiHostProvider: DuckAiHostProvider = mock()
 
     @UiThreadTest
     @Before
@@ -57,10 +62,19 @@ class AppThirdPartyCookieManagerTest {
             .allowMainThreadQueries()
             .build()
         authCookiesAllowedDomainsDao = db.authCookiesAllowedDomainsDao()
-        authCookiesAllowedDomainsRepository = AuthCookiesAllowedDomainsRepository(authCookiesAllowedDomainsDao, coroutinesTestRule.testDispatcherProvider)
+        authCookiesAllowedDomainsRepository =
+            AuthCookiesAllowedDomainsRepository(authCookiesAllowedDomainsDao, coroutinesTestRule.testDispatcherProvider)
         webView = TestWebView(InstrumentationRegistry.getInstrumentation().targetContext)
 
-        testee = AppThirdPartyCookieManager(cookieManager, authCookiesAllowedDomainsRepository)
+        whenever(thirdPartyCookieNamesMock.hasExcludedCookieName("$USER_ID_COOKIE=test")).thenReturn(true)
+        whenever(mockDuckAiHostProvider.getHost()).thenReturn("duck.ai")
+
+        testee = AppThirdPartyCookieManager(
+            cookieManagerProvider,
+            authCookiesAllowedDomainsRepository,
+            thirdPartyCookieNamesMock,
+            mockDuckAiHostProvider,
+        )
     }
 
     @UiThreadTest
@@ -71,82 +85,99 @@ class AppThirdPartyCookieManagerTest {
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsNotInTheListThenThirdPartyCookiesDisabled() = coroutinesTestRule.runBlocking {
-        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI)
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsNotInTheListThenThirdPartyCookiesDisabled() = runTest {
+        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI, BrowserMode.REGULAR)
 
         assertFalse(cookieManager.acceptThirdPartyCookies(webView))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsInTheListAndHasCookieThenThirdPartyCookiesEnabled() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsInTheListAndHasCookieThenThirdPartyCookiesEnabled() = runTest {
         givenDomainIsInTheThirdPartyCookieList(EXAMPLE_URI.host!!)
         givenUserIdCookieIsSet()
 
-        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI)
+        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI, BrowserMode.REGULAR)
 
         assertTrue(cookieManager.acceptThirdPartyCookies(webView))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsInTheListAndDoesNotHaveCookieThenThirdPartyCookiesDisabled() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsNotGoogleAuthAndIsInTheListAndDoesNotHaveCookieThenThirdPartyCookiesDisabled() = runTest {
         givenDomainIsInTheThirdPartyCookieList(EXAMPLE_URI.host!!)
 
-        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI)
+        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI, BrowserMode.REGULAR)
 
         assertFalse(cookieManager.acceptThirdPartyCookies(webView))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndCookieIsSetThenDomainRemovedFromList() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndCookieIsSetThenDomainRemovedFromList() = runTest {
         givenUserIdCookieIsSet()
         givenDomainIsInTheThirdPartyCookieList(EXAMPLE_URI.host!!)
 
-        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI)
+        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI, BrowserMode.REGULAR)
 
         assertNull(authCookiesAllowedDomainsRepository.getDomain(EXAMPLE_URI.host!!))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndCookieIsNotSetThenDomainRemovedFromList() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndCookieIsNotSetThenDomainRemovedFromList() = runTest {
         givenDomainIsInTheThirdPartyCookieList(EXAMPLE_URI.host!!)
 
-        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI)
+        testee.processUriForThirdPartyCookies(webView, EXAMPLE_URI, BrowserMode.REGULAR)
 
         assertNull(authCookiesAllowedDomainsRepository.getDomain(EXAMPLE_URI.host!!))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndIsFromExceptionListThenDomainNotRemovedFromList() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfDomainIsInTheListAndIsFromExceptionListThenDomainNotRemovedFromList() = runTest {
         givenDomainIsInTheThirdPartyCookieList(EXCLUDED_DOMAIN_URI.host!!)
 
-        testee.processUriForThirdPartyCookies(webView, EXCLUDED_DOMAIN_URI)
+        testee.processUriForThirdPartyCookies(webView, EXCLUDED_DOMAIN_URI, BrowserMode.REGULAR)
 
         assertNotNull(authCookiesAllowedDomainsRepository.getDomain(EXCLUDED_DOMAIN_URI.host!!))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthAndIsTokenTypeThenDomainAddedToTheList() = coroutinesTestRule.runBlocking {
-        testee.processUriForThirdPartyCookies(webView, THIRD_PARTY_AUTH_URI)
+    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthAndIsTokenTypeThenDomainAddedToTheList() = runTest {
+        testee.processUriForThirdPartyCookies(webView, THIRD_PARTY_AUTH_URI, BrowserMode.REGULAR)
 
         assertNotNull(authCookiesAllowedDomainsRepository.getDomain(EXAMPLE_URI.host!!))
     }
 
     @UiThreadTest
     @Test
-    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthAndIsNotTokenTypeThenDomainNotAddedToTheList() = coroutinesTestRule.runBlocking {
-        testee.processUriForThirdPartyCookies(webView, NON_THIRD_PARTY_AUTH_URI)
+    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthAndIsNotTokenTypeThenDomainNotAddedToTheList() = runTest {
+        testee.processUriForThirdPartyCookies(webView, NON_THIRD_PARTY_AUTH_URI, BrowserMode.REGULAR)
 
         assertNull(authCookiesAllowedDomainsRepository.getDomain(EXAMPLE_URI.host!!))
     }
 
+    @UiThreadTest
     @Test
-    fun whenClearAllDataThenDomainDeletedFromDatabase() = coroutinesTestRule.runBlocking {
+    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthWithAppDomainAndNoSsDomainThenDomainAddedToTheList() = runTest {
+        testee.processUriForThirdPartyCookies(webView, THIRD_PARTY_AUTH_APP_DOMAIN_URI, BrowserMode.REGULAR)
+
+        assertNotNull(authCookiesAllowedDomainsRepository.getDomain(EXAMPLE_URI.host!!))
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenProcessUriForThirdPartyCookiesIfUrlIsGoogleAuthWithBothSsDomainAndAppDomainThenSsDomainUsed() = runTest {
+        testee.processUriForThirdPartyCookies(webView, THIRD_PARTY_AUTH_BOTH_DOMAINS_URI, BrowserMode.REGULAR)
+
+        assertNotNull(authCookiesAllowedDomainsRepository.getDomain("ss.com"))
+        assertNull(authCookiesAllowedDomainsRepository.getDomain("app.com"))
+    }
+
+    @Test
+    fun whenClearAllDataThenDomainDeletedFromDatabase() = runTest {
         givenDomainIsInTheThirdPartyCookieList(EXAMPLE_URI.host!!)
 
         testee.clearAllData()
@@ -155,15 +186,20 @@ class AppThirdPartyCookieManagerTest {
     }
 
     @Test
-    fun whenClearAllDataIfDomainIsInExclusionListThenDomainNotDeletedFromDatabase() = coroutinesTestRule.runBlocking {
-        givenDomainIsInTheThirdPartyCookieList(EXCLUDED_DOMAIN_URI.host!!)
+    fun whenClearAllDataIfDomainIsInExclusionListThenDomainNotDeletedFromDatabase() = runTest {
+        val excludedDomains = listOf("home.nest.com", "duck.ai", "duckduckgo.com")
+        excludedDomains.forEach { domain ->
+            givenDomainIsInTheThirdPartyCookieList(domain)
+        }
 
         testee.clearAllData()
 
-        assertNotNull(authCookiesAllowedDomainsRepository.getDomain(EXCLUDED_DOMAIN_URI.host!!))
+        excludedDomains.forEach { domain ->
+            assertNotNull(authCookiesAllowedDomainsRepository.getDomain(domain))
+        }
     }
 
-    private suspend fun givenDomainIsInTheThirdPartyCookieList(domain: String) = coroutinesTestRule.runBlocking {
+    private suspend fun givenDomainIsInTheThirdPartyCookieList(domain: String) = runTest {
         withContext(coroutinesTestRule.testDispatcherProvider.io()) {
             authCookiesAllowedDomainsRepository.addDomain(domain)
         }
@@ -180,7 +216,14 @@ class AppThirdPartyCookieManagerTest {
     companion object {
         val EXCLUDED_DOMAIN_URI = "http://home.nest.com".toUri()
         val EXAMPLE_URI = "http://example.com".toUri()
-        val THIRD_PARTY_AUTH_URI = "https://accounts.google.com/o/oauth2/auth/identifier?response_type=permission%20id_token&ss_domain=https%3A%2F%2Fexample.com".toUri()
-        val NON_THIRD_PARTY_AUTH_URI = "https://accounts.google.com/o/oauth2/auth/identifier?response_type=code&ss_domain=https%3A%2F%2Fexample.com".toUri()
+        val THIRD_PARTY_AUTH_URI =
+            "https://accounts.google.com/o/oauth2/auth/identifier?response_type=permission%20id_token&ss_domain=https%3A%2F%2Fexample.com".toUri()
+        val NON_THIRD_PARTY_AUTH_URI =
+            "https://accounts.google.com/o/oauth2/auth/identifier?response_type=code&ss_domain=https%3A%2F%2Fexample.com".toUri()
+        val THIRD_PARTY_AUTH_APP_DOMAIN_URI =
+            "https://accounts.google.com/v3/signin/identifier?response_type=permission%20id_token&app_domain=https%3A%2F%2Fexample.com".toUri()
+        val THIRD_PARTY_AUTH_BOTH_DOMAINS_URI =
+            "https://accounts.google.com?response_type=permission%20id_token&ss_domain=https%3A%2F%2Fss.com&app_domain=https%3A%2F%2Fapp.com".toUri()
+        const val USER_ID_COOKIE = "user_id"
     }
 }

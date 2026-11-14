@@ -1,0 +1,211 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.remote.messaging.fixtures
+
+import com.duckduckgo.remote.messaging.api.JsonMessageAction
+import com.duckduckgo.remote.messaging.impl.models.JsonContent
+import com.duckduckgo.remote.messaging.impl.models.JsonContentTranslations
+import com.duckduckgo.remote.messaging.impl.models.JsonDisplayConditions
+import com.duckduckgo.remote.messaging.impl.models.JsonListItem
+import com.duckduckgo.remote.messaging.impl.models.JsonMatchingRule
+import com.duckduckgo.remote.messaging.impl.models.JsonRemoteMessage
+import com.duckduckgo.remote.messaging.impl.models.JsonRemoteMessagingConfig
+
+object JsonRemoteMessageOM {
+    private fun jsonMessageAction(
+        type: String = "url",
+        value: String = "http://example.com",
+        additionalParameters: Map<String, String>? = null,
+    ) = JsonMessageAction(
+        type = type,
+        value = value,
+        additionalParameters = additionalParameters,
+    )
+
+    fun smallJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+    ) = JsonContent(
+        messageType = "small",
+        titleText = titleText,
+        descriptionText = descriptionText,
+    )
+
+    fun mediumJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+        placeholder: String = "Announce",
+        imageUrl: String? = null,
+    ) = JsonContent(
+        messageType = "medium",
+        titleText = titleText,
+        descriptionText = descriptionText,
+        placeholder = placeholder,
+        imageUrl = imageUrl,
+    )
+
+    fun bigSingleActionJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+        placeholder: String = "Announce",
+        primaryActionText: String = "Action1",
+        primaryAction: JsonMessageAction = jsonMessageAction(),
+        imageUrl: String? = null,
+    ) = JsonContent(
+        messageType = "big_single_action",
+        titleText = titleText,
+        descriptionText = descriptionText,
+        placeholder = placeholder,
+        primaryActionText = primaryActionText,
+        primaryAction = primaryAction,
+        imageUrl = imageUrl,
+    )
+
+    fun bigTwoActionJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+        placeholder: String = "Announce",
+        primaryActionText: String = "Action1",
+        primaryAction: JsonMessageAction = jsonMessageAction(),
+        secondaryActionText: String = "Action2",
+        secondaryAction: JsonMessageAction = jsonMessageAction(),
+        imageUrl: String? = null,
+    ) = JsonContent(
+        messageType = "big_two_action",
+        titleText = titleText,
+        descriptionText = descriptionText,
+        placeholder = placeholder,
+        primaryActionText = primaryActionText,
+        primaryAction = primaryAction,
+        secondaryActionText = secondaryActionText,
+        secondaryAction = secondaryAction,
+        imageUrl = imageUrl,
+    )
+
+    fun promoSingleActionJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+        placeholder: String = "MacAndWindows",
+        actionText: String = "Action",
+        action: JsonMessageAction = jsonMessageAction(),
+        imageUrl: String? = null,
+    ) = JsonContent(
+        messageType = "promo_single_action",
+        titleText = titleText,
+        descriptionText = descriptionText,
+        placeholder = placeholder,
+        actionText = actionText,
+        action = action,
+        imageUrl = imageUrl,
+    )
+
+    fun cardsListJsonContent(
+        titleText: String = "title",
+        descriptionText: String = "description",
+        placeholder: String = "Announce",
+        primaryActionText: String = "Action",
+        primaryAction: JsonMessageAction = jsonMessageAction(),
+        listItems: List<JsonListItem> = listOf(
+            JsonListItem(
+                id = "item1",
+                type = "two_line_list_item",
+                titleText = "Item Title 1",
+                descriptionText = "Item Description 1",
+                placeholder = "ImageAI",
+                primaryAction = jsonMessageAction(),
+                primaryActionText = "Item Action 1",
+            ),
+            JsonListItem(
+                id = "item2",
+                type = "two_line_list_item",
+                titleText = "Item Title 2",
+                descriptionText = "Item Description 2",
+                placeholder = "Radar",
+                primaryAction = jsonMessageAction(),
+                primaryActionText = "Item Action 2",
+            ),
+        ),
+        imageUrl: String? = null,
+    ) = JsonContent(
+        messageType = "cards_list",
+        titleText = titleText,
+        descriptionText = descriptionText,
+        placeholder = placeholder,
+        primaryActionText = primaryActionText,
+        primaryAction = primaryAction,
+        listItems = listItems,
+        imageUrl = imageUrl,
+    )
+
+    fun actionableItemsJsonContent(
+        titleText: String = "Complete your setup",
+        listItems: List<JsonListItem> = listOf(
+            JsonListItem(
+                id = "setup_default_browser",
+                type = "one_action_item",
+                titleText = "Set as default browser",
+                descriptionText = "Open links in DuckDuckGo",
+                placeholder = "Announce",
+                primaryAction = jsonMessageAction(type = "defaultBrowser", value = ""),
+                primaryActionText = "Set as default",
+            ),
+            JsonListItem(
+                id = "setup_add_widget",
+                type = "one_action_item",
+                titleText = "Add widget",
+                descriptionText = "Search from your home screen",
+                placeholder = "Radar",
+                primaryAction = jsonMessageAction(),
+                primaryActionText = "Add widget",
+            ),
+        ),
+    ) = JsonContent(
+        messageType = "actionable_items",
+        titleText = titleText,
+        listItems = listItems,
+    )
+
+    fun emptyJsonContent(messageType: String = "") = JsonContent(messageType = messageType)
+
+    fun aJsonMessage(
+        id: String = "id",
+        content: JsonContent? = emptyJsonContent(),
+        exclusionRules: List<Int> = emptyList(),
+        matchingRules: List<Int> = emptyList(),
+        translations: Map<String, JsonContentTranslations> = emptyMap(),
+        surfaces: List<String>? = null,
+        displayConditions: JsonDisplayConditions? = null,
+    ) = JsonRemoteMessage(
+        id = id,
+        content = content,
+        exclusionRules = exclusionRules,
+        matchingRules = matchingRules,
+        translations = translations,
+        surfaces = surfaces,
+        displayConditions = displayConditions,
+    )
+
+    fun aJsonRemoteMessagingConfig(
+        version: Long = 0L,
+        messages: List<JsonRemoteMessage> = emptyList(),
+        rules: List<JsonMatchingRule> = emptyList(),
+    ) = JsonRemoteMessagingConfig(
+        version = version,
+        messages = messages,
+        rules = rules,
+    )
+}

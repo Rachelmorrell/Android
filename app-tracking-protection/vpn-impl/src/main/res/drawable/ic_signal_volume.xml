@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="12dp"
+    android:viewportWidth="12"
+    android:viewportHeight="12">
+  <group>
+    <clip-path
+        android:pathData="M0,0h12v12H0z"/>
+    <path
+        android:pathData="M4.29,0.454C4.92,-0.18 6,0.267 6,1.159v9.682c0,0.892 -1.08,1.338 -1.71,0.705L1.902,9.143h-0.276A1.625,1.625 0,0 1,0 7.518L0,4.482c0,-0.897 0.728,-1.625 1.625,-1.625h0.276L4.291,0.454ZM4.75,1.765L2.604,3.923a0.625,0.625 0,0 1,-0.443 0.184h-0.536a0.375,0.375 0,0 0,-0.375 0.375v3.036c0,0.207 0.168,0.375 0.375,0.375h0.536c0.167,0 0.326,0.066 0.443,0.184l2.146,2.158v-8.47Z"
+        android:fillColor="?attr/daxColorPrimaryIcon"
+        android:fillType="evenOdd"/>
+    <path
+        android:pathData="M7.223,3.595a0.625,0.625 0,0 1,0.881 -0.072,3.25 3.25,0 0,1 0.004,4.95 0.625,0.625 0,0 1,-0.811 -0.95,2 2,0 0,0 -0.002,-3.047 0.625,0.625 0,0 1,-0.072 -0.881Z"
+        android:fillColor="?attr/daxColorPrimaryIcon"/>
+    <path
+        android:pathData="M9.944,1.478a0.625,0.625 0,0 0,-0.822 0.942,4.75 4.75,0 0,1 -0.003,7.162 0.625,0.625 0,0 0,0.821 0.943,6 6,0 0,0 0.004,-9.047Z"
+        android:fillColor="?attr/daxColorPrimaryIcon"/>
+  </group>
+</vector>

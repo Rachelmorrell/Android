@@ -16,17 +16,20 @@
 
 package com.duckduckgo.app.di
 
-import com.duckduckgo.app.global.file.AndroidFileDeleter
-import com.duckduckgo.app.global.file.FileDeleter
-import dagger.Module
-import dagger.Provides
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.file.AndroidFileDeleter
+import com.duckduckgo.common.utils.file.FileDeleter
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
 
-@Module
-class FileModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object FileModule {
 
     @Provides
-    fun providesFileDeleter(): FileDeleter {
-        return AndroidFileDeleter()
+    fun providesFileDeleter(dispatchers: DispatcherProvider): FileDeleter {
+        return AndroidFileDeleter(dispatchers)
     }
-
 }

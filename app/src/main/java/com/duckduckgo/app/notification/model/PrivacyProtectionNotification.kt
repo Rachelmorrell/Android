@@ -17,25 +17,33 @@
 package com.duckduckgo.app.notification.model
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import com.duckduckgo.app.browser.BrowserActivity
 import com.duckduckgo.app.browser.R
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.APP_LAUNCH
-import com.duckduckgo.app.notification.NotificationHandlerService.NotificationEvent.CANCEL
+import com.duckduckgo.app.browser.mode.PrivacyNotification
+import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.notification.NotificationRegistrar
 import com.duckduckgo.app.notification.db.NotificationDao
+import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.privacy.db.PrivacyProtectionCountDao
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesIntoSet
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 
 class PrivacyProtectionNotification(
     private val context: Context,
     private val notificationDao: NotificationDao,
-    private val privacyProtectionCountDao: PrivacyProtectionCountDao
+    private val privacyProtectionCountDao: PrivacyProtectionCountDao,
 ) : SchedulableNotification {
 
     override val id = "com.duckduckgo.privacy.privacyprotection"
-
-    override val launchIntent: String = APP_LAUNCH
-
-    override val cancelIntent: String = CANCEL
 
     override suspend fun canShow(): Boolean {
         return !notificationDao.exists(id)
@@ -48,7 +56,11 @@ class PrivacyProtectionNotification(
     }
 }
 
-class PrivacyProtectionNotificationSpecification(context: Context, trackers: Int, upgrades: Int) : NotificationSpec {
+class PrivacyProtectionNotificationSpecification(
+    context: Context,
+    trackers: Int,
+    upgrades: Int,
+) : NotificationSpec {
 
     override val channel = NotificationRegistrar.ChannelType.TUTORIALS
     override val systemId = NotificationRegistrar.NotificationId.PrivacyProtection
@@ -58,7 +70,7 @@ class PrivacyProtectionNotificationSpecification(context: Context, trackers: Int
     override val closeButton: String? = null
     override val autoCancel = true
     override val bundle: Bundle = Bundle()
-    override val color: Int = R.color.cornflowerBlue
+    override val color: Int = context.getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorAccentBlue)
 
     override val title: String = when {
         trackers < TRACKER_THRESHOLD && upgrades < UPGRADE_THRESHOLD -> context.getString(R.string.privacyProtectionNotificationDefaultTitle)
@@ -78,4 +90,48 @@ class PrivacyProtectionNotificationSpecification(context: Context, trackers: Int
         private const val TRACKER_THRESHOLD = 2
         private const val UPGRADE_THRESHOLD = 2
     }
+}
+
+@ContributesIntoSet(AppScope::class)
+class PrivacyProtectionNotificationPlugin @Inject constructor(
+    private val context: Context,
+    private val schedulableNotification: PrivacyProtectionNotification,
+    private val pixel: Pixel,
+    @AppCoroutineScope private val coroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider,
+) : SchedulableNotificationPlugin {
+
+    override fun getSchedulableNotification(): SchedulableNotification {
+        return schedulableNotification
+    }
+
+    override fun onNotificationCancelled() {
+        pixel.fire(pixelName(AppPixelName.NOTIFICATION_CANCELLED.pixelName))
+    }
+
+    override fun onNotificationShown() {
+        pixel.fire(pixelName(AppPixelName.NOTIFICATION_SHOWN.pixelName))
+    }
+
+    override fun getSpecification(): NotificationSpec {
+        val deferred = coroutineScope.async(dispatcherProvider.io()) {
+            schedulableNotification.buildSpecification()
+        }
+        return runBlocking {
+            deferred.await()
+        }
+    }
+
+    override suspend fun getLaunchIntent(): Intent {
+        return BrowserActivity.intent(
+            context,
+            launchSource = PrivacyNotification,
+            newSearch = true,
+            interstitialScreen = true,
+        ).apply {
+            putExtra(BrowserActivity.LAUNCH_FROM_NOTIFICATION_PIXEL_NAME, pixelName(AppPixelName.NOTIFICATION_LAUNCHED.pixelName))
+        }
+    }
+
+    private fun pixelName(notificationType: String) = "${notificationType}_${getSpecification().pixelSuffix}"
 }

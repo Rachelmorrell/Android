@@ -19,23 +19,44 @@ package com.duckduckgo.app.email
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
-import com.duckduckgo.app.global.DispatcherProvider
+import com.duckduckgo.app.browser.navigation.safeCopyBackForwardList
+import com.duckduckgo.autofill.api.Autofill
+import com.duckduckgo.autofill.api.AutofillFeature
+import com.duckduckgo.autofill.api.email.EmailManager
+import com.duckduckgo.common.utils.DispatcherProvider
 import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 
 class EmailJavascriptInterface(
     private val emailManager: EmailManager,
     private val webView: WebView,
     private val urlDetector: DuckDuckGoUrlDetector,
     private val dispatcherProvider: DispatcherProvider,
-    private val showNativeTooltip: () -> Unit
+    private val autofillFeature: AutofillFeature,
+    private val autofill: Autofill,
+    private val originCheckFeature: EmailBridgeOriginCheckFeature,
+    private val showNativeTooltip: () -> Unit,
 ) {
 
-    private fun isUrlFromDuckDuckGoEmail(): Boolean {
+    private fun getUrl(): String? {
         return runBlocking(dispatcherProvider.main()) {
-            val url = webView.url
-            (url != null && urlDetector.isDuckDuckGoEmailUrl(url))
+            webView.url
         }
     }
+
+    private fun isUrlFromDuckDuckGoEmail(): Boolean {
+        if (!originCheckFeature.self().isEnabled()) return isDuckDuckGoEmailUrl(getUrl())
+        // webView.url can already be a pending navigation's destination while the previous document is still running and
+        // calling this interface; the committed back/forward entry names that document until the navigation commits.
+        val (url, committedUrl) = runBlocking(dispatcherProvider.main()) {
+            webView.url to webView.safeCopyBackForwardList()?.currentItem?.url
+        }
+        return isDuckDuckGoEmailUrl(url) && isDuckDuckGoEmailUrl(committedUrl)
+    }
+
+    private fun isDuckDuckGoEmailUrl(url: String?): Boolean = url != null && urlDetector.isDuckDuckGoEmailUrl(url)
+
+    private fun isAutofillEnabled() = autofillFeature.self().isEnabled()
 
     @JavascriptInterface
     fun isSignedIn(): String {
@@ -47,15 +68,52 @@ class EmailJavascriptInterface(
     }
 
     @JavascriptInterface
-    fun storeCredentials(token: String, username: String, cohort: String) {
+    fun getUserData(): String {
+        return if (isUrlFromDuckDuckGoEmail()) {
+            emailManager.getUserData()
+        } else {
+            ""
+        }
+    }
+
+    @JavascriptInterface
+    fun getDeviceCapabilities(): String {
+        return if (isUrlFromDuckDuckGoEmail()) {
+            JSONObject().apply {
+                put("addUserData", true)
+                put("getUserData", true)
+                put("removeUserData", true)
+            }.toString()
+        } else {
+            ""
+        }
+    }
+
+    @JavascriptInterface
+    fun storeCredentials(
+        token: String,
+        username: String,
+        cohort: String,
+    ) {
         if (isUrlFromDuckDuckGoEmail()) {
             emailManager.storeCredentials(token, username, cohort)
         }
     }
 
     @JavascriptInterface
+    fun removeCredentials() {
+        if (isUrlFromDuckDuckGoEmail()) {
+            emailManager.signOut()
+        }
+    }
+
+    @JavascriptInterface
     fun showTooltip() {
-        showNativeTooltip()
+        getUrl()?.let {
+            if (isAutofillEnabled() && !autofill.isAnException(it)) {
+                showNativeTooltip()
+            }
+        }
     }
 
     companion object {

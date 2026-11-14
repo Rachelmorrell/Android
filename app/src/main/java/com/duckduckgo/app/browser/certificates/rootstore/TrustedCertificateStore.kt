@@ -17,11 +17,11 @@
 package com.duckduckgo.app.browser.certificates.rootstore
 
 import android.net.http.SslCertificate
-import com.duckduckgo.app.browser.certificates.toX509Certificate
 import com.duckduckgo.app.browser.certificates.CertificateType
 import com.duckduckgo.app.browser.certificates.CertificateTypes
 import com.duckduckgo.app.browser.certificates.LetsEncryptCertificateProvider
-import timber.log.Timber
+import com.duckduckgo.app.browser.certificates.toX509Certificate
+import logcat.logcat
 import java.security.cert.*
 
 interface TrustedCertificateStore {
@@ -29,14 +29,14 @@ interface TrustedCertificateStore {
 }
 
 sealed class CertificateValidationState {
-    object IssuerExpired : CertificateValidationState()
-    object IssuerNotYetValid : CertificateValidationState()
-    object UntrustedChain : CertificateValidationState()
-    object TrustedChain : CertificateValidationState()
+    data object IssuerExpired : CertificateValidationState()
+    data object IssuerNotYetValid : CertificateValidationState()
+    data object UntrustedChain : CertificateValidationState()
+    data object TrustedChain : CertificateValidationState()
 }
 
 class TrustedCertificateStoreImpl(
-    private val letsEncryptCertificateProvider: LetsEncryptCertificateProvider
+    private val letsEncryptCertificateProvider: LetsEncryptCertificateProvider,
 ) : TrustedCertificateStore {
 
     /**
@@ -69,21 +69,24 @@ class TrustedCertificateStoreImpl(
             validate(sslCertificate.toX509Certificate(), it.certificate())
             // then check if root
             if (it.type() == CertificateType.Root) {
-                Timber.d("Certificate Trusted anchor validated!")
+                logcat { "SSLShield: Certificate Trusted anchor validated!" }
                 return
             }
-            Timber.d("Intermediate certificate validated!")
+            logcat { "SSLShield: Intermediate certificate validated!" }
             validateSslCertificateChainInternal(SslCertificate(it.certificate() as X509Certificate))
 
             // certificate chain validated
             return
         }
 
-        throw CertificateException("Unable to find certificate trusted anchor")
+        throw CertificateException("SSLShield: Unable to find certificate trusted anchor")
     }
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class)
-    private fun validate(cert: Certificate, issuerCertificate: Certificate) {
+    private fun validate(
+        cert: Certificate,
+        issuerCertificate: Certificate,
+    ) {
         if (issuerCertificate.type == CertificateTypes.X509) {
             (issuerCertificate as X509Certificate).checkValidity()
         }

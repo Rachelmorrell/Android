@@ -1,0 +1,366 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.nativeinput
+
+import android.graphics.Color
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.view.ViewOutlineProvider
+import android.widget.TextView
+import androidx.annotation.VisibleForTesting
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.updateLayoutParams
+import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.browser.omnibar.Omnibar
+import com.duckduckgo.app.browser.omnibar.Omnibar.ViewMode.DuckAI
+import com.duckduckgo.app.browser.omnibar.OmnibarType
+import com.duckduckgo.app.browser.webview.BottomOmnibarBrowserContainerLayoutBehavior
+import com.duckduckgo.app.browser.webview.TopOmnibarBrowserContainerLayoutBehavior
+import com.duckduckgo.common.ui.view.getColorFromAttr
+import com.duckduckgo.common.ui.view.gone
+import com.duckduckgo.common.ui.view.show
+import com.duckduckgo.common.ui.view.toPx
+import com.google.android.material.card.MaterialCardView
+
+sealed class DuckAiTier {
+    data object Free : DuckAiTier()
+    data object FreeNoUpgrade : DuckAiTier()
+    data object Paid : DuckAiTier()
+    data object Unknown : DuckAiTier()
+}
+
+interface OmnibarState {
+    fun isDuckAiMode(): Boolean
+    fun isBrowserMode(): Boolean
+    fun isOmnibarBottom(): Boolean
+    fun isSplitMode(): Boolean
+}
+
+interface NativeInputOmnibarController : OmnibarState {
+    fun show()
+    fun hide()
+    fun getText(): String
+    fun hideBackground()
+    fun getCardView(): View?
+    fun restore()
+    fun forceToTop()
+    fun updateTierTitle(tier: DuckAiTier, onUpgradeClicked: () -> Unit, onUpgradeShown: () -> Unit)
+
+    /** Hide/show the subscription-tier indicator (Free pill / paid title) in the Duck.ai header. */
+    fun setTierVisible(visible: Boolean)
+}
+
+class RealNativeInputOmnibarController(
+    private val omnibar: Omnibar,
+    private val rootView: ViewGroup,
+    private val nativeInputStateBugKillSwitch: NativeInputStateBugKillSwitch,
+) : NativeInputOmnibarController {
+
+    private var layoutListener: View.OnLayoutChangeListener? = null
+
+    private var overlayActive: Boolean = false
+
+    override fun isDuckAiMode(): Boolean = omnibar.viewMode == DuckAI
+
+    override fun isBrowserMode(): Boolean = omnibar.viewMode is Omnibar.ViewMode.Browser
+
+    override fun isOmnibarBottom(): Boolean =
+        omnibar.omnibarType == OmnibarType.SINGLE_BOTTOM
+
+    override fun isSplitMode(): Boolean =
+        omnibar.omnibarType == OmnibarType.SPLIT
+
+    override fun show() = omnibar.show()
+
+    override fun hide() = omnibar.hide()
+
+    override fun getText(): String = omnibar.getText()
+
+    override fun hideBackground() {
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        overlayActive = true
+        applyOnLayout(omnibarView) {
+            makeOmnibarTransparent(omnibarView)
+            hideOmnibarContent(omnibarView)
+            showDuckAiTitle(omnibarView)
+            if (isSplitMode()) {
+                showOmnibarButtons(omnibarView)
+            }
+        }
+    }
+
+    @VisibleForTesting
+    internal fun showOmnibarButtons(omnibarView: View) {
+        // Only reached for a Duck.ai chat in split mode with native input enabled. The leading slot
+        // shows the "+" (new chat), never the fire button — fire already lives next to the native
+        // input field at the bottom, so showing it here too would duplicate it. Mirrors the fire→+
+        // swap the OmnibarLayout applies via shouldShowPlusIcon in non-split positions.
+        omnibarView.findViewById<View?>(R.id.fireIconMenu)?.gone()
+        omnibarView.findViewById<View?>(R.id.plusIconMenu)?.show()
+        omnibarView.findViewById<View?>(R.id.tabsMenu)?.show()
+        omnibarView.findViewById<View?>(R.id.browserMenu)?.show()
+    }
+
+    @VisibleForTesting
+    internal fun hideOmnibarButtons(omnibarView: View) {
+        omnibarView.findViewById<View?>(R.id.fireIconMenu)?.gone()
+        omnibarView.findViewById<View?>(R.id.plusIconMenu)?.gone()
+        omnibarView.findViewById<View?>(R.id.tabsMenu)?.gone()
+        omnibarView.findViewById<View?>(R.id.browserMenu)?.gone()
+    }
+
+    private fun makeOmnibarTransparent(omnibarView: View) {
+        omnibarView.findViewById<View?>(R.id.toolbarContainer)?.setBackgroundColor(Color.TRANSPARENT)
+        omnibarView.findViewById<MaterialCardView?>(R.id.omniBarContainerShadow)?.apply {
+            setCardBackgroundColor(Color.TRANSPARENT)
+            cardElevation = 0f
+            removeCustomShadow()
+        }
+        omnibarView.findViewById<MaterialCardView?>(R.id.omniBarContainer)?.setCardBackgroundColor(Color.TRANSPARENT)
+    }
+
+    private fun View.removeCustomShadow() {
+        outlineProvider = ViewOutlineProvider.BACKGROUND
+        elevation = 0f
+        outlineAmbientShadowColor = Color.BLACK
+        outlineSpotShadowColor = Color.BLACK
+    }
+
+    private fun hideOmnibarContent(omnibarView: View) {
+        omnibarView.findViewById<View?>(R.id.omnibarIconContainer)?.gone()
+        omnibarView.findViewById<View?>(R.id.shieldIcon)?.gone()
+        omnibarView.findViewById<View?>(R.id.omnibarTextInput)?.gone()
+        omnibarView.findViewById<View?>(R.id.pageLoadingIndicator)?.gone()
+        omnibarView.findViewById<View?>(R.id.pageLoadProgressBar)?.gone()
+    }
+
+    private var currentTier: DuckAiTier = DuckAiTier.Unknown
+    private var currentUpgradeClick: (() -> Unit)? = null
+    private var tierVisible: Boolean = true
+
+    // Fired when the upgradeable Free pill becomes visible, for the free-label subscription impression pixel.
+    private var onUpgradeShown: (() -> Unit)? = null
+
+    private var upgradePillShown = false
+
+    private fun showDuckAiTitle(omnibarView: View) {
+        val header = omnibarView.findViewById<android.widget.LinearLayout?>(R.id.duckAIHeader)
+        omnibarView.findViewById<View?>(R.id.aiIcon)?.gone()
+        header?.show()
+        header?.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        header?.setBackgroundColor(Color.TRANSPARENT)
+        applyTierText(omnibarView)
+    }
+
+    override fun updateTierTitle(tier: DuckAiTier, onUpgradeClicked: () -> Unit, onUpgradeShown: () -> Unit) {
+        currentTier = tier
+        currentUpgradeClick = onUpgradeClicked
+        this.onUpgradeShown = onUpgradeShown
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        applyTierText(omnibarView)
+    }
+
+    override fun setTierVisible(visible: Boolean) {
+        tierVisible = visible
+        (omnibar.omnibarView as? View)?.let { applyTierText(it) }
+    }
+
+    private fun applyTierText(omnibarView: View) {
+        val pillSuppressedByKillSwitch = nativeInputStateBugKillSwitch.self().isEnabled() && !overlayActive
+
+        // Fire the free-label impression from the same conditions that render the upgradeable Free pill
+        // (below), so it measures an actual on-screen impression. This is triggered only once
+        // per hidden→shown  transition, resetting when it hides so the next display re-fires.
+        val upgradeablePillVisible = tierVisible && !pillSuppressedByKillSwitch && currentTier is DuckAiTier.Free
+        if (upgradeablePillVisible && !upgradePillShown) onUpgradeShown?.invoke()
+        upgradePillShown = upgradeablePillVisible
+
+        val aiTitle = omnibarView.findViewById<TextView?>(R.id.aiTitle)
+        val freePill = omnibarView.findViewById<View?>(R.id.duckAIFreePill)
+        val freePillUpgrade = omnibarView.findViewById<View?>(R.id.duckAIFreePillUpgrade)
+        val freePillChevron = omnibarView.findViewById<View?>(R.id.duckAIFreePillChevron)
+        if (!tierVisible) {
+            aiTitle?.gone()
+            freePill?.gone()
+            freePill?.setOnClickListener(null)
+            return
+        }
+        if (pillSuppressedByKillSwitch) {
+            freePill?.gone()
+            freePill?.setOnClickListener(null)
+            return
+        }
+        when (currentTier) {
+            is DuckAiTier.Free -> {
+                aiTitle?.gone()
+                freePill?.show()
+                freePillUpgrade?.show()
+                freePillChevron?.show()
+                freePill?.isClickable = true
+                freePill?.setOnClickListener { currentUpgradeClick?.invoke() }
+            }
+            is DuckAiTier.FreeNoUpgrade -> {
+                aiTitle?.gone()
+                freePill?.show()
+                freePillUpgrade?.gone()
+                freePillChevron?.gone()
+                freePill?.setOnClickListener(null)
+                freePill?.isClickable = false
+            }
+            is DuckAiTier.Paid -> {
+                freePill?.gone()
+                freePill?.setOnClickListener(null)
+                aiTitle?.show()
+                aiTitle?.setTextIfChanged(aiTitle.context.getString(R.string.duckAiHeaderPaidTitle))
+                aiTitle?.textSize = 16f
+            }
+            // Empty until the plan loads, so free users don't see the paid title before their pill.
+            is DuckAiTier.Unknown -> {
+                aiTitle?.gone()
+                freePill?.gone()
+                freePill?.setOnClickListener(null)
+            }
+        }
+    }
+
+    // Runs from the omnibar's OnLayoutChangeListener. setText on a wrap_content TextView always requests
+    // a layout, even for identical text, so an unconditional set re-triggers the listener on every frame
+    // and the queued traversal holds back the keyboard's InputConnection calls.
+    private fun TextView.setTextIfChanged(value: String) {
+        if (text.toString() != value) text = value
+    }
+
+    private fun applyOnLayout(omnibarView: View, block: () -> Unit) {
+        removeLayoutListener(omnibarView)
+        block()
+        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            if ((!nativeInputStateBugKillSwitch.self().isEnabled() || overlayActive) &&
+                rootView.findViewById<View?>(R.id.inputModeRoot) != null
+            ) {
+                block()
+            }
+        }
+        layoutListener = listener
+        omnibarView.addOnLayoutChangeListener(listener)
+    }
+
+    private fun removeLayoutListener(omnibarView: View) {
+        layoutListener?.let { omnibarView.removeOnLayoutChangeListener(it) }
+        layoutListener = null
+    }
+
+    override fun getCardView(): View? {
+        val omnibarView = omnibar.omnibarView as? View ?: return null
+        return omnibarView.findViewById(R.id.omniBarContainerShadow)
+    }
+
+    override fun restore() {
+        overlayActive = false
+        currentTier = DuckAiTier.Unknown
+        currentUpgradeClick = null
+        onUpgradeShown = null
+        upgradePillShown = false
+        tierVisible = true
+        (omnibar.omnibarView as? View)?.let { removeLayoutListener(it) }
+        restoreOmnibarColors()
+        restoreOmnibarContent()
+        restoreBottomOmnibarPosition()
+        if (omnibar.omnibarType == OmnibarType.SPLIT) {
+            rootView.findViewById<View?>(R.id.navigationBar)?.show()
+        } else {
+            rootView.findViewById<View?>(R.id.bottomBrowserOutlineStroke)?.show()
+        }
+        rootView.findViewById<View?>(R.id.topBrowserOutlineStroke)?.show()
+        omnibar.isScrollingEnabled = true
+    }
+
+    private fun restoreOmnibarContent() {
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        // Enter morph fades the address card to 0 and intentionally leaves it there before hide().
+        // Restore must put alpha back — otherwise show() reveals an invisible field with only the
+        // trailing fire/tabs/menu icons visible (common after Search-only / Duck.ai-off teardown).
+        omnibarView.findViewById<View?>(R.id.omniBarContainerShadow)?.apply {
+            alpha = 1f
+            show()
+        }
+        omnibarView.findViewById<View?>(R.id.omniBarContainer)?.apply {
+            alpha = 1f
+            show()
+        }
+        omnibarView.findViewById<View?>(R.id.endIconsContainer)?.show()
+        omnibarView.findViewById<View?>(R.id.omnibarIconContainer)?.show()
+        omnibarView.findViewById<View?>(R.id.omnibarTextInput)?.show()
+        omnibarView.findViewById<View?>(R.id.duckAIHeader)?.gone()
+        omnibarView.findViewById<View?>(R.id.duckAIFreePill)?.gone()
+        if (isSplitMode()) {
+            hideOmnibarButtons(omnibarView)
+        }
+    }
+
+    private fun restoreOmnibarColors() {
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        val ctx = omnibarView.context
+        omnibarView.findViewById<View?>(R.id.toolbarContainer)
+            ?.setBackgroundColor(ctx.getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorToolbar))
+        omnibarView.findViewById<MaterialCardView?>(R.id.omniBarContainerShadow)?.apply {
+            setCardBackgroundColor(ctx.getColorFromAttr(com.google.android.material.R.attr.colorSurface))
+            val isTop = omnibar.omnibarType == OmnibarType.SINGLE_TOP || omnibar.omnibarType == OmnibarType.SPLIT
+            cardElevation = if (isTop) 6f.toPx() else 3f.toPx()
+        }
+        omnibarView.findViewById<MaterialCardView?>(R.id.omniBarContainer)?.apply {
+            setCardBackgroundColor(context.getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorWindow))
+        }
+    }
+
+    private fun restoreBottomOmnibarPosition() {
+        if (omnibar.omnibarType != OmnibarType.SINGLE_BOTTOM) return
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        val params = omnibarView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
+        if (params.gravity != Gravity.TOP) return
+
+        omnibarView.updateLayoutParams<CoordinatorLayout.LayoutParams> { gravity = Gravity.BOTTOM }
+        val parent = omnibarView.parent as? ViewGroup
+        parent?.removeView(omnibarView)
+        parent?.addView(omnibarView)
+        omnibarView.elevation = 0f
+        rootView.findViewById<View?>(R.id.browserLayout)?.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+            behavior = BottomOmnibarBrowserContainerLayoutBehavior()
+        }
+    }
+
+    override fun forceToTop() {
+        val omnibarView = omnibar.omnibarView as? View ?: return
+        val parent = omnibarView.parent as? ViewGroup ?: return
+
+        if (omnibar.omnibarType == OmnibarType.SINGLE_BOTTOM) {
+            omnibarView.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                gravity = Gravity.TOP
+            }
+            parent.removeView(omnibarView)
+            parent.addView(omnibarView, 0)
+            omnibarView.elevation = 1f.toPx()
+
+            val topBehavior = TopOmnibarBrowserContainerLayoutBehavior(rootView.context, null)
+            rootView.findViewById<View?>(R.id.browserLayout)?.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                behavior = topBehavior
+            }
+        }
+        omnibar.isScrollingEnabled = false
+        omnibar.setExpanded(true)
+    }
+}

@@ -20,10 +20,10 @@ import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserDetector
 import com.duckduckgo.app.global.DefaultRoleBrowserDialog
 import com.duckduckgo.app.onboarding.ui.OnboardingPageBuilder.OnboardingPageBlueprint
 import com.duckduckgo.app.onboarding.ui.OnboardingPageBuilder.OnboardingPageBlueprint.DefaultBrowserBlueprint
-import com.duckduckgo.app.onboarding.ui.OnboardingPageBuilder.OnboardingPageBlueprint.WelcomeBlueprint
+import com.duckduckgo.app.onboarding.ui.OnboardingPageBuilder.OnboardingPageBlueprint.WelcomePageBlueprint
 import com.duckduckgo.app.onboarding.ui.page.DefaultBrowserPage
 import com.duckduckgo.app.onboarding.ui.page.OnboardingPageFragment
-import com.duckduckgo.app.onboarding.ui.page.WelcomePage
+import com.duckduckgo.app.onboarding.ui.page.welcome.WelcomePageFragment
 
 interface OnboardingPageManager {
     fun pageCount(): Int
@@ -34,7 +34,7 @@ interface OnboardingPageManager {
 class OnboardingPageManagerWithTrackerBlocking(
     private val defaultRoleBrowserDialog: DefaultRoleBrowserDialog,
     private val onboardingPageBuilder: OnboardingPageBuilder,
-    private val defaultWebBrowserCapability: DefaultBrowserDetector
+    private val defaultWebBrowserCapability: DefaultBrowserDetector,
 ) : OnboardingPageManager {
 
     private val pages = mutableListOf<OnboardingPageBlueprint>()
@@ -43,17 +43,15 @@ class OnboardingPageManagerWithTrackerBlocking(
 
     override fun buildPageBlueprints() {
         pages.clear()
-
-        pages.add(WelcomeBlueprint)
-
+        pages += WelcomePageBlueprint
         if (shouldShowDefaultBrowserPage()) {
-            pages.add((DefaultBrowserBlueprint))
+            pages += DefaultBrowserBlueprint
         }
     }
 
     override fun buildPage(position: Int): OnboardingPageFragment? {
         return when (pages.getOrNull(position)) {
-            is WelcomeBlueprint -> buildWelcomePage()
+            is WelcomePageBlueprint -> buildWelcomePage()
             is DefaultBrowserBlueprint -> buildDefaultBrowserPage()
             else -> null
         }
@@ -65,11 +63,11 @@ class OnboardingPageManagerWithTrackerBlocking(
             !defaultRoleBrowserDialog.shouldShowDialog()
     }
 
-    private fun buildDefaultBrowserPage(): DefaultBrowserPage {
-        return onboardingPageBuilder.buildDefaultBrowserPage()
+    private fun buildWelcomePage(): WelcomePageFragment {
+        return onboardingPageBuilder.buildWelcomePage()
     }
 
-    private fun buildWelcomePage(): WelcomePage {
-        return onboardingPageBuilder.buildWelcomePage()
+    private fun buildDefaultBrowserPage(): DefaultBrowserPage {
+        return onboardingPageBuilder.buildDefaultBrowserPage()
     }
 }

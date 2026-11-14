@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2026 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="showExperimentalBrowserMenu">Experimentálna ponuka prehliadača</string>
+
+    <!-- Inactivity timeout -->
+    <string name="afterInactivityOptionTitle">Po nečinnosti</string>
+    <string name="afterInactivityTimeoutTitle">Časovač nečinnosti</string>
+    <string name="afterInactivityScreenDescription">Vyber si, čo sa zobrazí po návrate do DuckDuckGo po nečinnosti</string>
+    <string name="afterInactivityOptionMessage" instruction="&apos;%1$s&apos; is a placeholder and will be replaced with the number of minutes, e.g. &apos;after 5 minutes of inactivity&apos;">Vyber si, čo sa ti ukáže po návrate po %1$s minútach nečinnosti.</string>
+    <string name="afterInactivityTimeoutAlways">Vždy</string>
+    <string name="afterInactivityTimeout1Minute">1 min.</string>
+    <string name="afterInactivityTimeoutXMinutes" instruction="&apos;%1$d&apos; is a placeholder and will be replaced with the number of minutes, e.g. &apos;5 minutes&apos;">%1$d minút</string>
+    <string name="afterInactivityTimeout1Hour">1 hod.</string>
+    <string name="afterInactivityTimeoutXHours" instruction="&apos;%1$d&apos; is a placeholder and will be replaced with the number of hours, e.g. &apos;2 hours&apos;">%1$d hodín</string>
+    <string name="returnToLastTabShortcutSettingTitle">Skratka „Vrátiť sa na“</string>
+    <string name="returnToLastTabShortcutSettingSubtitle">Zobrazí odkaz na návrat na naposledy použitú kartu pri spustení aplikácie po nečinnosti.</string>
+</resources>

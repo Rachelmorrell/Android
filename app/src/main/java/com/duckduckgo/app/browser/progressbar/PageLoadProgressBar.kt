@@ -1,0 +1,270 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.progressbar
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.os.SystemClock
+import android.util.AttributeSet
+import android.view.Choreographer
+import android.view.View
+import androidx.core.graphics.blue
+import androidx.core.graphics.green
+import androidx.core.graphics.red
+import androidx.core.view.isVisible
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.getColorFromAttr
+
+class PageLoadProgressBar @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0,
+) : View(context, attrs, defStyleAttr) {
+
+    private val defaultConfig = ProgressBarConfig()
+    private val updatedConfig = ProgressBarConfig(
+        initialProgress = 10f,
+        fastStartDurationMs = 300L,
+        fadeInDurationMs = 50L,
+    )
+    private var activeConfig = defaultConfig
+
+    private val timeProvider = object : TimeProvider {
+        override fun elapsedRealtime(): Long = SystemClock.elapsedRealtime()
+    }
+
+    private var engine = ProgressPhaseEngine(activeConfig, timeProvider)
+
+    private val barColor = context.getColorFromAttr(com.duckduckgo.mobile.android.R.attr.daxColorOmnibarAccent)
+
+    private var shimmerRenderer = buildShimmerRenderer(activeConfig)
+
+    private var indeterminateSweepRenderer = buildIndeterminateSweepRenderer(activeConfig)
+
+    private fun buildShimmerRenderer(config: ProgressBarConfig) = ShimmerRenderer(
+        config = config,
+        density = resources.displayMetrics.density,
+        shimmerColor = lighten(barColor, shimmerLightenFraction(config)),
+    )
+
+    private fun buildIndeterminateSweepRenderer(config: ProgressBarConfig) = IndeterminateSweepRenderer(
+        config = config,
+        barColor = barColor,
+    )
+
+    /**
+     * Selects the right progress config and rebuilds internal states from it,
+     * so all states always agree on the same config, then starts.
+     */
+    fun start(animationUpdateEnabled: Boolean) {
+        val resolved = if (animationUpdateEnabled) updatedConfig else defaultConfig
+        if (resolved != activeConfig) {
+            activeConfig = resolved
+            engine = ProgressPhaseEngine(activeConfig, timeProvider)
+            shimmerRenderer = buildShimmerRenderer(activeConfig)
+            indeterminateSweepRenderer = buildIndeterminateSweepRenderer(activeConfig)
+        }
+        start()
+    }
+
+    private val progressPaint = Paint().apply {
+        color = barColor
+        style = Paint.Style.FILL
+    }
+
+    private val barHeightPx = 1.5f * resources.displayMetrics.density
+
+    private fun shimmerLightenFraction(config: ProgressBarConfig): Float {
+        val isDark = (context as? DuckDuckGoActivity)?.isDarkThemeEnabled() ?: false
+        return if (isDark) config.shimmerLightenFractionDark else config.shimmerLightenFractionLight
+    }
+
+    private var lastFrameTimeNanos = 0L
+    private var _isStarted = false
+    private var isDismissing = false
+    private var lastReportedProgress = 0f
+
+    /**
+     * True from [start] until the completion fade-out finishes.
+     * Prevents stale progress updates from restarting the animation.
+     */
+    val isStarted: Boolean get() = _isStarted
+
+    private val frameCallback = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            val dtSeconds = if (lastFrameTimeNanos == 0L) {
+                0.016f
+            } else {
+                ((frameTimeNanos - lastFrameTimeNanos) / 1_000_000_000f)
+            }
+            lastFrameTimeNanos = frameTimeNanos
+
+            val now = SystemClock.elapsedRealtime()
+            val state = engine.tick(dtSeconds)
+
+            if (state.phase == Phase.INDETERMINATE) {
+                if (!indeterminateSweepRenderer.isActive) {
+                    indeterminateSweepRenderer.start(now, state.displayProgress / 100f)
+                } else if (indeterminateSweepRenderer.hasFinished(now)) {
+                    indeterminateSweepRenderer.stop()
+                    engine.onSweepFinished()
+                }
+            } else if (indeterminateSweepRenderer.isActive) {
+                indeterminateSweepRenderer.stop()
+            }
+
+            invalidate()
+
+            if (engine.phase == Phase.DONE) {
+                onDone()
+            } else if (state.shouldInvalidate && windowVisibility == VISIBLE) {
+                Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+    }
+
+    private fun start() {
+        val wasVisible = isDismissing || isVisible
+        if (isDismissing) {
+            animate().cancel()
+            isDismissing = false
+        }
+        engine.reset()
+        engine.start()
+        _isStarted = true
+        indeterminateSweepRenderer.stop()
+
+        lastReportedProgress = 0f
+        shimmerRenderer.start(SystemClock.elapsedRealtime())
+        if (wasVisible) {
+            // Bar still on screen from previous load — continue seamlessly
+            alpha = 1f
+        } else {
+            alpha = 0f
+            animate().alpha(1f).setDuration(activeConfig.fadeInDurationMs).start()
+        }
+        visibility = VISIBLE
+        lastFrameTimeNanos = 0L
+        // Ensure we don't have multiple frame callbacks queued if start() is called multiple times in quick succession
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        if (windowVisibility == VISIBLE) {
+            Choreographer.getInstance().postFrameCallback(frameCallback)
+        }
+    }
+
+    fun onProgressUpdate(progress: Float) {
+        if (progress < lastReportedProgress) {
+            // Progress went backward — new navigation, restart fresh
+            start()
+        }
+        val resumedFromStall = engine.phase == Phase.INDETERMINATE && progress > lastReportedProgress
+        lastReportedProgress = progress
+        engine.onProgressUpdate(progress)
+        if (resumedFromStall) {
+            indeterminateSweepRenderer.requestFinish(SystemClock.elapsedRealtime())
+        }
+    }
+
+    fun triggerCompletion() {
+        val wasIndeterminate = engine.phase == Phase.INDETERMINATE
+        engine.triggerCompletion()
+        if (wasIndeterminate) {
+            // Page finished while the sweep shows — let it finish the current cycle before completing.
+            indeterminateSweepRenderer.requestFinish(SystemClock.elapsedRealtime())
+        }
+    }
+
+    fun reset() {
+        _isStarted = false
+        isDismissing = false
+
+        animate().cancel()
+        engine.reset()
+        shimmerRenderer.stop()
+        indeterminateSweepRenderer.stop()
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        lastFrameTimeNanos = 0L
+        visibility = INVISIBLE
+        alpha = 1f
+    }
+
+    private fun onDone() {
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        isDismissing = true
+        animate()
+            .alpha(0f)
+            .setDuration(activeConfig.fadeOutDurationMs)
+            .withEndAction {
+                if (isDismissing) {
+                    _isStarted = false
+                    isDismissing = false
+                    engine.reset()
+                    shimmerRenderer.stop()
+                    indeterminateSweepRenderer.stop()
+                    visibility = INVISIBLE
+                    alpha = 1f
+                    lastFrameTimeNanos = 0L
+                }
+            }
+            .start()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val state = engine.frameState
+        if (state.phase == Phase.INDETERMINATE) {
+            val top = height - barHeightPx
+            indeterminateSweepRenderer.draw(canvas, width.toFloat(), top, height.toFloat(), SystemClock.elapsedRealtime())
+            return
+        }
+
+        if (state.displayProgress <= 0f) return
+        val progressWidth = (state.displayProgress / 100f) * width
+        val cornerRadius = barHeightPx / 2f
+        val top = height - barHeightPx
+        canvas.drawRoundRect(-cornerRadius, top, progressWidth, height.toFloat(), cornerRadius, cornerRadius, progressPaint)
+
+        if (shimmerRenderer.isActive) {
+            shimmerRenderer.draw(canvas, progressWidth, top, height.toFloat(), SystemClock.elapsedRealtime())
+        }
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        Choreographer.getInstance().removeFrameCallback(frameCallback)
+        lastFrameTimeNanos = 0L
+        if (visibility == VISIBLE && isStarted && engine.phase != Phase.DONE) {
+            engine.onBecameVisible()
+            Choreographer.getInstance().postFrameCallback(frameCallback)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        reset()
+    }
+
+    companion object {
+        /** Blend [color] toward white by [fraction] (0 = original, 1 = white). */
+        private fun lighten(color: Int, fraction: Float): Int = Color.rgb(
+            (color.red + (255 - color.red) * fraction).toInt(),
+            (color.green + (255 - color.green) * fraction).toInt(),
+            (color.blue + (255 - color.blue) * fraction).toInt(),
+        )
+    }
+}

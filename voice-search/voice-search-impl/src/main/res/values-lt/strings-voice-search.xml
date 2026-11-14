@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="voiceSearchError">Kažkas atsitiko. Pabandykite dar kartą vėliau.</string>
+    <string name="voiceSearchIconContentDescription">Paieška balsu</string>
+    <string name="voiceSearchListening">Kalbėkite dabar</string>
+    <string name="voiceSearchListeningFooter">Garsas apdorojamas įrenginyje. Jis nesaugomas ir su niekuo, įskaitant „DuckDuckGo“, nebendrinamas.</string>
+    <string name="voiceSearchNegativeAction">Atšaukti</string>
+    <string name="voiceSearchMicAccessDeniedDialogTitle">„DuckDuckGo“ reikia prieigos prie tavo mikrofono</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessage">Jei nori naudotis mūsų privačia paieška balsu, reikia leidimo naudoti mikrofoną.</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessageDuckAi">Norint naudotis mūsų privačiomis balso funkcijomis, reikia leidimo naudoti mikrofoną.</string>
+    <string name="voiceSearchMicAccessDeniedDialogChangePermissions">Keisti leidimus</string>
+    <string name="voiceSearchMicAccessDeniedDialogHideVoiceSearch">Slėpti paiešką balsu</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarMessage">Balso funkcijoms reikia leidimo naudoti mikrofoną</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarAction">Leisti</string>
+    <string name="voiceSearchTitle">Paieška balsu</string>
+</resources>

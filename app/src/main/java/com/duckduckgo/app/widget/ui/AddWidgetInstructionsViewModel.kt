@@ -17,19 +17,19 @@
 package com.duckduckgo.app.widget.ui
 
 import androidx.lifecycle.ViewModel
-import com.duckduckgo.app.global.SingleLiveEvent
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.Close
 import com.duckduckgo.app.widget.ui.AddWidgetInstructionsViewModel.Command.ShowHome
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.ActivityScope
 import javax.inject.Inject
 
-class AddWidgetInstructionsViewModel : ViewModel() {
+@ContributesViewModel(ActivityScope::class)
+class AddWidgetInstructionsViewModel @Inject constructor() : ViewModel() {
 
     sealed class Command {
-        object ShowHome : Command()
-        object Close : Command()
+        data object ShowHome : Command()
+        data object Close : Command()
     }
 
     val command: SingleLiveEvent<Command> = SingleLiveEvent()
@@ -40,17 +40,5 @@ class AddWidgetInstructionsViewModel : ViewModel() {
 
     fun onClosePressed() {
         command.value = Close
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class AddWidgetInstructionsViewModelFactory @Inject constructor() : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(AddWidgetInstructionsViewModel::class.java) -> (AddWidgetInstructionsViewModel() as T)
-                else -> null
-            }
-        }
     }
 }

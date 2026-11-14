@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2023 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.brokensite.impl.di
+
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.brokensite.impl.BrokenSitePromptDataStore
+import com.duckduckgo.brokensite.impl.BrokenSiteRefreshesInMemoryStore
+import com.duckduckgo.brokensite.impl.BrokenSiteReportRepository
+import com.duckduckgo.brokensite.impl.RealBrokenSiteReportRepository
+import com.duckduckgo.brokensite.store.ALL_MIGRATIONS
+import com.duckduckgo.brokensite.store.BrokenSiteDatabase
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.data.store.api.DatabaseProvider
+import com.duckduckgo.data.store.api.RoomDatabaseConfig
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CoroutineScope
+
+@BindingContainer
+@ContributesTo(AppScope::class)
+class BrokenSiteModule {
+
+    @SingleIn(AppScope::class)
+    @Provides
+    fun provideBrokenSiteReportRepository(
+        database: BrokenSiteDatabase,
+        @AppCoroutineScope coroutineScope: CoroutineScope,
+        dispatcherProvider: DispatcherProvider,
+        brokenSitePromptDataStore: BrokenSitePromptDataStore,
+        brokenSiteRefreshesInMemoryStore: BrokenSiteRefreshesInMemoryStore,
+    ): BrokenSiteReportRepository {
+        return RealBrokenSiteReportRepository(
+            database,
+            coroutineScope,
+            dispatcherProvider,
+            brokenSitePromptDataStore,
+            brokenSiteRefreshesInMemoryStore,
+        )
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideBrokenSiteDatabase(databaseProvider: DatabaseProvider): BrokenSiteDatabase {
+        return databaseProvider.buildRoomDatabase(
+            BrokenSiteDatabase::class.java,
+            "broken_site.db",
+            config = RoomDatabaseConfig(
+                fallbackToDestructiveMigration = true,
+                migrations = ALL_MIGRATIONS,
+            ),
+        )
+    }
+}

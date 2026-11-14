@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">Lataus epäonnistui. Tarkista internetyhteys.</string>
+
+    <string name="notificationChannelFileDownloading">Tiedosto latautuu</string>
+    <string name="notificationChannelFileDownloaded">Tiedosto ladattu</string>
+
+    <string name="downloadInProgress">Ladataan</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">Tiedoston %1$s lataus aloitettu</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">Kohteen %1$s lataus valmis</string>
+    <string name="downloadsDownloadGenericErrorMessage">Lataus epäonnistui.</string>
+    <string name="downloadsCancel">Peruuta</string>
+    <string name="downloadsRetry">Yritä uudelleen</string>
+    <string name="notificationDownloadComplete">Lataus valmis.</string>
+    <string name="notificationDownloadFailed">Lataus epäonnistui.</string>
+
+    <string name="downloadConfirmationContinue">Tallenna latauksiin</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">Sivustolta %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Poista kaikki</string>
+    <string name="downloadsActivityNoItemsDescription">Yhtään tiedostoa ei ole vielä ladattu</string>
+    <string name="downloadsActivityTitle">Lataukset</string>
+    <string name="downloadsAllFilesDeletedMessage">Kaikki tiedostot poistettu</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Tiedoston avaaminen ei onnistu. Tarkista yhteensopiva sovellus.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">%1$s poistettiin</string>
+    <string name="downloadsFileNotFoundErrorMessage">Tiedostoa ei enää ole olemassa</string>
+    <string name="downloadsItemMenuCancel">Peruuta</string>
+    <string name="downloadsItemMenuDelete">Poista</string>
+    <string name="downloadsItemMenuShare">Jaa</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">%1$s: lisäasetukset</string>
+    <string name="downloadsNotifyMeSubtitle">Saat ilmoituksen, kun lataukset ovat valmiita.</string>
+    <string name="downloadsNotifyMeTitle">Saat tietää, milloin lataukset ovat valmiita</string>
+    <string name="downloadsShareTitle">Jaa...</string>
+    <string name="downloadsStateInProgress">Käynnissä…</string>
+    <string name="downloadsUndoActionName">Kumoa</string>
+    <string name="downloadsSearchHint">Hae</string>
+</resources>

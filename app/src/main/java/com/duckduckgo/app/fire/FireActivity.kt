@@ -17,15 +17,17 @@
 package com.duckduckgo.app.fire
 
 import android.app.Activity
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Process
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import com.duckduckgo.app.browser.BrowserActivity
-import com.duckduckgo.app.browser.R
-import com.duckduckgo.app.global.view.fadeTransitionConfig
+import com.duckduckgo.app.browser.mode.FireRestart
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.view.fadeTransitionConfig
+import com.duckduckgo.common.ui.view.noAnimationConfig
+import com.duckduckgo.di.scopes.ActivityScope
 
 /**
  * Activity which is responsible for killing the main process and restarting it. This Activity will automatically finish itself after a brief time.
@@ -36,58 +38,89 @@ import com.duckduckgo.app.global.view.fadeTransitionConfig
  *
  * This Activity was largely inspired by https://github.com/JakeWharton/ProcessPhoenix
  */
+@InjectWith(ActivityScope::class)
 class FireActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val intent = intent.getParcelableExtra<Intent>(KEY_RESTART_INTENTS)
-        startActivity(intent, fadeTransitionConfig())
+        // Reconstruct the restart Intent in this process from the primitive extras passed by triggerRestart.
+        val notifyDataCleared = intent.getBooleanExtra(KEY_NOTIFY_DATA_CLEARED, false)
+        val deletedTabCount = intent.getIntExtra(KEY_DELETED_TAB_COUNT, 0)
+        val query = intent.getStringExtra(KEY_QUERY)
+        startActivity(getRestartIntent(this, notifyDataCleared, deletedTabCount, query), fadeTransitionConfig())
+        overridePendingTransition(0, 0)
         finish()
         killProcess()
     }
 
-    override fun onBackPressed() {
-        // do nothing - the activity will kill itself soon enough
-    }
-
     companion object {
-        private const val KEY_RESTART_INTENTS = "KEY_RESTART_INTENTS"
+        private const val KEY_NOTIFY_DATA_CLEARED = "KEY_NOTIFY_DATA_CLEARED"
+        private const val KEY_DELETED_TAB_COUNT = "KEY_DELETED_TAB_COUNT"
+        private const val KEY_QUERY = "KEY_QUERY"
 
-        fun triggerRestart(context: Context, notifyDataCleared: Boolean) {
-            triggerRestart(context, getRestartIntent(context, notifyDataCleared))
-        }
+        fun triggerRestart(
+            context: Context,
+            notifyDataCleared: Boolean,
+            enableTransitionAnimation: Boolean = true,
+            deletedTabCount: Int = 0,
+            query: String? = null,
+        ) {
+            val intent = fireActivityIntent(context, notifyDataCleared, deletedTabCount, query)
 
-        private fun triggerRestart(context: Context, nextIntent: Intent) {
-            val intent = Intent(context, FireActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            intent.putExtra(KEY_RESTART_INTENTS, nextIntent)
+            val transitionAnimationConfig = if (enableTransitionAnimation) {
+                context.fadeTransitionConfig()
+            } else {
+                context.noAnimationConfig()
+            }
 
-            context.startActivity(intent, context.fadeTransitionConfig())
+            context.startActivity(intent, transitionAnimationConfig)
             if (context is Activity) {
+                context.overridePendingTransition(0, 0)
                 context.finish()
             }
             killProcess()
         }
 
-        private fun getRestartIntent(context: Context, notifyDataCleared: Boolean = false): Intent {
-            val intent = BrowserActivity.intent(context, notifyDataCleared = notifyDataCleared)
+        /**
+         * Builds the Intent that launches [FireActivity], carrying only primitive extras and never a
+         * nested Intent. [FireActivity] reconstructs the restart Intent itself, because forwarding a
+         * nested Intent unparceled from another Intent's extras trips Android 16's intent-redirection
+         * hardening (UnsafeIntentLaunchViolation).
+         */
+        @VisibleForTesting
+        internal fun fireActivityIntent(
+            context: Context,
+            notifyDataCleared: Boolean,
+            deletedTabCount: Int,
+            query: String? = null,
+        ): Intent {
+            return Intent(context, FireActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(KEY_NOTIFY_DATA_CLEARED, notifyDataCleared)
+                putExtra(KEY_DELETED_TAB_COUNT, deletedTabCount)
+                putExtra(KEY_QUERY, query)
+            }
+        }
+
+        private fun getRestartIntent(
+            context: Context,
+            notifyDataCleared: Boolean = false,
+            deletedTabCount: Int = 0,
+            query: String? = null,
+        ): Intent {
+            val intent = BrowserActivity.intent(
+                context,
+                launchSource = FireRestart,
+                queryExtra = query,
+                notifyDataCleared = notifyDataCleared,
+                deletedTabCount = deletedTabCount,
+            )
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             return intent
         }
 
         private fun killProcess() {
             Runtime.getRuntime().exit(0)
-        }
-
-        fun appRestarting(context: Context): Boolean {
-            val currentProcessId = Process.myPid()
-            val activityManager: ActivityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            activityManager.runningAppProcesses?.forEach {
-                if (it.pid == currentProcessId && it.processName.endsWith(context.getString(R.string.fireProcessName))) {
-                    return true
-                }
-            }
-            return false
         }
     }
 }

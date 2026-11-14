@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Sync Disabled messages -->
+    <string name="sync_flows_disabled"><b>Sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami</b>\nAtsiprašome, bet šiuo metu sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami. Pabandykite dar kartą vėliau.</string>
+    <string name="sync_flows_disabled_new_version"><b>Sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami</b>\nAtsiprašome, bet sinchronizavimas ir atsarginės kopijos kūrimas šioje programos versijoje nebepasiekiami. Norėdami tęsti, atnaujinkite „DuckDuckGo“ į naujausią versiją.</string>
+    <string name="sync_create_account_disabled"><b>Sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami</b>\nAtsiprašome, bet šiuo metu sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami. Pabandykite dar kartą vėliau.</string>
+    <string name="sync_create_account_disabled_new_version"><b>Sinchronizavimas ir atsarginės kopijos kūrimas nepasiekiami</b>\nAtsiprašome, bet sinchronizavimas ir atsarginės kopijos kūrimas šioje programos versijoje nebepasiekiami. Norėdami tęsti, atnaujinkite „DuckDuckGo“ į naujausią versiją.</string>
+    <string name="sync_disabled_authenticated_user"><b>Sinchronizavimas ir atsarginės kopijos kūrimas pristabdyti</b>\nAtsiprašome, bet sinchronizavimas ir atsarginės kopijos kūrimas šiuo metu nepasiekiami. Pabandykite dar kartą vėliau.</string>
+    <string name="sync_disabled_authenticated_user_new_version"><b>Sinchronizavimas ir atsarginės kopijos kūrimas pristabdyti</b>\nAtsiprašome, bet sinchronizavimas ir atsarginės kopijos kūrimas šioje programos versijoje nebepasiekiami. Norėdami tęsti, atnaujinkite „DuckDuckGo“ į naujausią versiją.</string>
+    <string name="sync_paused_notification"><b>Sinchronizavimas ir atsarginės kopijos kūrimas pristabdyti</b>\nAtsiprašome, bet sinchronizavimas ir atsarginės kopijos kūrimas šiuo metu nepasiekiami. Pabandykite dar kartą vėliau.</string>
+    <string name="sync_error_notification"><b>Sinchronizavimo klaida</b>\n„Sync &amp; Backup“ laikinai nepasiekiamas.</string>
+    <string name="sync_error_warning"><b>Sinchronizavimo klaida</b>\n„Sync &amp; Backup“ laikinai nepasiekiamas.</string>
+    <string name="sync_signed_out_notification"><b>Sinchronizavimas pristabdymas</b>\nSinchronizavimas buvo pristabdytas. Jei norite toliau sinchronizuoti šį įrenginį, iš naujo prisijunkite naudodami kitą įrenginį arba atkūrimo kodą.</string>
+
+    <!-- Settings screen -->
+    <string name="sync_screen_title">Sinchronizuoti ir kurti atsarginę kopiją</string>
+    <string name="sync_setup_begin_syncing">Pradėti sinchronizavimą</string>
+    <string name="sync_setup_with_another_device_cta_title">Sinchronizuoti su kitu įrenginiu</string>
+    <string name="sync_setup_with_another_device_cta_subtitle">Saugiai sinchronizuokite žymes ir slaptažodžius tarp savo įrenginių.</string>
+    <string name="sync_setup_with_another_device_cta_subtitle_with_ai_chat">Saugiai sinchronizuokite žymes, slaptažodžius ir Duck.ai pokalbius tarp savo įrenginių.</string>
+    <string name="sync_off_hint">Jūsų duomenys šifruojami ištisiniu būdu, o „DuckDuckGo“ neturi prieigos prie šifravimo rakto.</string>
+    <string name="sync_setup_single_device_title">Vieno įrenginio sąranka</string>
+    <string name="sync_setup_other_options_title">Kitos parinktys</string>
+    <string name="sync_setup_single_recover_data_cta_title">Atkurti sinchronizuotus duomenis</string>
+    <string name="sync_setup_single_sync_this_device_cta_title">Sinchronizuokite ir sukurkite atsarginę šio įrenginio kopiją</string>
+
+    <string name="sync_off_encrypted_hint">Jūsų duomenys šifruojami ištisiniu būdu, o „DuckDuckGo“ neturi prieigos prie iššifravimo rakto.</string>
+
+    <!-- Setup screen -->
+    <string name="sync_enable_sync_title">Nustatome sinchronizavimą ir atsarginės kopijos kūrimą!</string>
+    <string name="sync_enable_sync_content">Jūsų žymės ir slaptažodžiai yra ruošiami sinchronizuoti. Tai turėtų užtrukti tik akimirką.</string>
+    <string name="sync_enable_sync_content_with_ai_chat">Jūsų žymos, slaptažodžiai ir „Duck.ai“ pokalbiai ruošiami sinchronizuoti. Tai turėtų užtrukti tik akimirką.</string>
+    <string name="sync_enable_options">Parinktys</string>
+    <string name="sync_enable_option_favicons_title">Gauti žymių piktogramas</string>
+    <string name="sync_enable_option_favicons_subtitle">Automatiškai atsisiųskite sinchronizuotų žymių piktogramas.</string>
+    <string name="sync_enable_connecting">Jungiamasi...</string>
+    <string name="sync_intro_enable_title">Sinchronizuokite ir sukurkite atsarginę šio įrenginio kopiją</string>
+    <string name="sync_intro_enable_content">Taip „DuckDuckGo“ saugiame serveryje sukuriama užšifruota atsarginė žymių ir slaptažodžių kopija, kurią galima sinchronizuoti su kitais įrenginiais. \n\n Šifravimo raktas saugomas tik jūsų įrenginyje, „DuckDuckGo“ negali jo pasiekti.</string>
+    <string name="sync_intro_enable_content_with_ai_chat">Tai sukuria užšifruotą jūsų žymių, slaptažodžių ir Duck.ai pokalbių atsarginę kopiją “DuckDuckGo” saugiame serveryje, kurią galima sinchronizuoti su kitais jūsų įrenginiais. \n\n Šifravimo raktas saugomas tik jūsų įrenginyje, „DuckDuckGo“ negali jo pasiekti.</string>
+    <string name="sync_intro_enable_footer">Vėliau galėsite sinchronizuoti su kitais įrenginiais.</string>
+    <string name="sync_intro_enable_cta">Įjunkite sinchronizavimą ir atsarginės kopijos kūrimą</string>
+    <!-- Recover Synced Data Intro Screen -->
+    <string name="sync_recover_synced_data_title">Sinchronizuotų duomenų atkūrimas</string>
+    <string name="sync_recover_synced_data_content">Reikės atkūrimo kodo, kurį gavai, kai nustatei „Sync &amp; Backup\". Galbūt išsaugojai jį kaip PDF failą naudojamame įrenginyje.</string>
+    <string name="sync_recover_synced_data_cta">Atkurti sinchronizuotus duomenis</string>
+
+    <!-- Recover data screen -->
+    <string name="login_screen_title">Nuskaityti QR kodą</string>
+    <string name="login_screen_enter_code_cta">Įveskite kodą ranka</string>
+    <string name="login_screen_barcode_hint">Norėdami sinchronizuoti, nukreipkite kamerą į QR kodą</string>
+    <string name="login_screen_cant_scan_label">Nepavyksta nuskaityti?</string>
+    <string name="login_screen_cant_scan_button_text">Kopijuoti teksto kodą</string>
+
+
+    <!-- Connect screen -->
+    <string name="connect_screen_title">Nuskaityti QR kodą</string>
+    <string name="connect_screen_scan_qr_hint">Kitame įrenginyje atidaryk „DuckDuckGo“ programėlę ir eik į <b>Nustatymai &gt; Sinchronizavimas ir atsarginės kopijos kūrimas &gt; Sinchronizuoti su kitu įrenginiu</b>.</string>
+    <string name="connect_screen_enter_code_cta">Įveskite kodą ranka</string>
+    <string name="connect_screen_connect_qr_hint_title">Arba nuskaityk su „DuckDuckGo“ savo kitame įrenginyje</string>
+    <string name="connect_screen_connect_qr_hint_content">Kitame įrenginyje atidaryk „DuckDuckGo“ ir nuskaityk šį kodą, kad sinchronizuotum.</string>
+    <string name="connect_screen_share_code">Kopijuoti kodą</string>
+
+    <!-- Enter Code screen -->
+    <string name="enter_code_screen_title">Įveskite kodą ranka</string>
+    <string name="sync_enter_code_hint">Eikite į <b>Nustatymai &gt; Sinchronizavimas ir atsarginės kopijos kūrimas &gt; Sinchronizuoti su kitu įrenginiu</b> ir pasirinkite <b>Rodyti teksto kodą</b> „DuckDuckGo“ programoje kitame sinchronizuotame įrenginyje ir įklijuokite čia kodą, kad sinchronizuotumėte šį įrenginį.</string>
+    <string name="sync_enter_code_verifying">Tikrinamas kodas</string>
+    <string name="sync_enter_code_invalid">⚠️ Netinkamas kodas</string>
+    <string name="sync_enter_code_paste">Įklijuoti kodą</string>
+
+    <!-- Recovery PDF screen -->
+    <string name="sync_recovery_code_title">Išsaugoti atkūrimo kodą</string>
+    <string name="sync_save_recovery_code_item_hint">Jei neteksite prieigos prie savo įrenginių, šio kodo reikės norint atkurti sinchronizuotus duomenis.</string>
+    <string name="sync_recovery_code_skip_button">Kitas</string>
+    <string name="sync_recovery_code_primary_button">Išsaugoti kaip PDF</string>
+    <string name="sync_recovery_code_secondary_button">Kopijuoti kodą</string>
+    <string name="sync_code_box_description">Kiekvienas, turintis prieigą prie šio kodo, gali pasiekti jūsų sinchronizuotus duomenis, todėl prašome laikyti juos saugioje vietoje.</string>
+
+    <!-- Device synced screen -->
+    <string name="sync_connected_device_title">Jūsų duomenys sinchronizuoti!</string>
+    <string name="sync_connected_device_primary_button">Atlikta</string>
+
+    <string name="show_qr_screen_title">Rodyti QR kodą</string>
+
+    <string name="show_code_screen_title">Kodas</string>
+    <string name="enter_code_screen_cta">Įvesti teksto kodą</string>
+    <string name="sync_login_device_hint">Norėdami atkurti duomenis, nuskaitykite QR kodą atkūrimo PDF arba kitame sinchronizuotame įrenginyje.</string>
+
+    <string name="synced_devices_section_title">Sinchronizuoti įrenginiai</string>
+    <string name="sync_new_device_section_title">Sinchronizuoti naują įrenginį</string>
+    <string name="sync_new_device_hint">Eikite į Nustatymai &gt; Sinchronizavimas ir atsarginės kopijos kūrimas „DuckDuckGo“ programoje kitame įrenginyje ir nuskaitykite, kad iš karto prisijungtumėte.</string>
+    <string name="sync_show_text_code_item">Rodyti teksto kodą</string>
+    <string name="sync_show_qr_code_item">Nuskaityti QR kodą</string>
+    <string name="sync_save_recovery_code_item">Išsaugoti atkūrimo PDF</string>
+    <string name="sync_delete_account_item">Išjungti ir ištrinti serverio duomenis…</string>
+    <string name="sync_disable_sync_item">Išjungti sinchronizavimą ir atsarginės kopijos kūrimą...</string>
+    <string name="sync_enable_sync_next_button">Kitas</string>
+    <string name="sync_recovery_code_content">Jei neteksite prieigos prie savo įrenginių, šio kodo reikės norint atkurti sinchronizuotus duomenis.</string>
+    <string name="sync_recovery_code_hint">Kiekvienas, turintis prieigą prie šio kodo, gali pasiekti jūsų sinchronizuotus duomenis, todėl prašome laikyti juos saugioje vietoje.</string>
+
+    <string name="turn_off_sync_dialog_title">Išjungti sinchronizavimą?</string>
+    <string name="turn_off_sync_dialog_content">Šis įrenginys nebegalės pasiekti jūsų sinchronizuotų duomenų</string>
+    <string name="turn_off_sync_dialog_primary_button">Išjungti</string>
+    <string name="turn_off_sync_dialog_secondary_button">Atšaukti</string>
+    <string name="sync_permission_required_store_recovery_code">Išsaugoti atkūrimo PDF reikia saugojimo leidimo</string>
+    <string name="sync_share_title">Dalintis su...</string>
+    <string name="sync_pdf_title">Sinchronizuoti atkūrimo kodą</string>
+    <string name="sync_pdf_description">Atkūrimo kodas leidžia sinchronizuoti slaptažodžius, automatinio pildymo duomenis ir „Duck.ai“ pokalbius keliuose įrenginiuose bei atkurti sinchronizuotus duomenis, jei prarandate prieigą prie įrenginio.</string>
+    <string name="sync_code_box_title">Saugokite šią informaciją.</string>
+    <string name="sync_instructions_title">Kaip naudoti šį kodą?</string>
+    <string name="sync_instructions_step1">Atidarykite „DuckDuckGo“ įrenginyje, kurį norite sinchronizuoti, ir eikite į „Nustatymai“ skiltį „Sync &amp; Backup“.</string>
+    <string name="sync_instructions_step2">Pasirinkite „Sinchronizuoti su kitu įrenginiu“ ir nuskaitykite QR kodą arba įveskite tekstinį kodą.</string>
+    <string name="sync_instructions_step3">Sinchronizavimas bus aktyvuotas ir vėl turėsite prieigą prie visų savo duomenų.</string>
+    <string name="sync_pdf_retention_notice">Jei daugiau nei 18 mėnesių nenaudosite naršyklės „DuckDuckGo“ su įjungta funkcija „Sync &amp; Backup“, jūsų duomenys bus ištrinti iš serverio ir jų nebus galima atkurti.</string>
+    <string name="remove_device_dialog_title">Pašalinti įrenginį?</string>
+    <string name="remove_device_dialog_content" instruction="Placeholder is a device name">„%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų.</string>
+    <string name="remove_device_dialog_primary_button">Pašalinti</string>
+    <string name="remove_device_dialog_secondary_button">Atšaukti</string>
+    <string name="edit_device_dialog_title">Redaguoti</string>
+    <string name="edit_device_dialog_hint">Įrenginio pavadinimas</string>
+    <string name="edit_device_dialog_primary_button">Gerai</string>
+    <string name="edit_device_dialog_secondary_button">Atšaukti</string>
+    <string name="sync_device_this_device_hint">Šis įrenginys</string>
+    <string name="sync_device_menu_option_edit">Redaguoti</string>
+    <string name="sync_device_menu_option_remove">Pašalinti įrenginį</string>
+    <string name="sync_show_code_copy">Kopijuoti kodą</string>
+    <string name="sync_show_code_copy_hint">Šį kodą naudokite pasirinkę „Įvesti kodą ranka“ sinchronizavimo sąrankos metu antrame įrenginyje</string>
+    <string name="sync_code_copied_message">Atkūrimo kodas nukopijuotas</string>
+    <string name="sync_camera_permission_required">Būtinas leidimas naudotis kamera</string>
+    <string name="sync_camera_unavailable">Kamera nepasiekiama</string>
+    <string name="sync_camera_permission_required_description">Eikite į savo įrenginio nustatymus ir suteikite šiai programai leidimą naudotis kamera.</string>
+    <string name="sync_go_to_settings">Eikite į „Nustatymai“</string>
+    <string name="sync_general_error">Įvyko klaida</string>
+    <string name="sync_notification_channel_name">Sinchronizuoti</string>
+    <string name="sync_notify_me_title">Pranešimai yra išjungti</string>
+    <string name="sync_notify_me_description">Gaukite pranešimą, jei „Sinchronizavimas ir atsarginės kopijos kūrimas“ susiduria su klaida.</string>
+
+    <!-- setup errors -->
+    <string name="sync_turn_off_error">Nepavyko išjungti funkcijos „Sync &amp; Backup“.</string>
+    <string name="sync_edit_device_error">Nepavyko atnaujinti įrenginio pavadinimo.</string>
+    <string name="sync_remove_device_error">Nepavyko pašalinti šio įrenginio iš funkcijos „Sync &amp; Backup“.</string>
+    <string name="sync_delete_data_error">Nepavyko ištrinti duomenų serveryje.</string>
+    <string name="sync_login_authenticated_device_error">"Norėdami susieti šiuos įrenginius, viename įrenginyje išjunkite funkciją „Sync &amp; Backup“, tada kitame įrenginyje bakstelėkite „Sinchronizuoti su kitu įrenginiu“."</string>
+    <string name="sync_connect_generic_error">Nepavyko prisijungti prie serverio.</string>
+    <string name="sync_connect_login_error">Nepavyko sinchronizuoti su kitu įrenginiu.</string>
+    <string name="sync_create_account_generic_error">Nepavyko prisijungti prie serverio.</string>
+    <string name="sync_invalid_code_error">Atsiprašome, šis kodas neteisingas. Įsitikinkite, kad įvestas arba nuskaitytas teisingas kodas.</string>
+    <string name="sync_recovery_pdf_error">Nepavyko sukurti atkūrimo PDF.</string>
+    <string name="sync_dialog_error_ok">Gerai</string>
+    <string name="sync_dialog_error_title">Sync &amp; Backup</string>
+    <string name="sync_encryption_not_supported_error_title">Nepalaikomas įrenginys</string>
+    <string name="sync_encryption_not_supported_error">Funkcijai „Sync &amp; Backup“ naudojamas ištisinis šifravimas, todėl jūsų įrenginyje turi būti galima užšifruoti ir išsaugoti duomenis. Jūsų įrenginys nepalaiko šifruotos saugyklos, todėl „Sync &amp; Backup“ funkcija nepasiekiama.</string>
+
+    <!-- Sync Device Authentication -->
+    <string name="sync_auth_text_for_access">Atrakinkite įrenginį, kad galėtumėte pasiekti funkciją „Sync &amp; Backup“.</string>
+    <string name="sync_biometric_prompt_title">Funkcija „Sync &amp; Backup“ užrakinta</string>
+    <string name="sync_require_device_passcode_dialog_title">Apsaugokite savo įrenginį, kad galėtumėte naudoti „Sync &amp; Backup“</string>
+    <string name="sync_require_device_passcode_dialog_body">Norint naudoti „Sync &amp; Backup“, reikalingas užrakinimo piešinys, PIN kodas arba biometriniai duomenys.</string>
+    <string name="sync_require_device_passcode_dialog_action">Eikite į „Nustatymai“</string>
+
+    <!-- Sync Settings -->
+    <string name="sync_delete_server_data_dialog_title">Ištrinti serverio duomenis?</string>
+    <string name="sync_delete_server_data_dialog_content">Jūsų atsarginė kopija bus ištrinta iš serverio. Visi įrenginiai bus atjungti nuo sinchronizavimo, bet iš nė vieno įrenginio niekas nebus ištrinta.</string>
+    <string name="sync_delete_server_data_dialog_primary_button">Ištrinti serverio duomenis</string>
+    <string name="sync_delete_server_data_dialog_secondary_button">Atšaukti</string>
+
+    <!-- Sync feature promo -->
+    <string name="syncPromoTitlePasswords">Sinchronizuokite slaptažodžius ir sukurkite atsargines jų kopijas</string>
+    <string name="syncPromoSubtitlePasswords">Paskyros nereikia. Galutinis šifravimas (angl. „end-to-end encryption“) reiškia, kad niekas, išskyrus jus, negali pamatyti jūsų slaptažodžių, net mes.</string>
+
+    <string name="syncPromoTitleBookmarks">Sinchronizuokite žymes ir kurkite jų atsargines kopijas</string>
+    <string name="syncPromoSubtitleBookmarks">Paskyros nereikia. Galutinis šifravimas (angl. „end-to-end encryption“) reiškia, kad niekas, išskyrus jus, negali pamatyti jūsų žymių, net mes.</string>
+
+    <string name="syncPromoPrimaryButton">Nustatykite sinchronizavimą</string>
+    <string name="syncPromoSecondaryButton">Ne, dėkoju</string>
+
+    <!-- Sync get apps on other platforms -->
+    <string name="syncGetAppsOnOtherPlatforms">Atsisiųskite „DuckDuckGo“ į kitus įrenginius</string>
+    <string name="syncGetAppsOnOtherPlatformsTitle">Atsisiųskite „DuckDuckGo“ į kitus įrenginius, kad sinchronizuotumėte su šiuo įrenginiu</string>
+    <string name="syncGetAppsOnOtherPlatformsActivityTitle">Atsisiųskite „DuckDuckGo“</string>
+    <string name="syncGetAppsOnOtherPlatformInstruction" instruction="A URL will be shown after this string">Norėdami atsisiųsti „DuckDuckGo“ į kompiuterį arba kitą mobilųjį įrenginį, apsilankykite:</string>
+    <string name="syncGetAppsOnOtherPlatformInstructionUrl" translatable="false">duckduckgo.com/app</string>
+    <string name="syncGetAppsOnOtherPlatformInstructionUrlDownloadButton">Bendrinti atsisiuntimo nuorodą</string>
+    <string name="syncGetAppsOnOtherPlatformInstructionUrlLinkCopied" instruction="This is shown after the user taps on the link, to confirm it was copied to their device clipboard">Nuoroda nukopijuota</string>
+
+    <!-- Sync Switching account prompt -->
+    <string name="sync_dialog_switch_account_header">Perjungti į kitą sinchronizaciją?</string>
+    <string name="sync_dialog_switch_account_primary_button">Perjungti sinchronizavimą</string>
+    <string name="sync_dialog_switch_account_secondary_button">Atšaukti</string>
+    <string name="sync_dialog_switch_account_description">Šis įrenginys jau sinchronizuotas, ar tikrai norite jį sinchronizuoti su kita atsargine kopija ar įrenginiu? Perjungiant nebus pašalinti jokie duomenys, jau sinchronizuoti su šiuo įrenginiu.</string>
+
+    <!-- Deep link sync setup -->
+    <string name="sync_setup_deep_link_confirmation_dialog_title">Sinchronizuoti naują įrenginį?</string>
+    <string name="sync_setup_deep_link_confirmation_dialog_message" instruction="Placeholder is a device name. e.g., Samsung S23">„%1$s“ galės pasiekti tavo sinchronizuotus „DuckDuckGo“ duomenis.</string>
+    <string name="sync_setup_deep_link_confirmation_dialog_button_positive">Sinchronizuok dabar</string>
+    <string name="sync_setup_deep_link_confirmation_dialog_button_negative">Atšaukti</string>
+
+    <string name="deep_link_auth_prompt_title">Nustatyk sinchronizavimą ir atsarginės kopijos kūrimą</string>
+    <string name="deep_link_auth_prompt_message">Atrakinkite įrenginį, kad galėtumėte nustatyti funkciją „Sinchronizuoti ir kurti atsarginę kopiją“.</string>
+
+    <!-- Sync promo in bookmark added confirmation dialog -->
+    <string name="addBookmarkDialogSyncPromoText">Sinchronizuoti žymes skirtinguose įrenginiuose</string>
+    <string name="addBookmarkDialogHideSyncSuggestion">Slėpti</string>
+
+    <!-- Get Desktop Browser -->
+    <string name="getDesktopBrowserSettingItemTitle">Gaukite kompiuterio naršyklę</string>
+    <string name="getDesktopBrowserSettingItemSubtitleTitle">„DuckDuckGo“, skirta „Mac“ ir „Windows“</string>
+
+    <!-- Sync Settings Recovery Section -->
+    <string name="sync_settings_recovery_section_header">Atkūrimas</string>
+    <string name="sync_settings_download_recovery_code_item">Atsisiųsk atkūrimo kodą PDF formatu</string>
+    <string name="sync_settings_download_recovery_code_item_hint">Naudok šį kodą duomenims atkurti, jei prarasi prieigą prie šio įrenginio. Saugok jį.</string>
+    <string name="sync_settings_data_expiration">Po 18 mėnesių neaktyvumo negalima atkurti „Sync &amp; Backup“ duomenų. <annotation type="learn_more_link">Sužinoti daugiau</annotation></string>
+
+    <!-- Previous Session Ready Screen -->
+    <string name="sync_previous_session_ready_title">Ar atkurti sinchronizavimo ir atsarginio kopijavimo duomenis iš ankstesnio įdiegimo?</string>
+    <string name="sync_previous_session_ready_body">Atkurk, kad susigrąžintum ankstesnes parankines, slaptažodžius ir kitus duomenis į „DuckDuckGo“.</string>
+    <string name="sync_previous_session_ready_resume_cta">Atkurti „Sync &amp; Backup“</string>
+    <string name="sync_previous_session_ready_continue_cta">Nustatyk naują sinchronizavimą</string>
+
+    <!-- Recover Data Screen -->
+    <string name="sync_recover_data_title">Lengvas duomenų atkūrimas</string>
+    <string name="sync_recover_data_content">Naudok šį kodą duomenims atkurti, jei prarasi prieigą prie šio įrenginio. Po 18 mėnesių neaktyvumo negalima atkurti „Sync &amp; Backup“ duomenų.</string>
+    <string name="sync_recover_data_recovery_code_label">Atkūrimo kodas</string>
+    <string name="sync_recover_data_download_pdf">Atsisiųsti kaip PDF</string>
+    <string name="sync_restore_on_reinstall_title">Atkurti iš naujo įdiegus programą</string>
+    <string name="sync_restore_on_reinstall_description">Jei iš naujo įdiegsi programą „DuckDuckGo“, paklausime, ar nori atkurti duomenis šiame įrenginyje.</string>
+
+    <!-- Chat sync promo -->
+    <string name="sync_chat_promo_banner_title">Pasiekite savo pokalbius visuose įrenginiuose – naudokite „Sync &amp; Backup“.</string>
+    <string name="sync_chat_promo_banner_cta_title">Sinchronizuoti su kitu įrenginiu</string>
+    <string name="sync_chat_bottom_sheet_title">Sinchronizuokime pokalbius visuose įrenginiuose!</string>
+    <string name="sync_chat_bottom_sheet_description">Kitame įrenginyje esančioje programėlėje „DuckDuckGo“ rasite QR kodą nuėję į Nustatymai › Sync &amp; Backup › Sinchronizuoti su kitu įrenginiu.</string>
+    <string name="sync_chat_bottom_sheet_positive">Nuskaityti QR kodą</string>
+    <string name="sync_chat_bottom_sheet_negative">Ne dabar</string>
+
+    <!-- v2 Exchange confirmation prompts (spec §"Exchange Confirmations") -->
+    <string name="sync_v2_joiner_confirmation_title">Sinchronizuoti duomenis?</string>
+    <string name="sync_v2_joiner_confirmation_positive">Sinchronizuoti dabar</string>
+    <string name="sync_v2_joiner_confirmation_negative">Atšaukti</string>
+
+    <string name="sync_v2_host_confirmation_title">Sinchronizuoti duomenis?</string>
+    <string name="sync_v2_host_confirmation_positive">Sinchronizuoti dabar</string>
+    <string name="sync_v2_host_confirmation_negative">Atšaukti</string>
+
+    <!-- v2 consent-dialog data-access copy (kind-specific; shared by joiner & host) -->
+    <string name="sync_v2_confirmation_message_ddg" instruction="Placeholder is a peer device name, e.g. Samsung S23.">„%1$s“ turės prieigą prie tavo sinchronizuotų „DuckDuckGo“ slaptažodžių, automatinio pildymo duomenų ir „Duck.ai“ pokalbių.</string>
+    <string name="sync_v2_confirmation_message_3p" instruction="Placeholder is a peer device name, e.g. Samsung S23.">„%1$s“ turės prieigą prie tavo sinchronizuotų „Duck.ai“ pokalbių.</string>
+    <string name="sync_v2_confirmation_message_unknown_peer_ddg">Kitas įrenginys turės prieigą prie tavo sinchronizuotų „DuckDuckGo“ slaptažodžių, automatinio pildymo duomenų ir „Duck.ai“ pokalbių.</string>
+    <string name="sync_v2_confirmation_message_unknown_peer_3p">Kitas įrenginys turės prieigą prie tavo sinchronizuotų „Duck.ai“ pokalbių.</string>
+
+    <!-- v2 pairing terminal-outcome copy (interim, English-only). Spec 2026-06-17 (title-primary). -->
+    <string name="sync_v2_error_pairing_failed">Sinchronizavimas nepavyko.</string>
+    <string name="sync_v2_error_pairing_rejected">Sinchronizavimas atšauktas iš kito tavo įrenginio.</string>
+    <string name="sync_v2_error_pairing_canceled">Sinchronizavimas atšauktas.</string>
+    <string name="sync_v2_error_upgrade_required">Atnaujink „DuckDuckGo“ naršyklę ir bandyk dar kartą.</string>
+    <string name="sync_v2_error_third_party_already_upgraded">Sinchronizuok šį įrenginį naudodamas jau prijungtą „DuckDuckGo“ naršyklę kitame įrenginyje.</string>
+    <string name="sync_v2_error_try_again">Bandyk dar kartą.</string>
+    <string name="sync_v2_error_got_it">Supratau</string>
+    <string name="sync_v2_already_paired_title">Jau sinchronizuota.</string>
+    <string name="sync_v2_already_paired_message">Šie įrenginiai jau prijungti prie „Sync &amp; Backup“.</string>
+
+    <!-- Simplified Sync -->
+
+    <!-- Sync settings screen: header -->
+    <string name="sync_simplified_settings_header_headline_disabled">Sinchronizuokite „DuckDuckGo“!</string>
+    <string name="sync_simplified_settings_header_headline_enabled">„DuckDuckGo“ yra sinchronizuota.</string>
+    <string name="sync_simplified_settings_header_body_disabled">Sinchronizuokite ir kurkite atsargines automatinio pildymo duomenų ir žymių kopijas visose savo programose „DuckDuckGo“ su ištisiniu šifravimu.</string>
+    <string name="sync_simplified_settings_header_body_disabled_with_duck_ai">Sinchronizuokite ir kurkite atsargines automatinio pildymo duomenų, žymių ir „Duck.ai“ pokalbių kopijas visose savo programose „DuckDuckGo“ su ištisiniu šifravimu.</string>
+    <string name="sync_simplified_settings_header_body_enabled">Jūsų žymių ir automatinio pildymo duomenų sinchronizavimas bei atsarginių kopijų kūrimas vyksta naudojant ištisinį šifravimą.</string>
+    <string name="sync_simplified_settings_header_body_enabled_with_duck_ai">Jūsų parankinių, automatinio pildymo duomenų ir „Duck.ai“ pokalbių sinchronizavimas bei atsarginių kopijų kūrimas vyksta naudojant ištisinį šifravimą.</string>
+
+    <!-- Sync settings screen: sync disabled state -->
+    <string name="sync_simplified_settings_sync_this_device_item">Sinchronizuoti šį įrenginį</string>
+    <string name="sync_simplified_settings_sync_with_another_device_button">Sinchronizuoti su kitu įrenginiu</string>
+    <string name="sync_simplified_settings_recover_section_header">Atkurti sinchronizuotus duomenis</string>
+    <string name="sync_simplified_settings_recover_data_item">Turiu atkūrimo kodą</string>
+
+    <!-- Sync settings screen: sync enabled state -->
+    <string name="sync_simplified_settings_devices_section_header">Mano įrenginiai</string>
+    <string name="sync_simplified_settings_local_device_item_hint">Šis įrenginys</string>
+    <string name="sync_simplified_settings_sync_with_another_device_item">Sinchronizuoti su kitu įrenginiu</string>
+    <string name="sync_simplified_settings_download_section_header">Atsisiųsti</string>
+    <string name="sync_simplified_settings_bookmarks_section_header">Žymės</string>
+    <string name="sync_simplified_settings_recovery_section_header">Atkūrimas</string>
+    <string name="sync_simplified_settings_restore_on_reinstall_item">Atkurti iš naujo įdiegus programą</string>
+    <string name="sync_simplified_settings_restore_on_reinstall_item_hint">Jei iš naujo įdiegsite programą „DuckDuckGo“, paklausime, ar norite atkurti duomenis šiame įrenginyje.</string>
+    <string name="sync_simplified_settings_copy_recovery_code_item">Nukopijuoti atkūrimo kodą</string>
+    <string name="sync_simplified_settings_download_recovery_code_item">Atsisiųsti atkūrimo kodą</string>
+    <string name="sync_simplified_settings_download_recovery_code_item_hint">Naudokite šį kodą duomenims atkurti, jei prarastumėte prieigą prie šio įrenginio. Saugokite šį kodą.</string>
+    <string name="sync_simplified_settings_data_expiration_notice">Po 18 mėnesių neaktyvumo negalima atkurti „Sync &amp; Backup“ duomenų. <annotation type="learn_more_link">Sužinokite daugiau</annotation></string>
+    <string name="sync_simplified_settings_delete_account_item">Išjungti ir ištrinti duomenis serveryje</string>
+    <string name="sync_simplified_settings_turn_off_item">Išjungti „Sync &amp; Backup“</string>
+    <string name="sync_simplified_settings_storage_permission_message">Išsaugoti atkūrimo PDF reikia saugojimo leidimo</string>
+    <string name="sync_simplified_settings_learn_more_screen_title">Sync &amp; Backup</string>
+
+    <!-- Sync settings screen: both states -->
+    <string name="sync_simplified_settings_notify_me_title">Pranešimai yra išjungti</string>
+    <string name="sync_simplified_settings_notify_me_body">Gaukite pranešimą, kai „Sync &amp; Backup“ susiduria su klaida.</string>
+    <string name="sync_simplified_settings_get_other_devices_item">Atsisiųskite „DuckDuckGo“ į kitus įrenginius</string>
+    <string name="sync_simplified_settings_get_desktop_browser_item">Gaukite kompiuterio naršyklę</string>
+
+    <!-- Sync settings screen: delete server data dialog -->
+    <string name="sync_simplified_settings_delete_server_data_dialog_title">Ar išjungti „Sync &amp; Backup“ ir ištrinti serverio duomenis?</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_body">Visi įrenginiai, naudojantys „Sync &amp; Backup“, bus atjungti, o jūsų sinchronizuoti duomenys bus ištrinti iš serverio.</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_primary_button">Ištrinti duomenis serveryje</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_secondary_button">Atšaukti</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_title_v2">Šio veiksmo anuliuoti negalima.</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_body_v2">Visi įrenginiai, naudojantys „Sync &amp; Backup“, bus atjungti, o jūsų sinchronizuoti duomenys bus ištrinti iš serverio.</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_primary_button_v2">Ištrinti visam laikui</string>
+    <string name="sync_simplified_settings_delete_server_data_dialog_secondary_button_v2">Atšaukti</string>
+
+    <!-- Sync settings screen: turn off sheet -->
+    <string name="sync_simplified_settings_turn_off_sheet_remove_title" instruction="Placeholder is a device name. e.g., Samsung S23">Ar šalinti įrenginį „ %1$s“ iš „Sync &amp; Backup“?</string>
+    <string name="sync_simplified_settings_turn_off_sheet_remove_body" instruction="Placeholder is a device name. e.g., Samsung S23">Įrenginys „%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų kituose įrenginiuose.</string>
+    <string name="sync_simplified_settings_turn_off_sheet_remove_item">Ar ištrinti duomenis ir serveryje?</string>
+    <string name="sync_simplified_settings_turn_off_sheet_remove_item_hint">Išjungia „Sync &amp; Backup“ ir ištrina visus sinchronizuotus duomenis iš serverio bei deaktyvuoja jūsų atkūrimo kodą.</string>
+    <string name="sync_simplified_settings_turn_off_sheet_remove_primary_button">Šalinti įrenginį</string>
+    <string name="sync_simplified_settings_turn_off_sheet_title">Ar išjungti „Sync &amp; Backup“?</string>
+    <string name="sync_simplified_settings_turn_off_sheet_body">Visi įrenginiai, naudojantys „Sync &amp; Backup“, bus atjungti, o jūsų sinchronizuoti duomenys bus ištrinti iš serverio.</string>
+    <string name="sync_simplified_settings_turn_off_sheet_primary_button_delete">Išjungti ir ištrinti duomenis serveryje</string>
+
+    <!-- Sync settings screen: turn off this device dialog -->
+    <string name="sync_simplified_settings_turn_off_device_dialog_title" instruction="Placeholder is a device name. e.g., Samsung S23">Ar šalinti įrenginį „ %1$s“ iš „Sync &amp; Backup“?</string>
+    <string name="sync_simplified_settings_turn_off_device_dialog_body" instruction="Placeholder is a device name. e.g., Samsung S23">Įrenginys „%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų. Žymės, automatinio pildymo duomenys ir „Duck.ai“ pokalbiai liks jūsų įrenginiuose.</string>
+    <string name="sync_simplified_settings_turn_off_device_dialog_primary_button">Šalinti</string>
+    <string name="sync_simplified_settings_turn_off_device_dialog_secondary_button">Atšaukti</string>
+
+    <!-- Sync settings screen: require device passcode dialog -->
+    <string name="sync_simplified_settings_require_passcode_dialog_title">Apsaugokite savo įrenginį, kad galėtumėte naudoti „Sync &amp; Backup“</string>
+    <string name="sync_simplified_settings_require_passcode_dialog_body">Norint naudoti „Sync &amp; Backup“, reikalingas užrakinimo piešinys, PIN kodas arba biometriniai duomenys.</string>
+    <string name="sync_simplified_settings_require_passcode_dialog_primary_button">Eikite į „Nustatymai“</string>
+
+    <!-- Sync This Device screen -->
+    <string name="sync_simplified_setup_header_headline">Sinchronizuokite šį įrenginį su netoliese esančiu kompiuteriu.</string>
+    <string name="sync_simplified_setup_header_body">Padėsime sinchronizuoti įrenginius.</string>
+    <string name="sync_simplified_setup_header_headline_v2">Ar netoliese turite kitą įrenginį? Sinchronizuokite savo įrenginius.</string>
+    <string name="sync_simplified_setup_header_body_v2">Dabar neturite kito įrenginio? Sinchronizuokite tik šį įrenginį, o su kitu įrenginiu sinchronizuosite vėliau.</string>
+    <string name="sync_simplified_setup_primary_button">Sinchronizuoti su kitu įrenginiu</string>
+    <string name="sync_simplified_setup_secondary_button">Sinchronizuoti tik šį įrenginį</string>
+    <string name="sync_simplified_setup_secondary_button_syncing">Jungiamasi...</string>
+
+    <!-- Recover Synced Data screen -->
+    <string name="sync_simplified_recover_data_headline">Sinchronizuotų duomenų atkūrimas</string>
+    <string name="sync_simplified_recover_data_body">Reikės atkūrimo kodo, kurį gavai, kai nustatei „Sync &amp; Backup“. Galbūt išsaugojai jį kaip PDF failą naudojamame įrenginyje.</string>
+    <string name="sync_simplified_recover_data_primary_button">Atkurti sinchronizuotus duomenis</string>
+
+    <!-- Previous Session Ready screen -->
+    <string name="sync_simplified_previous_session_headline">Jūsų ankstesnis „Sync &amp; Backup“ seansas paruoštas.</string>
+    <string name="sync_simplified_previous_session_body">Tęskite „Sync &amp; Backup“ seansą, kad atkurtumėte savo žymes, slaptažodžius ir kt., arba tęskite ir atlikite naują sąranką.</string>
+    <string name="sync_simplified_previous_session_primary_button">Tęsti „ Sync &amp; Backup“</string>
+    <string name="sync_simplified_previous_session_secondary_button">Nustatyti naują sinchronizavimą</string>
+
+    <!-- Scanner screen: toolbar and tabs -->
+    <string name="sync_simplified_scanner_show_qr_code_content_description">Rodyti QR kodą</string>
+    <string name="sync_simplified_scanner_camera_tab_label">Nuskaityti QR</string>
+    <string name="sync_simplified_scanner_manual_entry_tab_label">Įvesti kodą</string>
+
+    <!-- Scanner screen: camera tab -->
+    <string name="sync_simplified_scanner_camera_header_headline">Nuskaitykite QR kodą, kad sinchronizuotumėte</string>
+    <string name="sync_simplified_scanner_camera_header_body">Atidarykite <annotation type="icon">￼</annotation> <b><annotation type="highlight">„DuckDuckGo“ kompiuteriui</annotation></b>\n<annotation type="gap">\n</annotation>ir eikite į <annotation type="highlight">Sync &amp; Backup</annotation> › <annotation type="highlight">Sinchronizuoti su kitu įrenginiu</annotation></string>
+    <string name="sync_simplified_scanner_camera_primary_button">Galima nuskaityti</string>
+    <string name="sync_simplified_scanner_camera_primary_button_v2">Supratau</string>
+    <string name="sync_simplified_scanner_camera_invalid_code_message">Deja, nuskaitytas kodas yra netinkamas.</string>
+    <string name="sync_simplified_scanner_no_permission_headline">Būtinas leidimas naudotis kamera</string>
+    <string name="sync_simplified_scanner_no_permission_body">Eikite į savo įrenginio nustatymus ir suteikite šiai programai leidimą pasiekti kamerą.</string>
+    <string name="sync_simplified_scanner_no_permission_primary_button">Eikite į „Nustatymai“</string>
+    <string name="sync_simplified_scanner_no_permission_headline_v2">„DuckDuckGo“ reikia pasiekti jūsų kamerą.</string>
+    <string name="sync_simplified_scanner_no_permission_body_v2">QR kodui nuskaityti reikia leidimo naudoti kamerą.</string>
+    <string name="sync_simplified_scanner_no_permission_primary_button_v2">Keisti leidimus</string>
+    <string name="sync_simplified_scanner_no_hardware_headline">Kamera nepasiekiama</string>
+
+    <!-- Scanner screen: manual entry tab -->
+    <string name="sync_simplified_scanner_manual_entry_header_headline">Įveskite sinchronizavimo kodą</string>
+    <string name="sync_simplified_scanner_manual_entry_header_body">Atverkite kitoje <annotation type="icon">￼</annotation> <b><annotation type="highlight">programoje „DuckDuckGo“</annotation></b>\n<annotation type="gap">\n</annotation>Eikite į <annotation type="highlight">Sync &amp; Backup</annotation> › <annotation type="highlight">Sinchronizuoti su kitu įrenginiu</annotation> › <annotation type="highlight">Kopijuoti tekstinį kodą</annotation></string>
+    <string name="sync_simplified_scanner_manual_entry_example_code_label">Kodo pavyzdys:</string>
+    <string name="sync_simplified_scanner_manual_entry_primary_button">Įklijuoti sinchronizavimo kodą</string>
+    <string name="sync_simplified_scanner_manual_entry_invalid_code_message">Deja, įklijuotas kodas yra netinkamas.</string>
+
+    <!-- QR Code screen -->
+    <string name="sync_simplified_qr_code_screen_title">QR kodas</string>
+    <string name="sync_simplified_qr_code_header_headline">Nuskaityti iš kito įrenginio</string>
+    <string name="sync_simplified_qr_code_header_body">Kitame įrenginyje atidarykite <annotation type="icon">￼</annotation> <b><annotation type="highlight">DuckDuckGo</annotation></b>\n<annotation type="gap">\n</annotation>ir eikite į <annotation type="highlight">Sync &amp; Backup</annotation> › <annotation type="highlight">Sinchronizuoti su kitu įrenginiu</annotation> ir nuskaityk šį kodą:</string>
+    <string name="sync_simplified_qr_code_copy_button">Kopijuoti teksto kodą</string>
+    <string name="sync_simplified_qr_code_share_button">Bendrinti</string>
+    <string name="sync_simplified_qr_code_copied_message">Atkūrimo kodas nukopijuotas</string>
+
+    <!-- Pairing screen -->
+    <string name="sync_simplified_pairing_headline">Funkcijai „Sync &amp; Backup“ visuose jūsų įrenginiuose naudojamas ištisinis šifravimas.</string>
+    <string name="sync_simplified_pairing_headline_check_other_device">Patikrinkite kitą savo įrenginį.</string>
+    <string name="sync_simplified_pairing_headline_recovery">Duomenų atkūrimas</string>
+    <string name="sync_simplified_pairing_body">Jungiamasi...</string>
+
+    <!-- Pairing dialogs, shown on the QR Code and Pairing screens -->
+    <string name="sync_simplified_pairing_dialog_host_title">Ar sinchronizuoti naują įrenginį?</string>
+    <string name="sync_simplified_pairing_dialog_host_primary_button">Sinchronizuoti dabar</string>
+    <string name="sync_simplified_pairing_dialog_host_secondary_button">Atšaukti</string>
+    <string name="sync_simplified_pairing_dialog_joiner_title">Ar sinchronizuoti naują įrenginį?</string>
+    <string name="sync_simplified_pairing_dialog_joiner_primary_button">Sinchronizuoti dabar</string>
+    <string name="sync_simplified_pairing_dialog_joiner_secondary_button">Atšaukti</string>
+    <string name="sync_simplified_pairing_dialog_acknowledgment_title">Patvirtinkite kitame įrenginyje…</string>
+    <string name="sync_simplified_pairing_dialog_acknowledgment_primary_button">Supratau</string>
+    <string name="sync_simplified_pairing_dialog_check_other_device_title">Patikrink kitą savo įrenginį</string>
+    <string name="sync_simplified_pairing_dialog_connecting_title">Vyksta sinchronizavimas</string>
+    <string name="sync_simplified_pairing_dialog_connecting_body">Jungiamasi...</string>
+
+    <!-- Recovery Code screen -->
+    <string name="sync_simplified_recovery_code_headline" instruction="Placeholder is a device name. e.g., Samsung S23">%1$s buvo pridėtas prie „Sync &amp; Backup“.</string>
+    <string name="sync_simplified_recovery_code_body">Naudokite šį kodą duomenims atkurti, jei prarastumėte prieigą prie šio įrenginio. Laikykite saugioje vietoje.</string>
+    <string name="sync_simplified_recovery_code_label">Atkūrimo kodas</string>
+    <string name="sync_simplified_recovery_code_download_button">Atsisiųsti atkūrimo kodą</string>
+    <string name="sync_simplified_recovery_code_restore_on_reinstall_item">Atkurti iš naujo įdiegus programą</string>
+    <string name="sync_simplified_recovery_code_restore_on_reinstall_item_hint">Jei iš naujo įdiegsite programą „DuckDuckGo“, paklausime, ar norite atkurti duomenis šiame įrenginyje.</string>
+    <string name="sync_simplified_recovery_code_primary_button">Atlikta</string>
+    <string name="sync_simplified_recovery_code_copied_message">Atkūrimo kodas nukopijuotas</string>
+    <string name="sync_simplified_recovery_code_storage_permission_message">Išsaugoti atkūrimo PDF reikia saugojimo leidimo</string>
+
+    <!-- Edit Device screen -->
+    <string name="sync_simplified_edit_device_header_status">Sinchronizuota</string>
+    <string name="sync_simplified_edit_device_edit_name_item">Redaguoti pavadinimą</string>
+    <string name="sync_simplified_edit_device_remove_item">Šalinti įrenginį</string>
+    <string name="sync_simplified_edit_device_sync_this_device_item">Sinchronizuoti šį įrenginį</string>
+    <string name="sync_simplified_edit_device_remove_notice_this_device">Pašalinus šį įrenginį, jis nebegalės pasiekti jūsų sinchronizuotų duomenų.</string>
+    <string name="sync_simplified_edit_device_remove_notice_another_device">Jeigu išjungsite, šis įrenginys nebegalės pasiekti jūsų sinchronizuotų duomenų.</string>
+    <string name="sync_simplified_edit_device_remove_notice_this_device_v2" instruction="Placeholder is a device name. e.g., Samsung S23">Įrenginys „%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų kituose įrenginiuose, jei tai bus išjungta.</string>
+    <string name="sync_simplified_edit_device_remove_notice_another_device_v2" instruction="Placeholder is a device name. e.g., Samsung S23">Įrenginys „%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų kituose įrenginiuose.</string>
+
+    <!-- Edit Device screen: edit name dialog -->
+    <string name="sync_simplified_edit_device_edit_name_dialog_title">Redaguoti pavadinimą</string>
+    <string name="sync_simplified_edit_device_edit_name_dialog_primary_button">Atlikta</string>
+    <string name="sync_simplified_edit_device_edit_name_dialog_secondary_button">Atšaukti</string>
+
+    <!-- Edit Device screen: remove device dialog -->
+    <string name="sync_simplified_edit_device_remove_dialog_title">Ar šalinti įrenginį?</string>
+    <string name="sync_simplified_edit_device_remove_dialog_body" instruction="Placeholder is a device name. e.g., Samsung S23">„%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų.</string>
+    <string name="sync_simplified_edit_device_remove_dialog_primary_button">Šalinti</string>
+    <string name="sync_simplified_edit_device_remove_dialog_secondary_button">Atšaukti</string>
+    <string name="sync_simplified_edit_device_remove_dialog_title_v2" instruction="Placeholder is a device name. e.g., Samsung S23">Ar šalinti įrenginį „ %1$s“ iš „Sync &amp; Backup“?</string>
+    <string name="sync_simplified_edit_device_remove_dialog_body_v2" instruction="Placeholder is a device name. e.g., Samsung S23">Įrenginys „%1$s“ nebegalės pasiekti jūsų sinchronizuotų duomenų. Žymės, automatinio pildymo duomenys ir „Duck.ai“ pokalbiai liks jūsų įrenginiuose.</string>
+
+    <!-- Edit Device screen: turn off sync dialog -->
+    <string name="sync_simplified_edit_device_turn_off_dialog_title">Ar išjungti „Sync &amp; Backup“?</string>
+    <string name="sync_simplified_edit_device_turn_off_dialog_body">Šis įrenginys nebegalės pasiekti jūsų sinchronizuotų duomenų kituose įrenginiuose.</string>
+    <string name="sync_simplified_edit_device_turn_off_dialog_primary_button">Išjungti</string>
+    <string name="sync_simplified_edit_device_turn_off_dialog_secondary_button">Atšaukti</string>
+
+    <!-- Error dialog, shared across Simplified Sync screens -->
+    <string name="sync_simplified_error_dialog_title">Sync &amp; Backup</string>
+    <string name="sync_simplified_error_dialog_primary_button">Gerai</string>
+    <string name="sync_simplified_error_dialog_generic_body">Įvyko klaida</string>
+    <string name="sync_simplified_error_dialog_create_account_body">Nepavyko prisijungti prie serverio.</string>
+    <string name="sync_simplified_error_dialog_edit_device_body">Nepavyko atnaujinti įrenginio pavadinimo.</string>
+    <string name="sync_simplified_error_dialog_recovery_pdf_body">Nepavyko sukurti atkūrimo PDF.</string>
+    <string name="sync_simplified_error_dialog_recovery_code_body">Nepavyko gauti atkūrimo kodo.</string>
+    <string name="sync_simplified_pairing_failed_generic_message">Įvyko klaida.</string>
+
+    <!-- Deep link setup: confirmation dialog and device-auth prompt, shown on the settings screen when an inbound sync pairing link is opened -->
+    <string name="sync_simplified_deep_link_confirmation_dialog_title">Ar sinchronizuoti naują įrenginį?</string>
+    <string name="sync_simplified_deep_link_confirmation_dialog_body" instruction="Placeholder is a device name. e.g., Samsung S23">„%1$s“ galės pasiekti jūsų sinchronizuotus „DuckDuckGo“ duomenis.</string>
+    <string name="sync_simplified_deep_link_confirmation_dialog_primary_button">Sinchronizuoti dabar</string>
+    <string name="sync_simplified_deep_link_confirmation_dialog_secondary_button">Atšaukti</string>
+    <string name="sync_simplified_deep_link_auth_prompt_title">Nustatyti „Sync &amp; Backup“</string>
+    <string name="sync_simplified_deep_link_auth_prompt_message">Atrakinkite įrenginį, kad galėtumėte nustatyti funkciją „Sync &amp; Backup“.</string>
+
+    <!-- Sync promo on passwords import success screen -->
+    <string name="sync_passwords_import_promo_title">Pasiek savo slaptažodžius mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_passwords_import_promo_title_label">Pasiek savo slaptažodžius mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_passwords_import_promo_primary_button_label">Pradėti sinchronizavimą</string>
+    <string name="sync_passwords_import_promo_title_toggle">Sinchronizuok savo slaptažodžius ir kurk atsargines jų kopijas mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_passwords_import_promo_toggle" instruction="Label next to a switch that turns on Sync &amp; Backup">Sync &amp; Backup</string>
+
+    <!-- Sync promo on bookmarks import success screen -->
+    <string name="sync_bookmarks_import_promo_title">Pasiek savo žymeles mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_bookmarks_import_promo_title_label">Pasiek savo žymes mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_bookmarks_import_promo_primary_button_label">Pradėti sinchronizavimą</string>
+    <string name="sync_bookmarks_import_promo_title_toggle">Sinchronizuok savo žymes ir kurk atsargines jų kopijas mobiliajame įrenginyje ir kompiuteryje.</string>
+    <string name="sync_bookmarks_import_promo_toggle" instruction="Label next to a switch that turns on Sync &amp; Backup">Sync &amp; Backup</string>
+
+    <!-- Sync promo on bookmarks screen -->
+    <string name="sync_bookmarks_promo_title">Sinchronizuoti žymes ir kurti jų atsargines kopijas</string>
+    <string name="sync_bookmarks_promo_message">Naudojamas ištisinis šifravimas. Niekas negali matyti tavo žymių, net ir mes.</string>
+    <string name="sync_bookmarks_promo_primary_button_label">Pradėti sinchronizavimą</string>
+    <string name="sync_bookmarks_promo_toggle" instruction="Label next to a switch that turns on Sync &amp; Backup">Sync &amp; Backup</string>
+
+    <!-- Multi-device Sync promo on bookmarks screen -->
+    <string name="sync_bookmarks_multi_device_promo_title">Sinchronizuoti žymes ir su kompiuterio programa?</string>
+    <string name="sync_bookmarks_multi_device_promo_message">Šiame įrenginyje įjungta „Sync &amp; Backup“.</string>
+    <string name="sync_bookmarks_multi_device_promo_primary_button" instruction="Button that starts connecting this device to the DuckDuckGo desktop app with Sync &amp; Backup">Prijungti</string>
+    <string name="sync_bookmarks_multi_device_promo_secondary_button" instruction="Button that opens a page about getting the DuckDuckGo desktop app">Gauti programą</string>
+
+    <!-- Sync promo in bookmark added dialog -->
+    <string name="sync_bookmark_added_set_up_promo_title">Sinchronizuoti žymes ir kurti jų atsargines kopijas</string>
+    <string name="sync_bookmark_added_set_up_promo_more_options" instruction="Accessibility label for a button that opens a menu with more options">Daugiau parinkčių</string>
+    <string name="sync_bookmark_added_set_up_promo_menu_hide" instruction="Menu item that hides this promotion">Slėpti</string>
+    <string name="sync_bookmark_added_set_up_promo_menu_turn_on_sync_label">Pradėti sinchronizavimą</string>
+
+    <!-- Multi-device Sync promo in bookmark added dialog -->
+    <string name="sync_bookmark_added_multi_device_promo_title">Sinchronizuoti su kompiuterio programa</string>
+    <string name="sync_bookmark_added_multi_device_promo_more_options" instruction="Accessibility label for a button that opens a menu with more options">Daugiau parinkčių</string>
+    <string name="sync_bookmark_added_multi_device_promo_menu_hide" instruction="Menu item that hides this promotion">Slėpti</string>
+    <string name="sync_bookmark_added_multi_device_promo_menu_sync_with_desktop">Sinchronizuoti su kompiuteriu</string>
+    <string name="sync_bookmark_added_multi_device_promo_menu_get_desktop_app">Gauti kompiuterio programą</string>
+    <string name="sync_bookmark_added_multi_device_sheet_title">Sinchronizuokime jūsų kompiuterio programą!</string>
+    <string name="sync_bookmark_added_multi_device_sheet_primary_button">Sinchronizuoti su kompiuteriu</string>
+    <string name="sync_bookmark_added_multi_device_sheet_secondary_button">Neturiu kompiuterio programos</string>
+
+    <!-- Sync promo on passwords screen -->
+    <string name="sync_passwords_promo_title">Sinchronizuoti slaptažodžius ir kurti jų atsargines kopijas</string>
+    <string name="sync_passwords_promo_message">Ištisinis šifravimas (angl. „end-to-end encryption“) reiškia, kad niekas, išskyrus jus, negali pamatyti jūsų slaptažodžių, net mes.</string>
+    <string name="sync_passwords_promo_primary_button_label">Pradėti sinchronizavimą</string>
+    <string name="sync_passwords_promo_toggle" instruction="Label next to a switch that turns on Sync &amp; Backup">Sync &amp; Backup</string>
+
+    <!-- Multi-device Sync promo on passwords screen -->
+    <string name="sync_passwords_multi_device_promo_title">Sinchronizuoti slaptažodžius ir su kompiuterio programa?</string>
+    <string name="sync_passwords_multi_device_promo_message">Šiame įrenginyje įjungta „Sync &amp; Backup“.</string>
+    <string name="sync_passwords_multi_device_promo_primary_button" instruction="Button that starts connecting this device to the DuckDuckGo desktop app with Sync &amp; Backup">Prijungti</string>
+    <string name="sync_passwords_multi_device_promo_secondary_button" instruction="Button that opens a page about getting the DuckDuckGo desktop app">Gauti programą</string>
+
+</resources>

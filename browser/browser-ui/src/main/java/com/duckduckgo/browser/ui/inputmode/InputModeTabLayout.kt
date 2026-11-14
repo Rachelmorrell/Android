@@ -1,0 +1,127 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.browser.ui.inputmode
+
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.InsetDrawable
+import android.util.AttributeSet
+import android.view.ViewOutlineProvider
+import android.widget.ImageView
+import androidx.core.content.ContextCompat
+import com.duckduckgo.browser.ui.R
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.store.AppTheme
+import com.duckduckgo.di.android.support.AndroidSupportInjection
+import com.duckduckgo.di.scopes.ViewScope
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.shape.CornerFamily
+import com.google.android.material.shape.MaterialShapeDrawable
+import com.google.android.material.shape.ShapeAppearanceModel
+import com.google.android.material.tabs.TabLayout
+import dev.zacsweers.metro.HasMemberInjections
+import javax.inject.Inject
+
+@HasMemberInjections
+@InjectWith(scope = ViewScope::class)
+open class InputModeTabLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = com.google.android.material.R.attr.tabStyle,
+) : TabLayout(context, attrs, defStyleAttr) {
+
+    @Inject
+    lateinit var appTheme: AppTheme
+
+    init {
+        setSelectedTabIndicator(
+            buildShadowedTabIndicator(
+                context = context,
+                heightPx = resources.getDimensionPixelSize(R.dimen.inputModeTabIndicatorHeight),
+                containerHeightPx = resources.getDimensionPixelSize(R.dimen.inputModeSwitchHeight),
+                horizontalInsetPx = resources.getDimensionPixelSize(R.dimen.inputModeTabIndicatorHorizontalInset),
+                elevationPx = resources.getDimensionPixelSize(R.dimen.inputModeTabIndicatorElevation),
+            ),
+        )
+        outlineProvider = ViewOutlineProvider.BACKGROUND
+        clipToOutline = true
+    }
+
+    override fun onAttachedToWindow() {
+        AndroidSupportInjection.inject(this)
+        super.onAttachedToWindow()
+        applySearchIconForTheme()
+    }
+
+    /**
+     * Swaps the search-tab icon for the dark variant when running under the dark app theme. The
+     * drawable-night qualifier is not sufficient because users can override the app theme
+     * independently of the system day/night setting.
+     *
+     * Subclasses that ship a theme-agnostic icon (e.g. the native input toggle) override this
+     * as a no-op.
+     */
+    protected open fun applySearchIconForTheme() {
+        if (appTheme.isLightModeEnabled()) return
+        val searchTabIcon = getTabAt(0)?.view?.findViewById<ImageView>(R.id.tab_icon) ?: return
+        searchTabIcon.setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_search_tab_selector_dark))
+    }
+
+    private fun buildShadowedTabIndicator(
+        context: Context,
+        heightPx: Int,
+        containerHeightPx: Int,
+        horizontalInsetPx: Int,
+        elevationPx: Int,
+    ): InsetDrawable {
+        val cornerRadius = heightPx / 2f
+        val pill = ShapeAppearanceModel.builder()
+            .setAllCorners(CornerFamily.ROUNDED, cornerRadius)
+            .build()
+
+        // Computing a pill height that will be perfectly centered in the container vertically, with equal top and bottom insets,
+        // and matching horizontal insets, if possible.
+        val shadowPillHeightCandidates = listOf(heightPx, heightPx - 1, heightPx + 1).filter { candidate ->
+            // only pick values that will result in even vertical insets
+            (containerHeightPx - candidate) % 2 == 0
+        }
+        val shadowPillHeight = shadowPillHeightCandidates
+            .firstOrNull { candidate ->
+                // prefer values that will result in equal horizontal and vertical insets
+                val verticalInsetsPx = (containerHeightPx - candidate) / 2
+                verticalInsetsPx == horizontalInsetPx
+            }
+            ?: shadowPillHeightCandidates.firstOrNull()
+            ?: heightPx
+
+        val shadowedPill = object : MaterialShapeDrawable(pill) {
+            override fun getIntrinsicHeight(): Int = shadowPillHeight
+        }.apply {
+            shadowCompatibilityMode = MaterialShapeDrawable.SHADOW_COMPAT_MODE_ALWAYS
+            initializeElevationOverlay(context)
+            val shadowColor = MaterialColors.getColor(
+                context,
+                com.duckduckgo.mobile.android.R.attr.daxColorInputModeIndicatorShadow,
+                Color.BLACK,
+            )
+            setShadowColor(shadowColor)
+            elevation = elevationPx.toFloat()
+        }
+
+        return InsetDrawable(shadowedPill, horizontalInsetPx, 0, horizontalInsetPx, 0)
+    }
+}

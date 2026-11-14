@@ -18,14 +18,44 @@ package com.duckduckgo.app.browser
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Message
+import android.print.PrintDocumentAdapter
 import android.util.AttributeSet
+import android.util.SparseArray
+import android.view.ActionMode
 import android.view.MotionEvent
+import android.view.WindowInsets
+import android.view.autofill.AutofillValue
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.webkit.DownloadListener
+import android.webkit.WebBackForwardList
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
-import androidx.core.view.NestedScrollingChild
+import android.webkit.WebViewClient
+import androidx.core.graphics.Insets
+import androidx.core.view.NestedScrollingChild3
 import androidx.core.view.NestedScrollingChildHelper
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.ScriptHandler
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewCompat.WebMessageListener
+import com.duckduckgo.app.browser.navigation.safeCopyBackForwardList
+import com.duckduckgo.app.browser.uilock.BrowserUiLockFeature
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.android.support.AndroidSupportInjection
+import com.duckduckgo.di.scopes.ViewScope
+import com.duckduckgo.duckchat.api.DuckAiTextSelectionDecorator
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import logcat.LogPriority.ERROR
+import logcat.asLog
+import logcat.logcat
+import javax.inject.Inject
 
 /**
  * WebView subclass which allows the WebView to
@@ -34,12 +64,16 @@ import androidx.core.view.ViewCompat
  *
  * Originally based on https://github.com/takahirom/webview-in-coordinatorlayout for scrolling behaviour
  */
-class DuckDuckGoWebView : WebView, NestedScrollingChild {
+@InjectWith(ViewScope::class)
+class DuckDuckGoWebView :
+    WebView,
+    NestedScrollingChild3 {
     private var lastClampedTopY: Boolean = true // when created we are always at the top
     private var contentAllowsSwipeToRefresh: Boolean = true
     private var enableSwipeRefreshCallback: ((Boolean) -> Unit)? = null
     private var hasGestureFinished = true
     private var canSwipeToRefresh = true
+    private var systemAutofillCallback: (() -> Unit)? = null
 
     private var lastY: Int = 0
     private var lastDeltaY: Int = 0
@@ -47,10 +81,218 @@ class DuckDuckGoWebView : WebView, NestedScrollingChild {
     private val scrollConsumed = IntArray(2)
     private var nestedOffsetY: Int = 0
     private var nestedScrollHelper: NestedScrollingChildHelper = NestedScrollingChildHelper(this)
+    private val helper = CoordinatorLayoutHelper()
+
+    private var isDestroyed: Boolean = false
+    private var isSafeWebViewEnabled: Boolean = true
+    private var stripImeInsetsEnabled: Boolean = false
+
+    @Inject
+    lateinit var dispatcherProvider: DispatcherProvider
+
+    @Inject
+    lateinit var browserUiLockFeature: BrowserUiLockFeature
+
+    @Inject
+    lateinit var duckAiTextSelectionDecorator: DuckAiTextSelectionDecorator
 
     constructor(context: Context) : this(context, null)
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
+    constructor(
+        context: Context,
+        attrs: AttributeSet?,
+    ) : super(context, attrs) {
         isNestedScrollingEnabled = true
+    }
+
+    override fun startActionMode(callback: ActionMode.Callback?): ActionMode? =
+        super.startActionMode(decorate(callback))
+
+    override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode? =
+        super.startActionMode(decorate(callback), type)
+
+    private fun decorate(callback: ActionMode.Callback?): ActionMode.Callback? =
+        if (::duckAiTextSelectionDecorator.isInitialized) duckAiTextSelectionDecorator.decorate(callback, pageUrl = url) else callback
+
+    override fun onAttachedToWindow() {
+        AndroidSupportInjection.inject(this)
+        super.onAttachedToWindow()
+        helper.onViewAttached(this)
+    }
+
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+        val adjustedInsets = if (stripImeInsetsEnabled) stripImeInsets(insets) else insets
+        return super.onApplyWindowInsets(adjustedInsets)
+    }
+
+    // Zero any IME inset passed to the WebView to avoid double-padding if the IME padding is handled by the surrounding layout.
+    // Reference https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets
+    private fun stripImeInsets(insets: WindowInsets): WindowInsets {
+        val windowInsetsCompat = WindowInsetsCompat.toWindowInsetsCompat(insets, this)
+
+        if (windowInsetsCompat.getInsets(WindowInsetsCompat.Type.ime()) == Insets.NONE) return insets
+
+        return WindowInsetsCompat.Builder(windowInsetsCompat)
+            .setInsets(WindowInsetsCompat.Type.ime(), Insets.NONE)
+            .build()
+            .toWindowInsets() ?: insets
+    }
+
+    override fun destroy() {
+        isDestroyed = true && isSafeWebViewEnabled
+        super.destroy()
+    }
+
+    override fun stopLoading() {
+        if (!isDestroyed) {
+            super.stopLoading()
+        }
+    }
+
+    override fun onPause() {
+        if (!isDestroyed) {
+            super.onPause()
+        }
+    }
+
+    override fun onResume() {
+        if (!isDestroyed) {
+            super.onResume()
+        }
+    }
+
+    override fun loadUrl(url: String) {
+        if (!isDestroyed) {
+            super.loadUrl(url)
+        }
+    }
+
+    override fun loadUrl(
+        url: String,
+        additionalHttpHeaders: Map<String, String>,
+    ) {
+        if (!isDestroyed) {
+            super.loadUrl(url, additionalHttpHeaders)
+        }
+    }
+
+    override fun reload() {
+        if (!isDestroyed) {
+            super.reload()
+        }
+    }
+
+    override fun goForward() {
+        if (!isDestroyed) {
+            super.goForward()
+        }
+    }
+
+    override fun goBackOrForward(steps: Int) {
+        if (!isDestroyed) {
+            super.goBackOrForward(steps)
+        }
+    }
+
+    override fun findAllAsync(find: String) {
+        if (!isDestroyed) {
+            super.findAllAsync(find)
+        }
+    }
+
+    override fun findNext(forward: Boolean) {
+        if (!isDestroyed) {
+            super.findNext(forward)
+        }
+    }
+
+    override fun clearSslPreferences() {
+        if (!isDestroyed) {
+            super.clearSslPreferences()
+        }
+    }
+
+    override fun setDownloadListener(listener: DownloadListener?) {
+        if (!isDestroyed) {
+            super.setDownloadListener(listener)
+        }
+    }
+
+    override fun requestFocusNodeHref(hrefMsg: Message?) {
+        if (!isDestroyed) {
+            super.requestFocusNodeHref(hrefMsg)
+        }
+    }
+
+    override fun setWebChromeClient(client: WebChromeClient?) {
+        if (!isDestroyed) {
+            super.setWebChromeClient(client)
+        }
+    }
+
+    override fun setWebViewClient(client: WebViewClient) {
+        if (!isDestroyed) {
+            super.setWebViewClient(client)
+        }
+    }
+
+    override fun setFindListener(listener: FindListener?) {
+        if (!isDestroyed) {
+            super.setFindListener(listener)
+        }
+    }
+
+    override fun autofill(value: AutofillValue?) {
+        if (!isDestroyed) {
+            super.autofill(value)
+            systemAutofillCallback?.invoke()
+        }
+    }
+
+    override fun autofill(values: SparseArray<AutofillValue?>) {
+        if (!isDestroyed) {
+            super.autofill(values)
+            systemAutofillCallback?.invoke()
+        }
+    }
+
+    override fun getUrl(): String? {
+        if (isDestroyed) return null
+        return super.getUrl()
+    }
+
+    fun safeCopyBackForwardList(): WebBackForwardList? {
+        if (isDestroyed) return null
+        return (this as WebView).safeCopyBackForwardList()
+    }
+
+    fun createSafePrintDocumentAdapter(documentName: String): PrintDocumentAdapter? {
+        if (isDestroyed) return null
+        return createPrintDocumentAdapter(documentName)
+    }
+
+    val safeSettings: WebSettings?
+        get() {
+            if (isDestroyed) return null
+            return getSettings()
+        }
+
+    val safeHitTestResult: HitTestResult?
+        get() {
+            if (isDestroyed) return null
+            return getHitTestResult()
+        }
+
+    fun setBottomMatchingBehaviourEnabled(value: Boolean) {
+        helper.setBottomMatchingBehaviourEnabled(value)
+    }
+
+    /**
+     * Enable when the surrounding layout already resizes for the keyboard, so IME insets are
+     * zeroed out before reaching the WebView and it does not additionally shrink its visual
+     * viewport for them.
+     */
+    fun setStripImeInsetsEnabled(value: Boolean) {
+        stripImeInsetsEnabled = value
     }
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
@@ -67,7 +309,9 @@ class DuckDuckGoWebView : WebView, NestedScrollingChild {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        var returnValue = false
+        parent.requestDisallowInterceptTouchEvent(true)
+
+        val returnValue: Boolean
 
         val event = MotionEvent.obtain(ev)
         val action = event.actionMasked
@@ -83,6 +327,7 @@ class DuckDuckGoWebView : WebView, NestedScrollingChild {
                 returnValue = super.onTouchEvent(event)
                 stopNestedScroll()
             }
+
             MotionEvent.ACTION_MOVE -> {
                 var deltaY = lastY - eventY
 
@@ -135,23 +380,82 @@ class DuckDuckGoWebView : WebView, NestedScrollingChild {
 
     override fun isNestedScrollingEnabled(): Boolean = nestedScrollHelper.isNestedScrollingEnabled
 
+    override fun startNestedScroll(
+        axes: Int,
+        type: Int,
+    ): Boolean = nestedScrollHelper.startNestedScroll(axes)
+
     override fun startNestedScroll(axes: Int): Boolean = nestedScrollHelper.startNestedScroll(axes)
+
+    override fun stopNestedScroll(type: Int) {
+        nestedScrollHelper.stopNestedScroll()
+    }
 
     override fun hasNestedScrollingParent(): Boolean = nestedScrollHelper.hasNestedScrollingParent()
 
-    override fun dispatchNestedScroll(dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int, offsetInWindow: IntArray?): Boolean =
+    override fun dispatchNestedScroll(
+        dxConsumed: Int,
+        dyConsumed: Int,
+        dxUnconsumed: Int,
+        dyUnconsumed: Int,
+        offsetInWindow: IntArray?,
+        type: Int,
+        consumed: IntArray,
+    ) {
         nestedScrollHelper.dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, offsetInWindow)
+    }
 
-    override fun dispatchNestedPreScroll(dx: Int, dy: Int, consumed: IntArray?, offsetInWindow: IntArray?): Boolean =
-        nestedScrollHelper.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow)
+    override fun hasNestedScrollingParent(type: Int): Boolean = nestedScrollHelper.hasNestedScrollingParent()
 
-    override fun dispatchNestedFling(velocityX: Float, velocityY: Float, consumed: Boolean): Boolean =
-        nestedScrollHelper.dispatchNestedFling(velocityX, velocityY, consumed)
+    override fun dispatchNestedScroll(
+        dxConsumed: Int,
+        dyConsumed: Int,
+        dxUnconsumed: Int,
+        dyUnconsumed: Int,
+        offsetInWindow: IntArray?,
+        type: Int,
+    ): Boolean = nestedScrollHelper.dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, offsetInWindow)
 
-    override fun dispatchNestedPreFling(velocityX: Float, velocityY: Float): Boolean =
-        nestedScrollHelper.dispatchNestedPreFling(velocityX, velocityY)
+    override fun dispatchNestedScroll(
+        dxConsumed: Int,
+        dyConsumed: Int,
+        dxUnconsumed: Int,
+        dyUnconsumed: Int,
+        offsetInWindow: IntArray?,
+    ): Boolean = nestedScrollHelper.dispatchNestedScroll(dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed, offsetInWindow)
 
-    override fun onOverScrolled(scrollX: Int, scrollY: Int, clampedX: Boolean, clampedY: Boolean) {
+    override fun dispatchNestedPreScroll(
+        dx: Int,
+        dy: Int,
+        consumed: IntArray?,
+        offsetInWindow: IntArray?,
+        type: Int,
+    ): Boolean = nestedScrollHelper.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow)
+
+    override fun dispatchNestedPreScroll(
+        dx: Int,
+        dy: Int,
+        consumed: IntArray?,
+        offsetInWindow: IntArray?,
+    ): Boolean = nestedScrollHelper.dispatchNestedPreScroll(dx, dy, consumed, offsetInWindow)
+
+    override fun dispatchNestedFling(
+        velocityX: Float,
+        velocityY: Float,
+        consumed: Boolean,
+    ): Boolean = nestedScrollHelper.dispatchNestedFling(velocityX, velocityY, consumed)
+
+    override fun dispatchNestedPreFling(
+        velocityX: Float,
+        velocityY: Float,
+    ): Boolean = nestedScrollHelper.dispatchNestedPreFling(velocityX, velocityY)
+
+    override fun onOverScrolled(
+        scrollX: Int,
+        scrollY: Int,
+        clampedX: Boolean,
+        clampedY: Boolean,
+    ) {
         // taking into account lastDeltaY since we are only interested whether we clamped at the top
         lastClampedTopY = clampedY && lastDeltaY <= 0
 
@@ -171,19 +475,118 @@ class DuckDuckGoWebView : WebView, NestedScrollingChild {
         enableSwipeRefreshCallback = callback
     }
 
+    fun removeEnableSwipeRefreshCallback() {
+        enableSwipeRefreshCallback = null
+    }
+
+    fun setSystemAutofillCallback(callback: () -> Unit) {
+        systemAutofillCallback = callback
+    }
+
+    fun removeSystemAutofillCallback() {
+        systemAutofillCallback = null
+    }
+
     private fun enableSwipeRefresh(enable: Boolean) {
         enableSwipeRefreshCallback?.invoke(enable && contentAllowsSwipeToRefresh)
     }
 
-    private fun setContentAllowsSwipeToRefresh(allowed: Boolean) {
+    internal fun setContentAllowsSwipeToRefresh(allowed: Boolean) {
         contentAllowsSwipeToRefresh = allowed
-        if (!allowed) {
-            enableSwipeRefresh(false)
+        if (!allowed || (::browserUiLockFeature.isInitialized && browserUiLockFeature.self().isEnabled())) {
+            enableSwipeRefresh(allowed)
+        }
+    }
+
+    fun isDestroyed(): Boolean = isDestroyed
+
+    @SuppressLint("RequiresFeature", "AddWebMessageListenerUsage")
+    suspend fun safeAddWebMessageListener(
+        jsObjectName: String,
+        allowedOriginRules: Set<String>,
+        listener: WebMessageListener,
+    ) = runCatching {
+        if (!isDestroyed) {
+            if (::dispatcherProvider.isInitialized) {
+                withContext(dispatcherProvider.main()) {
+                    if (!isActive) return@withContext
+                    WebViewCompat.addWebMessageListener(
+                        this@DuckDuckGoWebView,
+                        jsObjectName,
+                        allowedOriginRules,
+                        listener,
+                    )
+                }
+            }
+        }
+    }.getOrElse { exception ->
+        logcat(ERROR) { "Error adding WebMessageListener: $jsObjectName: ${exception.asLog()}" }
+    }
+
+    @SuppressLint("RequiresFeature", "RemoveWebMessageListenerUsage")
+    suspend fun safeRemoveWebMessageListener(jsObjectName: String) =
+        runCatching {
+            if (!isDestroyed) {
+                if (::dispatcherProvider.isInitialized) {
+                    withContext(dispatcherProvider.main()) {
+                        if (!isActive) return@withContext
+                        WebViewCompat.removeWebMessageListener(
+                            this@DuckDuckGoWebView,
+                            jsObjectName,
+                        )
+                    }
+                }
+            }
+        }.getOrElse { exception ->
+            logcat(ERROR) { "Error removing WebMessageListener: $jsObjectName: ${exception.asLog()}" }
+        }
+
+    @SuppressLint("RequiresFeature", "AddDocumentStartJavaScriptUsage")
+    suspend fun safeAddDocumentStartJavaScript(
+        script: String,
+        allowedOriginRules: Set<String>,
+    ): ScriptHandler? {
+        return runCatching {
+            if (!isDestroyed) {
+                if (::dispatcherProvider.isInitialized) {
+                    return withContext(dispatcherProvider.main()) {
+                        if (!isActive) return@withContext null
+                        return@withContext WebViewCompat.addDocumentStartJavaScript(
+                            this@DuckDuckGoWebView,
+                            script,
+                            allowedOriginRules,
+                        )
+                    }
+                }
+            }
+            null
+        }.getOrElse { e ->
+            logcat(ERROR) { "Error calling addDocumentStartJavaScript: ${e.asLog()}" }
+            null
+        }
+    }
+
+    @SuppressLint("RequiresFeature", "PostMessageUsage")
+    suspend fun safePostMessage(
+        replyProxy: JavaScriptReplyProxy,
+        subscriptionEvent: String,
+    ) {
+        runCatching {
+            if (!isDestroyed) {
+                if (::dispatcherProvider.isInitialized) {
+                    return withContext(dispatcherProvider.main()) {
+                        if (!isActive) return@withContext
+                        replyProxy.postMessage(subscriptionEvent)
+                    }
+                }
+            }
+            null
+        }.getOrElse { e ->
+            logcat(ERROR) { "Error calling addDocumentStartJavaScript: ${e.asLog()}" }
         }
     }
 
     companion object {
-
         /*
          * Taken from EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
          * We can't use that value directly as it was only added on Oreo, but we can apply the value anyway.

@@ -16,35 +16,36 @@
 
 package com.duckduckgo.app.browser.serviceworker
 
-import android.os.Build
-import android.webkit.ServiceWorkerClient
+import android.net.Uri
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import androidx.annotation.RequiresApi
+import androidx.core.net.toUri
+import androidx.webkit.ServiceWorkerClientCompat
 import com.duckduckgo.app.browser.RequestInterceptor
-import com.duckduckgo.app.global.exception.UncaughtExceptionRepository
-import com.duckduckgo.app.global.exception.UncaughtExceptionSource
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.runBlocking
-import timber.log.Timber
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
+import javax.inject.Inject
 
-@RequiresApi(Build.VERSION_CODES.N)
-class BrowserServiceWorkerClient(private val requestInterceptor: RequestInterceptor, private val uncaughtExceptionRepository: UncaughtExceptionRepository) : ServiceWorkerClient() {
+@ContributesBinding(AppScope::class)
+@SingleIn(AppScope::class)
+class BrowserServiceWorkerClient @Inject constructor(
+    private val requestInterceptor: RequestInterceptor,
+) : ServiceWorkerClientCompat() {
 
     override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
         return runBlocking {
-            try {
-                val documentUrl: String? = request.requestHeaders[HEADER_ORIGIN] ?: request.requestHeaders[HEADER_REFERER]
-                Timber.v("Intercepting Service Worker resource ${request.url} type:${request.method} on page $documentUrl")
-                requestInterceptor.shouldInterceptFromServiceWorker(request, documentUrl)
-            } catch (e: Throwable) {
-                uncaughtExceptionRepository.recordUncaughtException(e, UncaughtExceptionSource.SHOULD_INTERCEPT_REQUEST_FROM_SERVICE_WORKER)
-                throw e
-            }
+            val documentUrl: Uri? = (request.requestHeaders[HEADER_ORIGIN] ?: request.requestHeaders[HEADER_REFERER])?.toUri()
+            logcat(VERBOSE) { "Intercepting Service Worker resource ${request.url} type:${request.method} on page $documentUrl" }
+            requestInterceptor.shouldInterceptFromServiceWorker(request, documentUrl)
         }
     }
 
     companion object {
-        const val HEADER_ORIGIN = "Origin"
-        const val HEADER_REFERER = "Referer"
+        private const val HEADER_ORIGIN = "Origin"
+        private const val HEADER_REFERER = "Referer"
     }
 }

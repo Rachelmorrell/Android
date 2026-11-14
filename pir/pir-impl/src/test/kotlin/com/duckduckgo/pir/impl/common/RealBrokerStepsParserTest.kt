@@ -1,0 +1,642 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.common
+
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.EmailConfirmationStep
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.OptOutStep
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep.ScanStep
+import com.duckduckgo.pir.impl.di.PirModule
+import com.duckduckgo.pir.impl.models.AddressCityState
+import com.duckduckgo.pir.impl.models.Broker
+import com.duckduckgo.pir.impl.models.ExtractedProfile
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.EmailConfirmationJobRecord
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.EmailConfirmationJobRecord.EmailData
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.EmailConfirmationJobRecord.LinkFetchData
+import com.duckduckgo.pir.impl.scripts.models.BrokerAction
+import com.duckduckgo.pir.impl.scripts.models.ElementSelector
+import com.duckduckgo.pir.impl.scripts.models.asActionType
+import com.duckduckgo.pir.impl.store.PirRepository
+import com.squareup.moshi.Moshi
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+
+class RealBrokerStepsParserTest {
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private lateinit var testee: RealBrokerStepsParser
+    private val mockRepository: PirRepository = mock()
+    private lateinit var moshi: Moshi
+
+    private val testBroker = Broker(
+        name = "testBroker",
+        fileName = "testBroker.json",
+        url = "https://testbroker.com",
+        version = "1.0",
+        parent = null,
+        addedDatetime = 1000L,
+        removedAt = 0L,
+    )
+
+    private val testProfile1 = ExtractedProfile(
+        dbId = 1L,
+        profileQueryId = 100L,
+        brokerName = "testBroker",
+        name = "John Doe",
+        age = "35",
+        addresses = listOf(AddressCityState(city = "New York", state = "NY")),
+    )
+
+    private val testProfile2 = ExtractedProfile(
+        dbId = 2L,
+        profileQueryId = 100L,
+        brokerName = "testBroker",
+        name = "Jane Smith",
+        age = "28",
+        addresses = listOf(AddressCityState(city = "Los Angeles", state = "CA")),
+    )
+
+    @Before
+    fun setUp() {
+        moshi = PirModule().providePirMoshi(Moshi.Builder().build())
+
+        testee = RealBrokerStepsParser(
+            dispatcherProvider = coroutineRule.testDispatcherProvider,
+            repository = mockRepository,
+            moshi = moshi,
+        )
+    }
+
+    @Test
+    fun whenParseStepWithScanJsonThenReturnScanStep() = runTest {
+        val scanJson = """
+            {
+                "stepType": "scan",
+                "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/search"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, scanJson, null)
+
+        assertEquals(1, result.size)
+        assertTrue(result[0] is ScanStep)
+        val scanStep = result[0] as ScanStep
+        assertEquals(testBroker, scanStep.broker)
+        assertEquals("scan", scanStep.step.stepType)
+        assertEquals("automated", scanStep.step.scanType)
+        assertEquals(1, scanStep.step.actions.size)
+    }
+
+    @Test
+    fun whenParseStepWithExecuteScriptActionThenReturnExecuteScriptAction() = runTest {
+        val actionId = "execute-script-1"
+        val script = "document.querySelector('#target').click();"
+        val scanJson = """
+            {
+                "stepType": "scan",
+                "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/search"
+                    },
+                    {
+                        "actionType": "executeScript",
+                        "id": "$actionId",
+                        "script": "$script"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, scanJson, null)
+
+        val actions = result.filterIsInstance<ScanStep>().single().step.actions
+        assertEquals(2, actions.size)
+        val executeScript = actions.filterIsInstance<BrokerAction.ExecuteScript>().single { it.id == actionId }
+        assertEquals(script, executeScript.script)
+    }
+
+    @Test
+    fun whenParseStepWithOptOutJsonAndProfileIdThenReturnOptOutStepsForEachProfile() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/optout"
+                    },
+                    {
+                        "actionType": "fillForm",
+                        "id": "fill-1",
+                        "selector": "#optout-form",
+                        "elements": [
+                            {
+                                "type": "elementType",
+                                "selector": "#element",
+                                "multiple": true,
+                                "min": "1",
+                                "max": "10",
+                                "failSilently": true,
+                                "format": "elementFormat"
+                            }
+                        ]
+                    }
+                ]
+            }
+        """.trimIndent()
+        val profileQueryId = 100L
+
+        whenever(mockRepository.getExtractedProfiles(eq("testBroker"), eq(profileQueryId)))
+            .thenReturn(listOf(testProfile1, testProfile2))
+
+        val result = testee.parseStep(testBroker, optOutJson, profileQueryId)
+
+        assertEquals(2, result.size)
+        assertTrue(result[0] is OptOutStep)
+        assertTrue(result[1] is OptOutStep)
+
+        val optOutStep1 = result[0] as OptOutStep
+        assertEquals(testBroker, optOutStep1.broker)
+        assertEquals(testProfile1, optOutStep1.profileToOptOut)
+        assertEquals("optOut", optOutStep1.step.stepType)
+        assertEquals("form", optOutStep1.step.optOutType)
+        assertEquals(2, optOutStep1.step.actions.size)
+
+        val fillForm = optOutStep1.step.actions[1] as BrokerAction.FillForm
+        assertEquals(
+            listOf(
+                ElementSelector(
+                    type = "elementType",
+                    selector = "#element",
+                    parent = null,
+                    multiple = true,
+                    min = "1",
+                    max = "10",
+                    failSilently = true,
+                    format = "elementFormat",
+                ),
+            ),
+            fillForm.elements,
+        )
+
+        val optOutStep2 = result[1] as OptOutStep
+        assertEquals(testProfile2, optOutStep2.profileToOptOut)
+    }
+
+    @Test
+    fun whenParseStepWithOptOutJsonButNoProfileIdThenReturnEmptyList() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": []
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, optOutJson, null)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun whenParseStepWithOptOutJsonButNoExtractedProfilesThenReturnEmptyList() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": []
+            }
+        """.trimIndent()
+        val profileQueryId = 100L
+
+        whenever(mockRepository.getExtractedProfiles(eq("testBroker"), eq(profileQueryId)))
+            .thenReturn(emptyList())
+
+        val result = testee.parseStep(testBroker, optOutJson, profileQueryId)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun whenParseStepWithMalformedJsonThenReturnEmptyList() = runTest {
+        val malformedJson = """{ "invalid": json }"""
+
+        val result = testee.parseStep(testBroker, malformedJson, null)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun whenParseStepWithEmptyJsonThenReturnEmptyList() = runTest {
+        val emptyJson = ""
+
+        val result = testee.parseStep(testBroker, emptyJson, null)
+
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun whenParseEmailConfirmationStepThenReturnStepWithActionsFromEmailConfirmationOnwards() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/optout"
+                    },
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-2",
+                        "url": "https://testbroker.com/confirm"
+                    },
+                    {
+                        "actionType": "emailConfirmation",
+                        "id": "email-conf-1",
+                        "pollingTime": "5000"
+                    },
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-3",
+                        "url": "https://testbroker.com/done"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val emailConfirmationJob = EmailConfirmationJobRecord(
+            brokerName = "testBroker",
+            userProfileId = 100L,
+            extractedProfileId = 1L,
+            emailData = EmailData(email = "test@example.com", attemptId = "attempt-123"),
+            linkFetchData = LinkFetchData(emailConfirmationLink = "https://confirm.link"),
+        )
+
+        whenever(mockRepository.getExtractedProfile(eq(1L))).thenReturn(testProfile1)
+
+        val result = testee.parseEmailConfirmationStep(testBroker, optOutJson, emailConfirmationJob)
+
+        assertTrue(result is EmailConfirmationStep)
+        val emailConfStep = result as? EmailConfirmationStep
+        assertTrue(emailConfStep != null)
+        assertEquals(testBroker, emailConfStep!!.broker)
+        assertEquals(testProfile1, emailConfStep.profileToOptOut)
+        assertEquals(emailConfirmationJob, emailConfStep.emailConfirmationJob)
+        assertEquals("optOut", emailConfStep.step.stepType)
+        assertEquals("form", emailConfStep.step.optOutType)
+
+        assertEquals(2, emailConfStep.step.actions.size)
+        assertTrue(emailConfStep.step.actions[0] is BrokerAction.EmailConfirmation)
+        assertEquals("email-conf-1", emailConfStep.step.actions[0].id)
+        assertTrue(emailConfStep.step.actions[1] is BrokerAction.Navigate)
+    }
+
+    @Test
+    fun whenParseEmailConfirmationStepWithMissingProfileThenReturnNull() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": [
+                    {
+                        "actionType": "emailConfirmation",
+                        "id": "email-conf-1",
+                        "pollingTime": "5000"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val emailConfirmationJob = EmailConfirmationJobRecord(
+            brokerName = "testBroker",
+            userProfileId = 100L,
+            extractedProfileId = 999L,
+            emailData = EmailData(email = "test@example.com", attemptId = "attempt-123"),
+        )
+
+        whenever(mockRepository.getExtractedProfile(eq(999L))).thenReturn(null)
+
+        val result = testee.parseEmailConfirmationStep(testBroker, optOutJson, emailConfirmationJob)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenParseEmailConfirmationStepWithMalformedJsonThenReturnNull() = runTest {
+        val malformedJson = """{ "invalid": json }"""
+
+        val emailConfirmationJob = EmailConfirmationJobRecord(
+            brokerName = "testBroker",
+            userProfileId = 100L,
+            extractedProfileId = 1L,
+            emailData = EmailData(email = "test@example.com", attemptId = "attempt-123"),
+        )
+
+        whenever(mockRepository.getExtractedProfile(eq(1L))).thenReturn(testProfile1)
+
+        val result = testee.parseEmailConfirmationStep(testBroker, malformedJson, emailConfirmationJob)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenParseStepWithMultipleActionTypesThenReturnStepWithAllActions() = runTest {
+        val scanJson = """
+            {
+                "stepType": "scan",
+                "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/search"
+                    },
+                    {
+                        "actionType": "emailConfirmation",
+                        "id": "email-1",
+                        "pollingTime": "5000"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, scanJson, null)
+
+        assertEquals(1, result.size)
+        val scanStep = result[0] as ScanStep
+        assertEquals(2, scanStep.step.actions.size)
+        assertTrue(scanStep.step.actions[0] is BrokerAction.Navigate)
+        assertTrue(scanStep.step.actions[1] is BrokerAction.EmailConfirmation)
+    }
+
+    @Test
+    fun whenParseEmailConfirmationStepWithNoEmailConfirmationActionThenReturnNull() = runTest {
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "form",
+                "actions": [
+                    {
+                        "actionType": "navigate",
+                        "id": "nav-1",
+                        "url": "https://testbroker.com/optout"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val emailConfirmationJob = EmailConfirmationJobRecord(
+            brokerName = "testBroker",
+            userProfileId = 100L,
+            extractedProfileId = 1L,
+            emailData = EmailData(email = "test@example.com", attemptId = "attempt-123"),
+        )
+
+        whenever(mockRepository.getExtractedProfile(eq(1L))).thenReturn(testProfile1)
+
+        val result = testee.parseEmailConfirmationStep(testBroker, optOutJson, emailConfirmationJob)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenParseEmailConfirmationStepWithEmptyActionsThenReturnNull() = runTest {
+        // Mirrors a broker that became a parentSiteOptOut mirror while a confirmation job was pending
+        val optOutJson = """
+            {
+                "stepType": "optOut",
+                "optOutType": "parentSiteOptOut",
+                "actions": []
+            }
+        """.trimIndent()
+
+        val emailConfirmationJob = EmailConfirmationJobRecord(
+            brokerName = "testBroker",
+            userProfileId = 100L,
+            extractedProfileId = 1L,
+            emailData = EmailData(email = "test@example.com", attemptId = "attempt-123"),
+        )
+
+        whenever(mockRepository.getExtractedProfile(eq(1L))).thenReturn(testProfile1)
+
+        val result = testee.parseEmailConfirmationStep(testBroker, optOutJson, emailConfirmationJob)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenParseExecuteScriptThenPreserveScriptAndDefaultFailSilentlyToFalse() = runTest {
+        val script = "const value = \"quoted\";\nroot.body.textContent = userProfile.firstName;"
+        val encodedScript = moshi.adapter(String::class.java).toJson(script)
+        listOf("", ", \"failSilently\": false", ", \"failSilently\": true").forEach { flag ->
+            val step = """
+                {
+                    "stepType": "scan", "scanType": "automated",
+                    "actions": [{"actionType": "executeScript", "id": "script-1", "script": $encodedScript $flag}]
+                }
+            """.trimIndent()
+
+            val result = testee.parseStep(testBroker, step, null).single() as ScanStep
+
+            assertEquals(
+                BrokerAction.ExecuteScript("script-1", script, failSilently = flag.contains("true")),
+                result.step.actions.single(),
+            )
+        }
+    }
+
+    @Test
+    fun whenParseExecuteScriptWithoutScriptThenRejectStep() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [{"actionType": "executeScript", "id": "script-1"}]
+            }
+        """.trimIndent()
+
+        assertTrue(testee.parseStep(testBroker, json, null).isEmpty())
+    }
+
+    @Test
+    fun whenParseStepWithClickChoicesAndNoElementsThenReturnScanStepWithClick() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "click",
+                        "id": "click-1",
+                        "choices": [
+                            {
+                                "condition": {"operation": "==", "left": "${'$'}{state}", "right": "al"},
+                                "elements": [{"type": "button", "selector": "//a[contains(@href, '/al/')]"}]
+                            }
+                        ]
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val click = result.filterIsInstance<ScanStep>().single().step.actions.single()
+        assertTrue(click is BrokerAction.Click)
+        assertEquals("click-1", click.id)
+    }
+
+    @Test
+    fun whenParseStepWithUrlExpectationWithoutSelectorThenReturnScanStepWithExpectation() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "expectation",
+                        "id": "expectation-1",
+                        "expectations": [{"type": "url", "expect": "/optout/process"}]
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val expectation = result.filterIsInstance<ScanStep>().single().step.actions.single() as BrokerAction.Expectation
+        val selector = expectation.expectations.single()
+        assertEquals("url", selector.type)
+        assertEquals("/optout/process", selector.expect)
+        assertNull(selector.selector)
+    }
+
+    @Test
+    fun whenParseStepWithConditionWithoutCommentAndSelectorThenReturnScanStepWithCondition() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "condition",
+                        "id": "condition-1",
+                        "expectations": [{"type": "url", "expect": "/optout/results/"}],
+                        "actions": [{"actionType": "navigate", "id": "nav-1", "url": "https://testbroker.com/search"}]
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val condition = result.filterIsInstance<ScanStep>().single().step.actions.single() as BrokerAction.Condition
+        assertNull(condition.comment)
+        assertNull(condition.expectations.single().selector)
+        assertTrue(condition.actions.single() is BrokerAction.Navigate)
+    }
+
+    @Test
+    fun whenParseStepWithConditionWithoutActionsThenReturnScanStepWithCondition() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "condition",
+                        "id": "condition-1",
+                        "expectations": [{"type": "url", "expect": "/optout/results/"}]
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val condition = result.filterIsInstance<ScanStep>().single().step.actions.single() as BrokerAction.Condition
+        assertTrue(condition.actions.isEmpty())
+    }
+
+    @Test
+    fun whenParseStepWithExpectationWithNestedActionsThenReturnScanStepWithNestedActions() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "expectation",
+                        "id": "expectation-1",
+                        "expectations": [{"type": "element", "selector": ".results"}],
+                        "actions": [
+                            {
+                                "actionType": "click",
+                                "id": "click-1",
+                                "elements": [{"type": "button", "selector": ".consent", "failSilently": true}]
+                            }
+                        ]
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val expectation = result.filterIsInstance<ScanStep>().single().step.actions.single() as BrokerAction.Expectation
+        assertEquals(listOf("click-1"), expectation.actions.map { it.id })
+    }
+
+    @Test
+    fun whenParseStepWithScrollActionThenReturnScanStepWithScroll() = runTest {
+        val json = """
+            {
+                "stepType": "scan", "scanType": "automated",
+                "actions": [
+                    {
+                        "actionType": "scroll",
+                        "id": "scroll-1",
+                        "selector": ".results"
+                    }
+                ]
+            }
+        """.trimIndent()
+
+        val result = testee.parseStep(testBroker, json, null)
+
+        val scroll = result.filterIsInstance<ScanStep>().single().step.actions.single()
+        assertEquals("scroll-1", scroll.id)
+        assertEquals("scroll", scroll.asActionType())
+    }
+}

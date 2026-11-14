@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Iestati sadaļā Iestatījumi</b></string>
+
+    <string name="saveLoginDialogButtonSave">Saglabāt paroli</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Saglabāt paroli</string>
+    <string name="saveLoginDialogNotNow">Nesaglabāt</string>
+    <string name="saveLoginDialogTitle">Vai saglabāt tavu paroli?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Citas iespējas</string>
+
+    <string name="useSavedLoginDialogTitle">Izmantot saglabāto paroli?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">%1$s parole</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Parole vietnei</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">No šīs vietnes</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">No %1$s</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Atjaunināt paroli</string>
+    <string name="updateLoginDialogButtonNotNow">Nesaglabāt</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Atjaunināt lietotājvārdu?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Atjaunināt lietotājvārdu</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Atjaunināt paroli lietotājvārdam \n%1$s?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo atjauninās tavā ierīcē saglabāto paroli.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Aizvērt automātiskās aizpildes dialoglodziņu</string>
+
+    <string name="credentialManagementEditUsernameHint">Lietotājvārds</string>
+    <string name="credentialManagementEditPasswordHint">Parole</string>
+    <string name="credentialManagementEditWebsiteHint">Tīmekļa vietnes URL</string>
+    <string name="credentialManagementEditNotesHint">Piezīmes</string>
+    <string name="credentialManagementEditButtonDelete">Dzēst</string>
+    <string name="credentialManagementEditButtonSaveChanges">Saglabāt izmaiņas</string>
+    <string name="credentialManagementEditButtonCopyUsername">Kopēt lietotājvārdu</string>
+    <string name="credentialManagementEditButtonCopyPassword">Kopēt paroli</string>
+
+    <string name="credentialManagementViewMenuEdit">Rediģēt</string>
+    <string name="credentialManagementViewMenuDelete">Dzēst</string>
+
+    <string name="credentialManagementSuggestionsLabel">Ieteikts</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Paroļu automātiskā aizpildīšana nav pieejama, jo tava Android WebView versija ir novecojusi vai nesaderīga.</string>
+
+    <string name="autofillManagementSearchClearDescription">Notīrīt meklēšanas ievadi</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Vaicājumam “%1$s” nav rezultātu</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Atcelt</string>
+    <string name="autofillDeleteLoginDialogDelete">Dzēst</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Lietotājvārds nokopēts</string>
+    <string name="autofillManagementPasswordCopied">Parole nokopēta</string>
+
+    <string name="autofill_password_generation_offer_title">Vai izmantot spēcīgu DuckDuckGo paroli?</string>
+    <string name="autofill_password_generation_offer_accept">Izmantot spēcīgu paroli</string>
+    <string name="autofill_password_generation_offer_decline">Izveidot savu</string>
+
+    <string name="deviceNotSupportedTitle">Ierīce netiek atbalstīta</string>
+
+    <string name="autofillManagementUndoDeletion">Atsaukt</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Atvērt tīmekļa vietni</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Deaktivizēt privāto Duck adresi?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-pasti, kas nosūtīti uz %1$s, vairs netiks pārsūtīti uz tavu iesūtni.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Deaktivizēt</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Vai atkārtoti aktivizēt privāto Duck adresi?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-pasti, kas nosūtīti uz %1$s, atkal tiks pārsūtīti uz tavu iesūtni.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Atkārtoti aktivizēt</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Aktīva</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Notiek aktivizēšana…</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Deaktivizēta</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Notiek deaktivizēšana…</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Šīs adreses pārvaldība uz laiku nav pieejama.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated."><annotation type="enable_duck_address">Iespējojiet e-pasta aizsardzību</annotation>, lai pārvaldītu Duck adreses šajā ierīcē.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">Izvēlies e-pasta adresi</string>
+    <string name="autofillTooltipUseYourAliasDescription">Bloķē e-pasta izsekotājus</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Ģenerēt privātu Duck adresi</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">Bloķē e-pasta izsekotājus un paslēp adresi</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Vari to jebkurā laikā atspējot iestatījumos.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Turpināt saglabāt</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Atslēgt</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">Paslēp savu e-pastu un\nbloķē izsekotājus</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">E-pasta aizsardzība</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Izveido unikālu, nejauši izvēlētu adresi, kas arī aizvāc slēptos izsekotājus un pārsūta e-pastus uz tavu pastkastīti.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">Aizsargāt manu e-pastu</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Turpmāk nerādīt</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Ja tagad iziesi, tava Duck adrese netiks saglabāta</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Turpināt iestatīšanu</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Iziet no iestatīšanas</string>
+
+    <string name="autofillManagementScreenTitle">Paroles</string>
+    <string name="autofillManagementScreenTitleNew">Paroles un automātiskā aizpildīšana</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Vēl nav saglabāta neviena parole</string>
+    <string name="credentialManagementAutofillToggleLabel">Saglabāt un automātiski aizpildīt paroles</string>
+    <string name="credentialManagementAutofillSubtitle">Paroles ir šifrētas. Neviens, izņemot tevi, tās nevar redzēt – pat mēs ne. <annotation type="learn_more_link">Uzzināt vairāk</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Paroļu pārvaldnieka drošība</string>
+    <string name="saveLoginDialogSubtitle">Droši saglabā paroli ierīcē, izmantojot DuckDuckGo paroles un automātisko aizpildīšanu.</string>
+    <string name="autofillManagementAddLogin">Pievienot paroli</string>
+    <string name="credentialManagementEditLoginTitleHint">Nosaukums</string>
+    <string name="autofillManagementDeletedConfirmation">Parole dzēsta</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Pēdējoreiz atjaunināts %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Vai vēlaties turpināt saglabāt paroles?</string>
+    <string name="deviceNotSupportedSubtitle">Lai droši glabātu pieteikšanās datus, mums tie ir jāšifrē un jāsaglabā tavā ierīcē. Tā kā tava ierīce neatbalsta šifrētu datu glabāšanu, paroļu saglabāšana un automātiskā aizpildīšana nav pieejama.</string>
+    <string name="autofill_password_generation_offer_message">Paroles tiek droši glabātas tavā ierīcē.</string>
+    <string name="autofillManagementSearchLogins">Meklēt paroles</string>
+    <string name="biometric_prompt_title">Paroles ir bloķētas</string>
+    <string name="autofill_auth_text_for_access">Atbloķē ierīci, lai piekļūtu parolēm</string>
+    <string name="managementDisabledModeTitle">Aizsargā savu ierīci, lai saglabātu paroles</string>
+    <string name="managementDisabledModeSubtitle">Lai aizsargātu tavus pieteikšanās datus, ir nepieciešama ierīces bloķēšanas figūra, PIN kods vai biometriskā aizsardzība.</string>
+    <string name="credentialManagementEditTitle">Paroles rediģēšana</string>
+
+    <string name="credentials_limit_warning"><b>Sinhronizācija pārtraukta</b>\nTu esi sasniedzis maksimālo paroļu skaitu. Lūdzu, izdzēs dažas, lai atsāktu sinhronizāciju.\n\n<annotation type="manage_logins">Pārvaldīt paroles</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Paroļu sinhronizācija ir pārtraukta</b>\nTu esi sasniedzis maksimālo paroļu skaitu. Lūdzu, izdzēs dažas paroles, lai atsāktu sinhronizāciju.</string>
+    <string name="credentials_invalid_request_warning"><b>Sinhronizācija pārtraukta</b>\nDažas paroles ir formatētas nepareizi vai ir pārāk garas un netika sinhronizētas.\n\n<annotation type="manage_logins">Pārvaldīt paroles</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Paroļu sinhronizācija ir pārtraukta</b>\nDažas paroles ir formatētas nepareizi vai ir pārāk garas un netika sinhronizētas.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Nekad nejautāt par šo vietni</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Nē, paldies</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Ja atiestatīsi izslēgtās vietnes, tev tiks piedāvāts saglabāt savus pieteikšanās datus, kad nākamreiz tajās pierakstīsies.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Atiestatīt izslēgtās vietnes</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Atiestatīt izslēgtās vietnes?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Atiestatīt</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Atcelt</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Dzēst visas paroles</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="zero">%1$d paroles izdzēstas</item>
+        <item quantity="one">%1$d parole izdzēsta</item>
+        <item quantity="other">%1$d paroles izdzēstas</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Autentificējies, lai apstiprinātu, ka vēlies dzēst visas paroles</string>
+    <string name="autofill_title_text_for_delete_all">Dzēst visas paroles</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="zero">Tavas paroles vietnei %1$s un vēl %2$d vietnēm nevar sinhronizēt, jo daži to lauki pārsniedz rakstzīmju ierobežojumu.</item>
+        <item quantity="one">Tavu paroli vietnei %1$s nevar sinhronizēt, jo kāds no tās laukiem pārsniedz rakstzīmju ierobežojumu.</item>
+        <item quantity="other">Tavas paroles vietnei %1$s un vēl %2$d vietnēm nevar sinhronizēt, jo daži to lauki pārsniedz rakstzīmju ierobežojumu.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Pārvaldīt paroles</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Tavas paroles tiks dzēstas no šīs ierīces.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="zero">Tavas paroles tiks dzēstas no šīs ierīces.</item>
+        <item quantity="one">Tava parole tiks dzēsta no šīs ierīces.</item>
+        <item quantity="other">Tavas paroles tiks dzēstas no šīs ierīces.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Parole tiks dzēsta no visām sinhronizētajām ierīcēm.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="zero">Tavas paroles tiks dzēstas no visām sinhronizētajām ierīcēm.</item>
+        <item quantity="one">Tava parole tiks dzēsta no visām sinhronizētajām ierīcēm.</item>
+        <item quantity="other">Tavas paroles tiks dzēstas no visām sinhronizētajām ierīcēm.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Vai tiešām vēlies dzēst šo paroli?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="zero">Vai tiešām vēlies dzēst %1$d paroles?</item>
+        <item quantity="one">Vai tiešām vēlies dzēst %1$d paroli?</item>
+        <item quantity="other">Vai tiešām vēlies dzēst %1$d paroles?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Pārliecinies, vai joprojām varēsi piekļūt savam kontam.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="zero">Pārliecinies, vai joprojām varēsi piekļūt savam kontam.</item>
+        <item quantity="one">Pārliecinies, vai joprojām varēsi piekļūt savam kontam.</item>
+        <item quantity="other">Pārliecinies, vai joprojām varēsi piekļūt savam kontam.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Tu vari DuckDuckGo importēt saglabātās paroles no citas pārlūkprogrammas.</string>
+
+    <string name="autofillManagementImportPasswords">Importēt paroles</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Sinhronizēt darbvirsmas paroles</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Kā importēt paroles</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Kā sinhronizēt darbvirsmas paroles</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">Importē paroles DuckDuckGo pārlūka galddatora versijā un pēc tam sinhronizē tās visās ierīcēs.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Iegūsti galddatora pārlūku</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Iegūsti DuckDuckGo pārlūku Mac vai Windows datoram</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Meklē privāti un bloķē izsekotājus, izmantojot DuckDuckGo pārlūku galddatoram. Apmeklē šo saiti savā datorā, lai lejupielādētu jau šodien.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Sinhronizēt ar galddatoru</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Importēšana no galddatora pārlūka:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Atver DuckDuckGo Mac vai Windows datorā</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Atver sadaļas <b>Iestatījumi</b> > <b>Paroles</b>]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Atlasi <b>Importēt paroles</b> un izpildi darbības, lai importētu]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Kad esi importējis paroles datorā, vari iestatīt sinhronizāciju šajā ierīcē</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Iegūt datora programmu</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Iegūsti DuckDuckGo Mac vai Windows datoram</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">Savā datorā dodies uz:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Ziņot par problēmu ar automātisko aizpildīšanu</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Anonīmi ziņot, ka šajā vietnē nedarbojas automātiska aizpildīšana. Paroles nekad netiek izpaustas.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Ziņot, ka vietnē %1$s nedarbojas automātiskā aizpildīšana?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">Ziņojumi, ko tu nosūti DuckDuckGo, ir anonīmi. Tajos nav iekļauts tavs lietotājvārds, parole vai jebkāda cita personiski identificējama informācija.\n\nZiņojumā ir iekļauta tikai vietnes adrese un dažu automātiskās aizpildīšanas iestatījumu statuss.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Nosūtīt ziņojumu</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Atcelt</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Paldies! Tavs ziņojums palīdzēs mums padarīt DuckDuckGo labāku visiem.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Galvenās funkcijas</string>
+    <string name="onboardingSaveDialogFeature1Title">Ērta pierakstīšanās</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Nav jāatceras pieteikšanās informācija.</string>
+    <string name="onboardingSaveDialogFeature2Title">Droša glabāšana</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Paroles tiek šifrētas, saglabātas ierīcē un bloķētas ar jūsu Android bloķēšanas figūru vai PIN kodu.</string>
+    <string name="onboardingSaveDialogFeature3Title">Sinhronizēšana starp ierīcēm</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">Pilnīga šifrēšana un viegla iestatīšana, kad esat gatavs.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Jebkurā brīdī varat izslēgt paroļu saglabāšanu.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Atvērt iestatījumus</string>
+
+    <string name="newTabPageShortcutPasswords">Paroles</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Importēt paroles</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d paroles importētas no Google</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d paroles importētas no CSV</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Importēt paroles no Google</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Importēt paroles no Google</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Sinhronizēt darbvirsmas paroles</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Sinhronizēt darbvirsmas paroles</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Importēt paroles no Google</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google var lūgt tevi pierakstīties vai ievadīt paroli, lai apstiprinātu.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Tava ierīce var lūgt tev ievadīt tavu PIN kodu, paroli vai atbloķēšanas zīmējumu, lai apstiprinātu.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Importēt no Google</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Izvēlies CSV failu</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Importēt no galddatora pārlūka</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Importēt uz DuckDuckGo</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Importēšana pabeigta</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Sapratu</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Paroļu importēšana neizdevās</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Izlaists (dublikāts vai nederīgs): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Importētās paroles: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Atver Paroles</string>
+    <string name="autofill_service_select_password_activity">Izvēlies Saglabāto paroli</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Paroles un automātiskā aizpildīšana</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Atiestatīt izslēgtās vietnes?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Ja atiestatīsi izslēgtās vietnes, tev tiks piedāvāts saglabāt savus pieteikšanās datus, kad nākamreiz tajās pierakstīsies.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Atiestatīt</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Atcelt</string>
+    <string name="autofillSettingsPasswordsEntry">Paroles</string>
+    <string name="autofillSettingsAutofillToggleLabel">Lūdz saglabāt un automātiski aizpildīt</string>
+    <string name="autofillSettingsAutofillSubtitle">Paroles ir šifrētas. Neviens, izņemot tevi, tās nevar redzēt – pat mēs ne. <annotation type="learn_more_link">Uzzināt vairāk</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Importēt paroles</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Importēt paroles no Google</string>
+    <string name="autofillSettingsImportFromDesktopSync">Sinhronizēt darbvirsmas paroles</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Atiestatīt izslēgtās vietnes</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Pārnes savas paroles no&lt;br /&gt;Google uz DuckDuckGo</string>
+    <string name="passwords_import_promo_subtitle">Ātri un droši importē savas paroles DuckDuckGo. Google var lūgt tevi ievadīt savu paroli.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Ātri un droši importē savas paroles DuckDuckGo. Tava ierīce var lūgt tev ievadīt tavu PIN kodu, paroli vai atbloķēšanas zīmējumu, lai apstiprinātu.</string>
+    <string name="passwords_import_promo_action">Importēt no Google</string>
+    <string name="passwords_import_promo_in_browser_title">Pārvieto savas paroles no&lt;br /&gt;Google uz DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Importē savas paroles no Google uz DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Vairs nejautāt</string>
+    <string name="passwords_import_promo_in_settings_title">Importēt paroles no Google</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Paslēpt</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Importēt uz DuckDuckGo</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Importēts no Chrome</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Importēt Google grāmatzīmes</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google var lūgt tevi pierakstīties vai ievadīt paroli, lai apstiprinātu.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Importēt no Google</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Izvēlies grāmatzīmju failu…</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Importēt grāmatzīmes</string>
+    <string name="importBookmarksProgressTitle">Importē no Google…</string>
+    <string name="importBookmarksProgressSubtitle">Atstāj šo ekrānu atvērtu un pacietīgi gaidi — tam nevajadzētu aizņemt vairāk par minūti vai divām.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google var lūgt tevi pierakstīties vai ievadīt paroli, lai apstiprinātu.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google var tev nosūtīt e-pasta vēstuli, kas apstiprina, ka tavas grāmatzīmes tiek eksportētas.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Atcelt importu?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Tavas grāmatzīmes netiks importētas, ja atcelsi tagad.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Atcelt importu</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Turpināt</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Grāmatzīmes: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Aizvērt</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Kaut kas notika nepareizi</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Lūdzu, pārliecinies, vai esi izveidojis savienojumu ar internetu, un mēģini vēlreiz.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Importēšana pabeigta!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Uzgaidi — atstāj šo logu atvērtu. Tam nevajadzētu aizņemt vairāk par minūti vai divām.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google var lūgt norādīt paroli.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google tev nosūtīs e-pasta ziņojumu ar apstiprinājumu, ka tavi dati ir eksportēti. Tev nekas nav jādara.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Importēšana pabeigta!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Importētas grāmatzīmes: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Pārvieto savas paroles no Google uz DuckDuckGo.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Importēt paroles no Google</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Pārvieto savas grāmatzīmes no Google uz DuckDuckGo.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Importēt Google grāmatzīmes</string>
+
+</resources>

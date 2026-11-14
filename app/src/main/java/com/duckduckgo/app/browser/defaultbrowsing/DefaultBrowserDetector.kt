@@ -23,39 +23,56 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
-import com.duckduckgo.app.browser.BuildConfig
-import timber.log.Timber
+import com.duckduckgo.app.statistics.api.BrowserFeatureStateReporterPlugin
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelParameter
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.utils.extensions.toBinaryString
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import logcat.LogPriority.INFO
+import logcat.logcat
+import javax.inject.Inject
 
-interface DefaultBrowserDetector {
-    fun deviceSupportsDefaultBrowserConfiguration(): Boolean
-    fun isDefaultBrowser(): Boolean
-    fun hasDefaultBrowser(): Boolean
-}
-
-class AndroidDefaultBrowserDetector(
-    private val context: Context
-) : DefaultBrowserDetector {
+@ContributesIntoSet(scope = AppScope::class, binding = binding<BrowserFeatureStateReporterPlugin>())
+@ContributesBinding(scope = AppScope::class, binding = binding<DefaultBrowserDetector>())
+class AndroidDefaultBrowserDetector @Inject constructor(
+    private val context: Context,
+    private val appBuildConfig: AppBuildConfig,
+) : DefaultBrowserDetector, BrowserFeatureStateReporterPlugin {
 
     override fun deviceSupportsDefaultBrowserConfiguration(): Boolean {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+        // previously was ensuring that device was >= Build.VERSION_CODES.N. Returning true here to minimize further changes.
+        return true
     }
 
     override fun isDefaultBrowser(): Boolean {
         val defaultBrowserPackage = defaultBrowserPackage()
-        val defaultAlready = defaultBrowserPackage == BuildConfig.APPLICATION_ID
-        Timber.i("Default browser identified as $defaultBrowserPackage")
+        val defaultAlready = defaultBrowserPackage == appBuildConfig.applicationId
+        logcat(INFO) { "Default browser identified as $defaultBrowserPackage" }
         return defaultAlready
     }
 
-    override fun hasDefaultBrowser(): Boolean = defaultBrowserPackage() != ANDROID_PACKAGE
+    override fun hasDefaultBrowser(): Boolean = defaultBrowserPackage() != null
 
-    private fun defaultBrowserPackage(): String {
-        val intent = Intent(ACTION_VIEW, Uri.parse("https://"))
-        val resolutionInfo: ResolveInfo? = context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        return resolutionInfo?.activityInfo?.packageName ?: ANDROID_PACKAGE
+    private fun defaultBrowserPackage(): String? {
+        val intent = Intent(ACTION_VIEW, Uri.parse("https://duckduckgo.com/"))
+        intent.addCategory(Intent.CATEGORY_BROWSABLE)
+        val resolutionInfo: ResolveInfo? = context.packageManager.resolveActivityCompat(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolutionInfo?.activityInfo?.packageName
     }
 
-    companion object {
-        const val ANDROID_PACKAGE = "android"
+    override fun featureStateParams(): Map<String, String> {
+        return mapOf(PixelParameter.DEFAULT_BROWSER to isDefaultBrowser().toBinaryString())
+    }
+
+    @Suppress("NewApi") // we use appBuildConfig
+    private fun PackageManager.resolveActivityCompat(intent: Intent, flag: Int): ResolveInfo? {
+        return if (appBuildConfig.sdkInt >= Build.VERSION_CODES.TIRAMISU) {
+            resolveActivity(intent, PackageManager.ResolveInfoFlags.of(flag.toLong()))
+        } else {
+            resolveActivity(intent, flag)
+        }
     }
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-  ~ Copyright (c) 2018 DuckDuckGo
+  ~ Copyright (c) 2025 DuckDuckGo
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -16,121 +16,158 @@
   ~ limitations under the License.
   -->
 
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/appBarLayoutMockup"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:parentTag="FrameLayout">
+    android:layout_height="?attr/actionBarSize"
+    android:background="?daxColorToolbar"
+    android:clipChildren="false">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/mockOmniBarContainerShadow"
+        app:cardCornerRadius="@dimen/largeShapeCornerRadius"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/omnibarCardMarginHorizontal"
+        android:layout_marginEnd="@dimen/omnibarCardMarginEnd"
+        android:layout_marginTop="@dimen/omnibarCardMarginTop"
+        android:layout_marginBottom="@dimen/omnibarCardMarginBottom"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/iconsContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/omniBarContainerMockup"
+            style="@style/Widget.DuckDuckGo.OmnibarCardView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/searchIconMockup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:paddingVertical="6dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="8dp"
+                    android:src="@drawable/ic_find_search_small_24" />
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/omnibarTextInputMockup"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="start|center"
+                    android:maxLines="1"
+                    android:paddingEnd="8dp"
+                    android:text="@string/search"
+                    android:textColor="?attr/daxColorSecondaryText" />
+
+                <ImageView
+                    android:id="@+id/aiChatIconMockup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:paddingVertical="6dp"
+                    android:paddingHorizontal="10dp"
+                    android:src="@drawable/ic_ai_chat_24" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </com.google.android.material.card.MaterialCardView>
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/appBarLayoutMockup"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?toolbarBgColor"
-        android:theme="@style/AppTheme.Dark.AppBarOverlay">
+        android:id="@+id/iconsContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/toolbarIcon"
+        android:layout_marginTop="@dimen/omnibarCardMarginTop"
+        android:layout_marginBottom="@dimen/omnibarCardMarginBottom"
+        android:layout_marginEnd="@dimen/keyline_1"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/mockOmniBarContainerShadow"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.duckduckgo.browser.ui.tabs.NewTabSwitcherButton
+            android:id="@+id/tabsMenu"
+            android:layout_width="@dimen/toolbarIcon"
+            android:layout_height="@dimen/toolbarIcon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/browserMenu"
+            app:layout_constraintStart_toEndOf="@id/fireIconMenu"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <FrameLayout
-            android:id="@+id/omniBarContainerMockup"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="8dp"
-            android:background="@drawable/omnibar_field_background"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            app:contentInsetEnd="0dp"
-            app:contentInsetStart="0dp"
+            android:id="@+id/browserMenu"
+            android:layout_width="@dimen/toolbarIcon"
+            android:layout_height="@dimen/toolbarIcon"
+            android:background="@drawable/selectable_item_rounded_corner_background"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/fireIconMenuMockup"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/tabsMenu"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/browserMenuImageView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:contentDescription="@string/browserPopupMenu"
+                android:scaleType="center"
+                android:src="@drawable/ic_menu_vertical_24" />
+
+
+            <View
+                android:id="@+id/browserMenuHighlight"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:layout_gravity="end"
+                android:layout_margin="@dimen/keyline_2"
+                android:background="@drawable/ic_dot_indicator_7"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/fireIconMenu"
+            android:layout_width="@dimen/toolbarIcon"
+            android:layout_height="@dimen/toolbarIcon"
+            android:background="@drawable/selectable_item_rounded_corner_background"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tabsMenu"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
-                android:id="@+id/searchIconMockup"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/privacyGradeContentDescription"
-                android:gravity="center"
-                android:padding="4dp"
-                android:src="@drawable/ic_loupe_24dp" />
-
-            <TextView
-                android:id="@+id/omnibarTextInputMockup"
-                style="@style/Base.V7.Widget.AppCompat.EditText"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@null"
-                android:fontFamily="sans-serif"
-                android:hint="@string/omnibarInputHint"
-                android:maxLines="1"
-                android:paddingStart="37dp"
-                android:paddingEnd="8dp"
-                android:textColor="?attr/omnibarTextColor"
-                android:textColorHint="?attr/omnibarHintColor"
-                android:textCursorDrawable="@drawable/text_cursor"
-                android:textSize="16sp"
-                android:textStyle="normal"/>
-
-        </FrameLayout>
-
-        <FrameLayout
-            android:id="@+id/fireIconMenuMockup"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_marginStart="2dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/tabsMenuMockup"
-            app:layout_constraintStart_toEndOf="@id/omniBarContainerMockup"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible">
-
-            <ImageView
-                android:id="@+id/fireIconImageViewMockup"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:id="@+id/fireIconImageView"
+                android:layout_width="@dimen/bottomNavIcon"
+                android:layout_height="@dimen/bottomNavIcon"
                 android:layout_gravity="center"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/browserPopupMenu"
-                android:padding="3dp"
-                android:src="@drawable/ic_fire" />
+                android:contentDescription="@string/fireMenu"
+                android:scaleType="center"
+                android:src="@drawable/ic_fire_24" />
         </FrameLayout>
 
-        <com.duckduckgo.app.browser.TabSwitcherButton
-            android:id="@+id/tabsMenuMockup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:background="?selectableItemBackgroundBorderless"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/browserMenuMockup"
-            app:layout_constraintStart_toEndOf="@id/fireIconMenuMockup"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <FrameLayout
-            android:id="@+id/browserMenuMockup"
-            android:layout_width="wrap_content"
+        <Space
+            android:layout_width="@dimen/omnibarCardExtendedMarginEnd"
             android:layout_height="match_parent"
-            android:paddingStart="9dp"
-            android:paddingEnd="13dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible">
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/browserPopupMenu"
-                android:padding="3dp"
-                android:src="@drawable/ic_overflow_12dp" />
-
-        </FrameLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
-</merge>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'com.android.library'
+    id 'dev.zacsweers.metro'
+    id 'com.google.devtools.ksp'
+}
+
+apply from: "$rootProject.projectDir/gradle/android-library.gradle"
+
+dependencies {
+    ksp project(':codegen-ksp')
+    implementation project(':codegen-annotations')
+
+    implementation project(':di')
+    implementation project(':common-utils')
+    implementation project(':browser-api')
+    implementation project(':feature-toggles-api')
+    implementation project(':privacy-config-api')
+    implementation project(':app-build-config-api')
+    implementation project(':user-agent-api')
+    implementation project(':statistics-api')
+    implementation project(':user-agent-store')
+
+    implementation AndroidX.appCompat
+    implementation Google.android.material
+    implementation AndroidX.constraintLayout
+    implementation "com.squareup.logcat:logcat:_"
+    implementation AndroidX.core.ktx
+    implementation AndroidX.webkit
+    implementation Square.retrofit2.converter.moshi
+    implementation "com.squareup.moshi:moshi-kotlin:_"
+
+    // Room
+    implementation AndroidX.room.runtime
+    testImplementation AndroidX.room.testing
+    ksp AndroidX.room.compiler
+
+    // Testing dependencies
+    testImplementation project(':feature-toggles-test')
+    testImplementation project(':common-test')
+    testImplementation project(':app-build-config-api')
+    testImplementation project(':privacy-config-api')
+    testImplementation "org.mockito.kotlin:mockito-kotlin:_"
+    testImplementation Testing.robolectric
+    testImplementation AndroidX.test.ext.junit
+    testImplementation Square.retrofit2.converter.moshi
+    testImplementation Testing.junit4
+    testImplementation AndroidX.archCore.testing
+    androidTestImplementation AndroidX.archCore.testing
+}
+
+
+android {
+    namespace 'com.duckduckgo.user.agent.impl'
+}

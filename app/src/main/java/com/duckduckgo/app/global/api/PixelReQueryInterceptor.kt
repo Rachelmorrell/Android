@@ -16,11 +16,11 @@
 
 package com.duckduckgo.app.global.api
 
-import com.duckduckgo.app.global.device.DeviceInfo
+import com.duckduckgo.common.utils.device.DeviceInfo
+import logcat.logcat
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.Response
-import timber.log.Timber
 
 /**
  * This interceptor fixes the re-query pixels without being invasive to the Pixel APIs.
@@ -32,16 +32,21 @@ import timber.log.Timber
  */
 class PixelReQueryInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        var url = chain.request().url
-        val request = chain.request().newBuilder()
+        val originalRequest = chain.request()
+        val originalUrlString = originalRequest.url.toUrl().toString()
 
-        url = url.toUrl().toString().replace("rq_0_android_${DeviceInfo.FormFactor.PHONE.description}", "rq_0").toHttpUrl()
-        url = url.toUrl().toString().replace("rq_0_android_${DeviceInfo.FormFactor.TABLET.description}", "rq_0").toHttpUrl()
-        url = url.toUrl().toString().replace("rq_1_android_${DeviceInfo.FormFactor.PHONE.description}", "rq_1").toHttpUrl()
-        url = url.toUrl().toString().replace("rq_1_android_${DeviceInfo.FormFactor.TABLET.description}", "rq_1").toHttpUrl()
+        val modifiedUrlString = originalUrlString
+            .replace("rq_0_android_${DeviceInfo.FormFactor.PHONE.description}", "rq_0")
+            .replace("rq_0_android_${DeviceInfo.FormFactor.TABLET.description}", "rq_0")
+            .replace("rq_1_android_${DeviceInfo.FormFactor.PHONE.description}", "rq_1")
+            .replace("rq_1_android_${DeviceInfo.FormFactor.TABLET.description}", "rq_1")
 
-        Timber.d("Pixel interceptor: $url")
+        if (modifiedUrlString == originalUrlString) {
+            return chain.proceed(originalRequest)
+        }
 
-        return chain.proceed(request.url(url).build())
+        logcat { "Pixel interceptor: $modifiedUrlString" }
+
+        return chain.proceed(originalRequest.newBuilder().url(modifiedUrlString.toHttpUrl()).build())
     }
 }

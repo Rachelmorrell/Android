@@ -14,591 +14,463 @@
  * limitations under the License.
  */
 
-@file:Suppress("RemoveExplicitTypeArguments")
-
 package com.duckduckgo.app.fire
 
+import android.app.Activity
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.annotation.UiThreadTest
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
+import androidx.work.WorkRequest
+import com.duckduckgo.app.browser.BrowserActivity
+import com.duckduckgo.app.browser.customtabs.CustomTabActivity
+import com.duckduckgo.app.browser.customtabs.CustomTabsFeature
+import com.duckduckgo.app.dispatchers.IntentDispatcherActivity
+import com.duckduckgo.app.fire.store.FireDataStore
+import com.duckduckgo.app.fire.wideevents.DataClearingWideEvent
 import com.duckduckgo.app.global.view.ClearDataAction
-import com.duckduckgo.app.settings.clear.ClearWhatOption
 import com.duckduckgo.app.settings.clear.ClearWhenOption
+import com.duckduckgo.app.settings.clear.FireClearOption
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.nhaarman.mockitokotlin2.*
-import kotlinx.coroutines.Dispatchers
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.test.InstantSchedulersRule
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.feature.toggles.api.FakeFeatureToggleFactory
+import com.duckduckgo.feature.toggles.api.Toggle.State
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertNull
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
 class AutomaticDataClearerTest {
 
-    private lateinit var testee: AutomaticDataClearer
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private val mockSettingsDataStore: SettingsDataStore = mock()
-    private val mockClearAction: ClearDataAction = mock()
-    private val mockTimeKeeper: BackgroundTimeKeeper = mock()
-    private val mockWorkManager: WorkManager = mock()
-    private val pixel: Pixel = mock()
-    private val dataClearerForegroundAppRestartPixel = DataClearerForegroundAppRestartPixel(InstrumentationRegistry.getInstrumentation().targetContext, pixel)
+    @get:Rule
+    val coroutineTestRule = CoroutineTestRule()
+
+    @get:Rule
+    val schedulers = InstantSchedulersRule()
+
+    private val settingsDataStore: SettingsDataStore = mock()
+    private val clearDataAction: ClearDataAction = mock()
+    private val workManager: WorkManager = mock()
+    private val dataClearing: AutomaticDataClearing = mock()
+    private val fireDataStore: FireDataStore = mock()
+    private val dataClearingWideEvent: DataClearingWideEvent = mock()
+    private val restartPixel = DataClearerForegroundAppRestartPixel(
+        InstrumentationRegistry.getInstrumentation().targetContext,
+        mock<Pixel>(),
+        coroutineTestRule.testScope,
+        coroutineTestRule.testDispatcherProvider,
+    )
+
+    private val customTabsFeature = FakeFeatureToggleFactory.create(CustomTabsFeature::class.java).apply {
+        keepCustomTabOnAppSwitch().setRawStoredState(State(enable = true))
+    }
+
+    private lateinit var testee: AutomaticDataClearer
 
     @UiThreadTest
     @Before
     fun setup() {
-        whenever(mockSettingsDataStore.hasBackgroundTimestampRecorded()).thenReturn(true)
-        testee = AutomaticDataClearer(mockWorkManager, mockSettingsDataStore, mockClearAction, mockTimeKeeper, dataClearerForegroundAppRestartPixel)
+        runBlocking { whenever(fireDataStore.getAutomaticClearOptions()).thenReturn(setOf(FireClearOption.DATA)) }
+        testee = createTestee(coroutineTestRule.testDispatcherProvider)
     }
 
-    private suspend fun simulateLifecycle(isFreshAppLaunch: Boolean) {
-        testee.isFreshAppLaunch = isFreshAppLaunch
-        testee.onAppForegroundedAsync()
-    }
+    private fun createTestee(dispatchers: DispatcherProvider) = AutomaticDataClearer(
+        workManager = workManager,
+        settingsDataStore = settingsDataStore,
+        clearDataAction = clearDataAction,
+        dataClearing = dataClearing,
+        dataClearerForegroundAppRestartPixel = restartPixel,
+        dispatchers = dispatchers,
+        fireDataStore = fireDataStore,
+        dataClearingWideEvent = dataClearingWideEvent,
+        customTabsFeature = customTabsFeature,
+    )
 
-    /* Clear None tests */
-
+    @UiThreadTest
     @Test
-    fun whenFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenOpenedByCustomTabThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onOpen(isFreshLaunch = true)
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+        verify(workManager).cancelAllWorkByTag(DataClearingWorker.WORK_REQUEST_TAG)
     }
 
+    @UiThreadTest
     @Test
-    fun whenFreshAppLaunchAndEnoughTimePassedAndAppNotUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenOpenedByCustomTabThenAppIsMarkedAsUsed() = runTest {
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onOpen(isFreshLaunch = true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        verify(settingsDataStore).appUsedSinceLastClear = true
     }
 
+    @UiThreadTest
     @Test
-    fun whenFreshAppLaunchAndNotEnoughTimePassedAndAppUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenBrowserStartsAfterCustomTabFreshLaunchThenDataIsClearedAsFreshLaunch() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(true, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(false)
+        whenever(fireDataStore.getAutomaticallyClearWhenOption()).thenReturn(ClearWhenOption.APP_EXIT_ONLY)
+        val customTab = CustomTabActivity()
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = true)
+        testee.onActivityStopped(customTab)
+        testee.onClose()
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(BrowserActivity())
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        verify(dataClearing).clearDataUsingAutomaticFireOptions(false)
     }
 
+    @UiThreadTest
     @Test
-    fun whenFreshAppLaunchAndNotEnoughTimePassedAndAppNotUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenBrowserStartsUnderDispatcherThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        val dispatcher = IntentDispatcherActivity()
+        testee.onActivityCreated(dispatcher, null)
+        testee.onActivityStarted(dispatcher)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(BrowserActivity())
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onActivityStopped(dispatcher)
+        testee.onActivityDestroyed(dispatcher)
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
     }
 
+    @UiThreadTest
     @Test
-    fun whenNotFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenDispatcherOpensBrowserThenDataIsClearedOnceDispatcherIsDestroyed() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(false)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        val dispatcher = IntentDispatcherActivity()
+        testee.onActivityCreated(dispatcher, null)
+        testee.onActivityStarted(dispatcher)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(BrowserActivity())
+        testee.onActivityStopped(dispatcher)
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+
+        testee.onActivityDestroyed(dispatcher)
+
+        verify(dataClearing).clearDataUsingAutomaticFireOptions(false)
     }
 
+    @UiThreadTest
     @Test
-    fun whenNotFreshAppLaunchAndEnoughTimePassedAndAppNotUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenCustomTabStopsWithBrowserInFrontThenDataIsCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(false)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        val customTab = CustomTabActivity()
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(BrowserActivity())
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+
+        testee.onActivityStopped(customTab)
+
+        verify(dataClearing).clearDataUsingAutomaticFireOptions(false)
     }
 
+    @UiThreadTest
     @Test
-    fun whenNotFreshAppLaunchAndNotEnoughTimePassedAndAppUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenOpenIsReportedBeforeCustomTabStartsThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
+        val queuedDispatcher = StandardTestDispatcher(testScheduler)
+        val testee = createTestee(
+            object : DispatcherProvider {
+                override fun computation(): CoroutineDispatcher = queuedDispatcher
+                override fun io(): CoroutineDispatcher = queuedDispatcher
+                override fun main(): CoroutineDispatcher = queuedDispatcher
+                override fun unconfined(): CoroutineDispatcher = queuedDispatcher
+            },
+        )
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(CustomTabActivity())
+        advanceUntilIdle()
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+        verify(workManager).cancelAllWorkByTag(DataClearingWorker.WORK_REQUEST_TAG)
     }
 
+    @UiThreadTest
     @Test
-    fun whenNotFreshAppLaunchAndNotEnoughTimePassedAndAppNotUsedSinceLastClearThenDataNotCleared() = runBlocking {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_NONE, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenBrowserStartsBeforeDispatcherThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
-    }
+        val dispatcher = IntentDispatcherActivity()
+        testee.onActivityCreated(dispatcher, null)
+        testee.onActivityStarted(BrowserActivity())
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(dispatcher)
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onActivityStopped(dispatcher)
+        testee.onActivityDestroyed(dispatcher)
 
-    /* Clear tabs tests */
-
-    @Test
-    fun whenFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearThenShouldClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsCleared()
-        }
-    }
-
-    @Test
-    fun whenFreshAppLaunchAndEnoughTimePassedAndAppNotUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
-    }
-
-    @Test
-    fun whenFreshAppLaunchAndNotEnoughTimePassedAndAppUsedSinceLastClearThenShouldClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsCleared()
-        }
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
     }
 
     @Test
-    fun whenFreshAppLaunchAndNotEnoughTimePassedAndAppNotUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
+    fun whenBrowserOpensFromCustomTabWhileClearIsPendingThenRestartKeepsTheQuery() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(false, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(true)
+        lateinit var customTab: CustomTabActivity
+        lateinit var dispatcher: IntentDispatcherActivity
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            customTab = CustomTabActivity()
+            dispatcher = IntentDispatcherActivity()
         }
+
+        testee.isFreshAppLaunch = false
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityCreated(dispatcher, null)
+        testee.onActivityStarted(dispatcher)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { testee.onActivityStarted(BrowserActivity()) }
+        testee.deferredQuery = "https://example.com"
+        testee.onActivityStopped(customTab)
+        testee.onActivityStopped(dispatcher)
+        testee.onActivityDestroyed(dispatcher)
+        Thread.sleep(200)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        verify(clearDataAction).killAndRestartProcess(notifyDataCleared = true, query = "https://example.com")
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenOtherScreenOpensFromCustomTabThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
+
+        val customTab = CustomTabActivity()
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStarted(Activity())
+        testee.onActivityStopped(customTab)
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenNoAutomaticClearOptionsThenOpeningCustomTabIsNotDeferred() = runTest {
+        whenever(fireDataStore.getAutomaticClearOptions()).thenReturn(emptySet())
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(false)
+
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onOpen(isFreshLaunch = false)
+
+        verify(dataClearing).shouldClearDataAutomatically(any(), any(), any())
     }
 
     @Test
-    fun whenNotFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenFreshLaunchClearWasDeferredForCustomTabThenProcessIsRestarted() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(true, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(true)
+        lateinit var customTab: CustomTabActivity
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { customTab = CustomTabActivity() }
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = true)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { testee.onActivityStarted(BrowserActivity()) }
+        testee.onActivityStopped(customTab)
+        Thread.sleep(200)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        verify(clearDataAction).killAndRestartProcess(notifyDataCleared = true)
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenOnlyCustomTabStopsThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(true)
+
+        val customTab = CustomTabActivity()
+        testee.onActivityStarted(customTab)
+        testee.onOpen(isFreshLaunch = false)
+        testee.onActivityStopped(customTab)
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenClosedWhileClearIsPendingThenBackgroundTimestampIsKept() = runTest {
+        whenever(fireDataStore.getAutomaticallyClearWhenOption()).thenReturn(ClearWhenOption.APP_EXIT_ONLY)
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onOpen(isFreshLaunch = false)
+        testee.onClose()
+
+        verify(settingsDataStore, never()).appBackgroundedTimestamp = any()
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenOpenedByCustomTabAndKeepCustomTabDisabledThenDataIsCleared() = runTest {
+        customTabsFeature.keepCustomTabOnAppSwitch().setRawStoredState(State(enable = false))
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(true, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(false)
+
+        testee.onActivityStarted(CustomTabActivity())
+        testee.onOpen(isFreshLaunch = true)
+
+        verify(dataClearing).clearDataUsingAutomaticFireOptions(false)
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenAutomaticClearNotNeededThenDataIsNotCleared() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(true, true, false)).thenReturn(false)
+
+        testee.isFreshAppLaunch = true
+        testee.onBrowserOpenedAsync()
+
+        verify(dataClearing, never()).clearDataUsingAutomaticFireOptions(any())
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenAutomaticClearNeededOnFreshLaunchThenDataIsClearedWithoutRestart() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(true, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(true)
+
+        testee.isFreshAppLaunch = true
+        testee.onBrowserOpenedAsync()
+
+        verify(dataClearing).clearDataUsingAutomaticFireOptions(false)
+        verify(clearDataAction, never()).killAndRestartProcess(any(), any(), any(), anyOrNull())
     }
 
     @Test
-    fun whenNotFreshAppLaunchAndEnoughTimePassedAndAppNotUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenAutomaticClearNeedsRestartAfterResumeThenProcessIsRestarted() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(false, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.isFreshAppLaunch = false
+        testee.onBrowserOpenedAsync()
+        Thread.sleep(200)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        verify(clearDataAction).setAppUsedSinceLastClearFlag(false)
+        verify(clearDataAction).killAndRestartProcess(notifyDataCleared = true)
+    }
+
+    @UiThreadTest
+    @Test
+    fun whenAutomaticClearFinishesWithoutRestartThenDeferredQueryIsDropped() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(any(), any(), any())).thenReturn(false)
+
+        testee.deferredQuery = "https://example.com"
+        testee.onBrowserOpenedAsync()
+
+        assertNull(testee.deferredQuery)
     }
 
     @Test
-    fun whenNotFreshAppLaunchAndNotEnoughTimePassedAndAppUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenAutomaticClearNeedsRestartWithDeferredQueryThenQueryIsPassedToRestart() = runTest {
+        whenever(settingsDataStore.appUsedSinceLastClear).thenReturn(true)
+        whenever(dataClearing.shouldClearDataAutomatically(false, true, false)).thenReturn(true)
+        whenever(dataClearing.clearDataUsingAutomaticFireOptions(false)).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.isFreshAppLaunch = false
+        testee.deferredQuery = "https://example.com"
+        testee.onBrowserOpenedAsync()
+        Thread.sleep(200)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+        verify(clearDataAction).killAndRestartProcess(notifyDataCleared = true, query = "https://example.com")
+        assertNull(testee.deferredQuery)
     }
 
     @Test
-    fun whenNotFreshAppLaunchAndNotEnoughTimePassedAndAppNotUsedSinceLastClearThenShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenAutomaticOptionsSelectedOnExitThenProcessIsKilled() = runTest {
+        whenever(dataClearing.isAutomaticDataClearingOptionSelected()).thenReturn(true)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
+        testee.onExit()
+
+        verify(clearDataAction).killProcess()
     }
 
     @Test
-    fun whenNotAppExitOnlyAndFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearShouldClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenNoAutomaticOptionsSelectedOnExitThenProcessIsNotKilled() = runTest {
+        whenever(dataClearing.isAutomaticDataClearingOptionSelected()).thenReturn(false)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsCleared()
-        }
+        testee.onExit()
+
+        verify(clearDataAction, never()).killProcess()
     }
 
     @Test
-    fun whenNotAppExitOnlyAndNotFreshAppLaunchAndEnoughTimePassedAndAppUsedSinceLastClearShouldClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenNoAutomaticOptionsSelectedOnCloseThenTimerIsNotScheduled() = runTest {
+        whenever(fireDataStore.getAutomaticClearOptions()).thenReturn(emptySet())
+        whenever(fireDataStore.getAutomaticallyClearWhenOption()).thenReturn(ClearWhenOption.APP_EXIT_OR_15_MINS)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsCleared()
-        }
+        testee.onClose()
+        coroutineTestRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(workManager, never()).enqueue(argThat<List<WorkRequest>> { size == 1 && first() is OneTimeWorkRequest })
     }
 
     @Test
-    fun whenNotAppExitOnlyAndFreshAppLaunchAndNotEnoughTimePassedAndAppUsedSinceLastClearShouldClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
+    fun whenAutomaticOptionsUseExitOnlyThenTimerIsNotScheduled() = runTest {
+        whenever(fireDataStore.getAutomaticClearOptions()).thenReturn(setOf(FireClearOption.DATA))
+        whenever(fireDataStore.getAutomaticallyClearWhenOption()).thenReturn(ClearWhenOption.APP_EXIT_ONLY)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsCleared()
-        }
+        testee.onClose()
+        coroutineTestRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        verify(workManager, never()).enqueue(argThat<List<WorkRequest>> { size == 1 && first() is OneTimeWorkRequest })
     }
 
     @Test
-    fun whenNotAppExitOnlyAndFreshAppLaunchAndNotEnoughTimePassedAndAppNotUsedSinceLastClearShouldNotClearTabs() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_ONLY, ClearWhenOption.APP_EXIT_OR_15_MINS)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
+    fun whenAutomaticOptionsUseDelayThenTimerIsScheduled() = runTest {
+        whenever(fireDataStore.getAutomaticClearOptions()).thenReturn(setOf(FireClearOption.DATA))
+        whenever(fireDataStore.getAutomaticallyClearWhenOption()).thenReturn(ClearWhenOption.APP_EXIT_OR_15_MINS)
 
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyTabsNotCleared()
-        }
-    }
+        testee.onClose()
+        coroutineTestRule.testDispatcher.scheduler.advanceUntilIdle()
 
-    /* Clear Tabs and Data tests */
-
-    @Test
-    fun whenAppExitOnlyFreshAppLaunchAndEnoughTimePassedAppUsedSinceLastClearThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyFreshAppLaunchAndEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyFreshAppLaunchAndNotEnoughTimePassedAppUsedSinceLastClearThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyFreshAppLaunchAndNotEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyNotFreshAppLaunchAndEnoughTimePassedAppUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyNotFreshAppLaunchAndEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyNotFreshAppLaunchAndNotEnoughTimePassedAppUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOnlyNotFreshAppLaunchAndNotEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_ONLY)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOrTimerFreshAppLaunchAndNotEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOrTimerNotFreshAppLaunchAndEnoughTimePassedAppUsedSinceLastClearThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOrTimerNotFreshAppLaunchAndEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOrTimerNotFreshAppLaunchAndNotEnoughTimePassedAppUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureNotEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenAppExitOrTimerNotFreshAppLaunchAndNotEnoughTimePassedAppNotUsedSinceLastClearThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureNotEnoughTimePassed()
-        configureAppNotUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenNotFreshAppLaunchAndIconJustChangedButAppNotUsedThenShouldNotClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureAppUsedSinceLastClear()
-        configureAppIconJustChanged()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyAppIconFlagReset()
-            verifyEverythingNotCleared()
-        }
-    }
-
-    @Test
-    fun whenFreshAppLaunchAndIconJustChangedButAppUsedThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = true
-
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureAppUsedSinceLastClear()
-        configureAppIconJustChanged()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyAppIconFlagReset()
-            verifyEverythingCleared()
-        }
-    }
-
-    @Test
-    fun whenNotFreshAppLaunchAndIconNotChangedThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-
-        configureAppIconNotChanged()
-        configureAppNotUsedSinceLastClear()
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingCleared()
-        }
-    }
-
-    @Test
-    fun whenNotFreshAppLaunchAndIconNotChangedAppUsedThenShouldClear() = runBlocking<Unit> {
-        val isFreshAppLaunch = false
-
-        configureAppIconNotChanged()
-        configureAppUsedSinceLastClear()
-        configureUserOptions(ClearWhatOption.CLEAR_TABS_AND_DATA, ClearWhenOption.APP_EXIT_OR_5_MINS)
-        configureEnoughTimePassed()
-        configureAppUsedSinceLastClear()
-
-        withContext(Dispatchers.Main) {
-            simulateLifecycle(isFreshAppLaunch)
-            verifyEverythingCleared()
-        }
-    }
-
-    private fun configureUserOptions(whatOption: ClearWhatOption, whenOption: ClearWhenOption) {
-        whenever(mockSettingsDataStore.automaticallyClearWhenOption).thenReturn(whenOption)
-        whenever(mockSettingsDataStore.automaticallyClearWhatOption).thenReturn(whatOption)
-    }
-
-    private fun configureAppUsedSinceLastClear() {
-        whenever(mockSettingsDataStore.appUsedSinceLastClear).thenReturn(true)
-    }
-
-    private fun configureAppNotUsedSinceLastClear() {
-        whenever(mockSettingsDataStore.appUsedSinceLastClear).thenReturn(false)
-    }
-
-    private fun configureEnoughTimePassed() {
-        whenever(mockTimeKeeper.hasEnoughTimeElapsed(any(), any(), any())).thenReturn(true)
-    }
-
-    private fun configureNotEnoughTimePassed() {
-        whenever(mockTimeKeeper.hasEnoughTimeElapsed(any(), any(), any())).thenReturn(false)
-    }
-
-    private fun configureAppIconJustChanged() {
-        whenever(mockSettingsDataStore.appIconChanged).thenReturn(true)
-    }
-
-    private fun configureAppIconNotChanged() {
-        whenever(mockSettingsDataStore.appIconChanged).thenReturn(false)
-    }
-
-    private suspend fun verifyTabsCleared() {
-        verify(mockClearAction).clearTabsAsync(any())
-    }
-
-    private suspend fun verifyTabsNotCleared() {
-        verify(mockClearAction, never()).clearTabsAsync(any())
-    }
-
-    private suspend fun verifyEverythingCleared() {
-        verify(mockClearAction).clearTabsAndAllDataAsync(any(), any())
-    }
-
-    private suspend fun verifyEverythingNotCleared() {
-        verify(mockClearAction, never()).clearTabsAndAllDataAsync(any(), any())
-    }
-
-    private fun verifyAppIconFlagReset() {
-        verify(mockSettingsDataStore).appIconChanged = false
+        verify(workManager).enqueue(argThat<List<WorkRequest>> { size == 1 && first() is OneTimeWorkRequest })
     }
 }

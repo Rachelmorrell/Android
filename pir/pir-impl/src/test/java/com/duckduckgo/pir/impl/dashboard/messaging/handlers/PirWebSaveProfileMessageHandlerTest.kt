@@ -1,0 +1,1142 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.dashboard.messaging.handlers
+
+import android.content.Context
+import android.content.Intent
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.js.messaging.api.JsMessageCallback
+import com.duckduckgo.js.messaging.api.JsMessaging
+import com.duckduckgo.pir.impl.PirRemoteFeatures
+import com.duckduckgo.pir.impl.brokers.BrokerJsonUpdater
+import com.duckduckgo.pir.impl.checker.DisabledReason
+import com.duckduckgo.pir.impl.checker.PirEligibility
+import com.duckduckgo.pir.impl.checker.PirRunMode
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.dashboard.messaging.PirDashboardWebMessages.SAVE_PROFILE
+import com.duckduckgo.pir.impl.dashboard.messaging.handlers.PirMessageHandlerUtils.createJsMessage
+import com.duckduckgo.pir.impl.dashboard.messaging.handlers.PirMessageHandlerUtils.verifyResponse
+import com.duckduckgo.pir.impl.dashboard.state.PirWebProfileStateHolder
+import com.duckduckgo.pir.impl.models.Address
+import com.duckduckgo.pir.impl.models.ExtractedProfile
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.notifications.PirScanCompleteNotifier
+import com.duckduckgo.pir.impl.onboarding.experiment.SubscriptionOnboardingExperimentMetrics
+import com.duckduckgo.pir.impl.scan.PirForegroundScanService
+import com.duckduckgo.pir.impl.scan.PirScanScheduler
+import com.duckduckgo.pir.impl.scheduling.JobRecordUpdater
+import com.duckduckgo.pir.impl.scheduling.PirExecutionType
+import com.duckduckgo.pir.impl.store.PirFreemiumDataStore
+import com.duckduckgo.pir.impl.store.PirRepository
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.time.LocalDateTime
+
+@RunWith(AndroidJUnit4::class)
+class PirWebSaveProfileMessageHandlerTest {
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private lateinit var testee: PirWebSaveProfileMessageHandler
+
+    private val mockPirWebProfileStateHolder: PirWebProfileStateHolder = mock()
+    private val mockRepository: PirRepository = mock()
+    private val mockContext: Context = mock()
+    private val mockScanScheduler: PirScanScheduler = mock()
+    private val mockCurrentTimeProvider: CurrentTimeProvider = mock()
+    private val mockJsMessaging: JsMessaging = mock()
+    private val mockJsMessageCallback: JsMessageCallback = mock()
+    private val mockJobRecordUpdater: JobRecordUpdater = mock()
+    private val mockSubscriptionOnboardingExperimentMetrics: SubscriptionOnboardingExperimentMetrics = mock()
+    private val mockPirWorkHandler: PirWorkHandler = mock()
+    private val mockPirRemoteFeatures: PirRemoteFeatures = mock()
+    private val mockFreemiumToggle: Toggle = mock()
+    private val mockPirFreemiumDataStore: PirFreemiumDataStore = mock()
+    private val mockPirScanCompleteNotifier: PirScanCompleteNotifier = mock()
+    private val mockBrokerJsonUpdater: BrokerJsonUpdater = mock()
+    private val mockUseBundledBrokerJsonsToggle: Toggle = mock()
+    private val mockNotificationPermissionPromptToggle: Toggle = mock()
+    private val testScope = TestScope()
+
+    @Before
+    fun setUp() = runTest {
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockPirRemoteFeatures.freemium()).thenReturn(mockFreemiumToggle)
+        whenever(mockPirRemoteFeatures.useBundledBrokerJsons()).thenReturn(mockUseBundledBrokerJsonsToggle)
+        whenever(mockUseBundledBrokerJsonsToggle.isEnabled()).thenReturn(true)
+        whenever(mockPirRemoteFeatures.notificationPermissionPrompt()).thenReturn(mockNotificationPermissionPromptToggle)
+        whenever(mockNotificationPermissionPromptToggle.isEnabled()).thenReturn(true)
+        whenever(mockRepository.getAllActiveBrokers()).thenReturn(listOf("broker"))
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Enabled(PirRunMode.SCAN_AND_OPT_OUT)),
+        )
+
+        testee = PirWebSaveProfileMessageHandler(
+            pirWebProfileStateHolder = mockPirWebProfileStateHolder,
+            repository = mockRepository,
+            dispatcherProvider = coroutineRule.testDispatcherProvider,
+            context = mockContext,
+            scanScheduler = mockScanScheduler,
+            currentTimeProvider = mockCurrentTimeProvider,
+            appCoroutineScope = testScope,
+            jobRecordUpdater = mockJobRecordUpdater,
+            subscriptionOnboardingExperimentMetrics = mockSubscriptionOnboardingExperimentMetrics,
+            pirWorkHandler = mockPirWorkHandler,
+            pirRemoteFeatures = mockPirRemoteFeatures,
+            pirFreemiumDataStore = mockPirFreemiumDataStore,
+            pirScanCompleteNotifier = mockPirScanCompleteNotifier,
+            brokerJsonUpdater = mockBrokerJsonUpdater,
+        )
+    }
+
+    @Test
+    fun whenMessageIsSetThenReturnsCorrectMessage() {
+        assertEquals(SAVE_PROFILE, testee.message)
+    }
+
+    @Test
+    fun whenProcessWithIncompleteProfileThenSendsErrorResponse() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirWebProfileStateHolder).isProfileComplete
+        verify(mockRepository, never()).updateProfileQueries(any(), any(), any())
+        verify(mockContext, never()).startForegroundService(any())
+        verify(mockScanScheduler, never()).scheduleScans()
+        verify(mockPirWebProfileStateHolder, never()).clear()
+        verifyResponse(jsMessage, false, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithCompleteProfileButSaveFailsThenSendsErrorResponse() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueries = listOf(createProfileQuery())
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            profileQueries,
+        )
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirWebProfileStateHolder).isProfileComplete
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = profileQueries,
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verify(mockContext, never()).startForegroundService(any())
+        verify(mockScanScheduler, never()).scheduleScans()
+        verify(mockPirWebProfileStateHolder, never()).clear()
+        verifyResponse(jsMessage, false, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithCompleteProfileAndSaveSucceedsThenSendsSuccessResponseAndStartsScan() =
+        runTest {
+            // Given
+            val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+            val currentYear = 2025
+            val currentDateTime = LocalDateTime.of(currentYear, 6, 15, 10, 30)
+            val profileQueries = listOf(createProfileQuery())
+
+            whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+            whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+            whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+                profileQueries,
+            )
+            whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+            whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+            whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+            // When
+            testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+            // Then
+            verify(mockPirWebProfileStateHolder).isProfileComplete
+            verify(mockRepository).updateProfileQueries(
+                profileQueriesToAdd = profileQueries,
+                profileQueriesToUpdate = emptyList(),
+                profileQueryIdsToDelete = emptyList(),
+            )
+            verifyResponse(jsMessage, true, mockJsMessaging)
+            verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_INITIAL)
+            verify(mockSubscriptionOnboardingExperimentMetrics).firePirActivated()
+            verify(mockPirWebProfileStateHolder).clear()
+        }
+
+    @Test
+    fun whenProcessWithCompleteProfileButUserAlreadyHadProfilesThenDoesNotFirePirActivated() =
+        runTest {
+            // Given an existing profile (profile edit, not first-time activation)
+            val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+            val currentDateTime = LocalDateTime.of(2025, 6, 15, 10, 30)
+            whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+            whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+            whenever(mockPirWebProfileStateHolder.toProfileQueries(2025)).thenReturn(listOf(createProfileQuery()))
+            whenever(mockRepository.getAllUserProfileQueries()).thenReturn(listOf(createProfileQuery()))
+            whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+            whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+            whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+            // When
+            testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+            // Then
+            verify(mockSubscriptionOnboardingExperimentMetrics, never()).firePirActivated()
+        }
+
+    @Test
+    fun whenProcessWithMultipleProfileQueriesThenSavesAllQueries() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 12, 31, 23, 59)
+        val profileQuery1 = createProfileQuery(firstName = "John", lastName = "Doe")
+        val profileQuery2 = createProfileQuery(firstName = "Jane", lastName = "Smith")
+        val profileQueries = listOf(profileQuery1, profileQuery2)
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            profileQueries,
+        )
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirWebProfileStateHolder).isProfileComplete
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = profileQueries,
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+        verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_INITIAL)
+        verify(mockPirWebProfileStateHolder).clear()
+    }
+
+    @Test
+    fun whenProcessWithDifferentCurrentYearsThenUsesCorrectYear() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2030 // Different year
+        val currentDateTime = LocalDateTime.of(currentYear, 3, 15, 8, 45)
+        val profileQueries = listOf(createProfileQuery())
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            profileQueries,
+        )
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = profileQueries,
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+        verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_INITIAL)
+        verify(mockPirWebProfileStateHolder).clear()
+    }
+
+    @Test
+    fun whenProcessWithNullCallbackThenStillProcessesCorrectly() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueries = listOf(createProfileQuery())
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            profileQueries,
+        )
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirWebProfileStateHolder).isProfileComplete
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = profileQueries,
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+        verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_INITIAL)
+        verify(mockPirWebProfileStateHolder).clear()
+    }
+
+    @Test
+    fun whenProcessWithExistingProfileQueriesAndNoChangesThenNoUpdate() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val existingProfileQuery = createProfileQuery(id = 1)
+        val newProfileQuery = createProfileQuery(id = 0) // Same content but id=0 as expected from state holder
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(listOf(newProfileQuery))
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(existingProfileQuery))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithNewProfileQueriesThenAddsThemToExisting() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val existingProfileQuery = createProfileQuery(id = 1, firstName = "Existing", lastName = "User")
+        val newProfileQuery1 = createProfileQuery(id = 0, firstName = "New", lastName = "User1")
+        val newProfileQuery2 = createProfileQuery(id = 0, firstName = "New", lastName = "User2")
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            listOf(existingProfileQuery.copy(id = 0), newProfileQuery1, newProfileQuery2),
+        )
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(existingProfileQuery))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = listOf(newProfileQuery1, newProfileQuery2),
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithProfileQueryToDeleteButHasExtractedProfilesThenDeprecatesInsteadOfDeleting() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDeprecate = createProfileQuery(id = 1, firstName = "ToDeprecate", lastName = "User")
+        val extractedProfile = ExtractedProfile(
+            dbId = 1L,
+            profileQueryId = 1L,
+            brokerName = "TestBroker",
+            name = "ToDeprecate User",
+        )
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList()) // No new profiles
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDeprecate))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(listOf(extractedProfile))
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = listOf(profileQueryToDeprecate.copy(deprecated = true)),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithProfileQueryToDeleteAndNoExtractedProfilesThenDeletesQuery() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDelete = createProfileQuery(id = 1, firstName = "ToDelete", lastName = "User")
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList()) // No new profiles
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDelete))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList()) // No extracted profiles
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = listOf(1L),
+        )
+        verifyResponse(jsMessage, true, mockJsMessaging)
+        verify(mockJobRecordUpdater).removeAllJobRecordsForProfiles(listOf(1L))
+    }
+
+    @Test
+    fun whenProcessWithDeprecatedProfileQueryThenRemovesJobRecordsExceptForBrokersWithExtractedProfiles() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDeprecate = createProfileQuery(id = 2, firstName = "ToDeprecate", lastName = "User")
+        val extractedProfile1 = ExtractedProfile(
+            dbId = 1L,
+            profileQueryId = 2L,
+            brokerName = "Broker1",
+            name = "ToDeprecate User",
+        )
+        val extractedProfile2 = ExtractedProfile(
+            dbId = 2L,
+            profileQueryId = 2L,
+            brokerName = "Broker2",
+            name = "ToDeprecate User",
+        )
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList())
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDeprecate))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(listOf(extractedProfile1, extractedProfile2))
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = listOf(profileQueryToDeprecate.copy(deprecated = true)),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verify(mockJobRecordUpdater).removeScanJobRecordsWithNoMatchesForProfiles(listOf(2L))
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithMultipleProfileQueriesToDeleteThenRemovesAllJobRecords() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDelete1 = createProfileQuery(id = 1, firstName = "Delete1", lastName = "User")
+        val profileQueryToDelete2 = createProfileQuery(id = 2, firstName = "Delete2", lastName = "User")
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList())
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDelete1, profileQueryToDelete2))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = emptyList(),
+            profileQueryIdsToDelete = listOf(1L, 2L),
+        )
+        verify(mockJobRecordUpdater).removeAllJobRecordsForProfiles(listOf(1L, 2L))
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithMultipleDeprecatedProfileQueriesThenRemovesJobRecordsForEach() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQuery1 = createProfileQuery(id = 1, firstName = "Deprecated1", lastName = "User")
+        val profileQuery2 = createProfileQuery(id = 2, firstName = "Deprecated2", lastName = "User")
+
+        val extractedProfile1 = ExtractedProfile(
+            dbId = 1L,
+            profileQueryId = 1L,
+            brokerName = "Broker1",
+            name = "Deprecated1 User",
+        )
+        val extractedProfile2 = ExtractedProfile(
+            dbId = 2L,
+            profileQueryId = 2L,
+            brokerName = "Broker2",
+            name = "Deprecated2 User",
+        )
+        val extractedProfile3 = ExtractedProfile(
+            dbId = 3L,
+            profileQueryId = 2L,
+            brokerName = "Broker3",
+            name = "Deprecated2 User",
+        )
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList())
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQuery1, profileQuery2))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(listOf(extractedProfile1, extractedProfile2, extractedProfile3))
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = listOf(
+                profileQuery1.copy(deprecated = true),
+                profileQuery2.copy(deprecated = true),
+            ),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verify(mockJobRecordUpdater).removeScanJobRecordsWithNoMatchesForProfiles(listOf(1L, 2L))
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithMixOfDeletedAndDeprecatedProfileQueriesThenHandlesJobRecordsCorrectly() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDelete = createProfileQuery(id = 1, firstName = "Delete", lastName = "User")
+        val profileQueryToDeprecate = createProfileQuery(id = 2, firstName = "Deprecate", lastName = "User")
+
+        val extractedProfile = ExtractedProfile(
+            dbId = 1L,
+            profileQueryId = 2L,
+            brokerName = "TestBroker",
+            name = "Deprecate User",
+        )
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList())
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDelete, profileQueryToDeprecate))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(listOf(extractedProfile))
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = listOf(profileQueryToDeprecate.copy(deprecated = true)),
+            profileQueryIdsToDelete = listOf(1L),
+        )
+        verify(mockJobRecordUpdater).removeAllJobRecordsForProfiles(listOf(1L))
+        verify(mockJobRecordUpdater).removeScanJobRecordsWithNoMatchesForProfiles(listOf(2L))
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenProcessWithDeprecatedProfileQueryWithDuplicateBrokerNamesThenDeduplicatesBrokerList() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val profileQueryToDeprecate = createProfileQuery(id = 1, firstName = "Deprecate", lastName = "User")
+
+        val extractedProfile1 = ExtractedProfile(
+            dbId = 1L,
+            profileQueryId = 1L,
+            brokerName = "SameBroker",
+            name = "Deprecate User",
+        )
+        val extractedProfile2 = ExtractedProfile(
+            dbId = 2L,
+            profileQueryId = 1L,
+            brokerName = "SameBroker",
+            name = "Deprecate User",
+        )
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(emptyList())
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(profileQueryToDeprecate))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(listOf(extractedProfile1, extractedProfile2))
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockRepository).updateProfileQueries(
+            profileQueriesToAdd = emptyList(),
+            profileQueriesToUpdate = listOf(profileQueryToDeprecate.copy(deprecated = true)),
+            profileQueryIdsToDelete = emptyList(),
+        )
+        verify(mockJobRecordUpdater).removeScanJobRecordsWithNoMatchesForProfiles(listOf(1L))
+        verify(mockJobRecordUpdater, never()).removeAllJobRecordsForProfiles(any())
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenExistingProfilesPresentThenScanIntentMarkedAsEditProfile() = runTest {
+        // Given - user already has a saved profile, so this save is an edit
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        val currentYear = 2025
+        val currentDateTime = LocalDateTime.of(currentYear, 1, 1, 0, 0)
+        val existingProfileQuery = createProfileQuery(id = 1, firstName = "Existing", lastName = "User")
+        val newProfileQuery = createProfileQuery(id = 0, firstName = "New", lastName = "User")
+
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(currentDateTime)
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(
+            listOf(existingProfileQuery.copy(id = 0), newProfileQuery),
+        )
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(listOf(existingProfileQuery))
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(listOf(existingProfileQuery))
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_EDIT_PROFILE)
+    }
+
+    private fun createProfileQuery(
+        id: Long = 1,
+        firstName: String = "Test",
+        lastName: String = "User",
+    ): ProfileQuery {
+        return ProfileQuery(
+            id = id,
+            firstName = firstName,
+            middleName = null,
+            lastName = lastName,
+            city = "Test City",
+            state = "TS",
+            addresses = listOf(Address("Test City", "TS")),
+            birthYear = 1990,
+            fullName = "$firstName $lastName",
+            age = 35,
+            deprecated = false,
+        )
+    }
+
+    @Test
+    fun whenSaveSucceedsAndUserCannotRunOptOutsAndFreemiumEnabledThenStoresActivationBeforeStartingScan() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then the scan service resolves eligibility again, so activation has to be stored first
+        inOrder(mockPirFreemiumDataStore, mockContext) {
+            verify(mockPirFreemiumDataStore).activate(any())
+            verify(mockContext).startForegroundService(any())
+        }
+    }
+
+    @Test
+    fun whenSaveSucceedsAndUserCanAlreadyRunOptOutsThenDoesNotStoreActivation() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Enabled(PirRunMode.SCAN_AND_OPT_OUT)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+        verifyStartAndScheduleInitialScan(PirExecutionType.MANUAL_INITIAL)
+    }
+
+    @Test
+    fun whenSaveSucceedsAndUserCannotRunOptOutsButFreemiumDisabledThenDoesNotStoreActivation() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSaveFailsThenDoesNotStoreActivation() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(false)
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenFreemiumActivatesThenFirstProfileSavedTimestampIsStored() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)))
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+        whenever(mockPirFreemiumDataStore.didActivate).thenReturn(false)
+        whenever(mockCurrentTimeProvider.currentTimeMillis()).thenReturn(1_700_000_000_000L)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirFreemiumDataStore).activate(1_700_000_000_000L)
+    }
+
+    @Test
+    fun whenAlreadyActivatedThenFirstProfileSavedTimestampIsNotOverwritten() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)))
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+        whenever(mockPirFreemiumDataStore.didActivate).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSavingProfileAsFreeUserThenScanOnlyWorkIsScheduled() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)),
+            flowOf(PirEligibility.Enabled(PirRunMode.SCAN_ONLY)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockScanScheduler).scheduleScanOnlyWork()
+        verify(mockScanScheduler, never()).scheduleScans()
+    }
+
+    @Test
+    fun whenSavingProfileAsSubscriberThenFullWorkIsScheduled() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Enabled(PirRunMode.SCAN_AND_OPT_OUT)))
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockScanScheduler).scheduleScans()
+        verify(mockScanScheduler, never()).scheduleScanOnlyWork()
+    }
+
+    @Test
+    fun whenSaveSucceedsAndRepositoryUnavailableThenDoesNotStoreActivation() = runTest {
+        // Given a subscriber resolves to REPOSITORY_UNAVAILABLE, which must not be read as a free user
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.REPOSITORY_UNAVAILABLE)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSaveSucceedsAndEntitlementLostThenDoesNotStoreActivation() = runTest {
+        // Given a subscriber whose plan does not include PIR
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.ENTITLEMENT_LOST)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSaveSucceedsAndPirFeatureDisabledThenDoesNotStoreActivation() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.FEATURE_DISABLED)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSaveSucceedsAndEligibilityNotEmittedThenDoesNotStoreActivation() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(emptyFlow())
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockPirFreemiumDataStore, never()).activate(any())
+    }
+
+    @Test
+    fun whenSavingProfileAsFreeUserThenScanCompleteNotificationIsMarkedPendingBeforeStartingScan() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.SUBSCRIPTION_EXPIRED)),
+            flowOf(PirEligibility.Enabled(PirRunMode.SCAN_ONLY)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then the run that finishes this scan takes the flag, so it has to be marked before the scan starts
+        inOrder(mockPirScanCompleteNotifier, mockContext) {
+            verify(mockPirScanCompleteNotifier).onInitialScanStarted()
+            verify(mockContext).startForegroundService(any())
+        }
+    }
+
+    @Test
+    fun whenSavingProfileAsSubscriberThenScanCompleteNotificationIsMarkedPendingBeforeStartingScan() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Enabled(PirRunMode.SCAN_AND_OPT_OUT)))
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        inOrder(mockPirScanCompleteNotifier, mockContext) {
+            verify(mockPirScanCompleteNotifier).onInitialScanStarted()
+            verify(mockContext).startForegroundService(any())
+        }
+    }
+
+    @Test
+    fun whenFreeUserEditsProfileThenScanCompleteNotificationIsMarkedPending() = runTest {
+        // Given an already activated free user with a saved profile
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(listOf(createProfileQuery(id = 1)))
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Enabled(PirRunMode.SCAN_ONLY)))
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirScanCompleteNotifier).onInitialScanStarted()
+        val intentCaptor = argumentCaptor<Intent>()
+        verify(mockContext).startForegroundService(intentCaptor.capture())
+        assertEquals(PirExecutionType.MANUAL_EDIT_PROFILE.name, intentCaptor.firstValue.getStringExtra("extra_execution_type"))
+    }
+
+    @Test
+    fun whenSavingProfileAndRunModeCannotBeResolvedThenScanCompleteNotificationIsNotMarkedPending() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.REPOSITORY_UNAVAILABLE)),
+        )
+        whenever(mockFreemiumToggle.isEnabled()).thenReturn(true)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirScanCompleteNotifier, never()).onInitialScanStarted()
+    }
+
+    @Test
+    fun whenSaveFailsThenScanCompleteNotificationIsNotMarkedPending() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(false)
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(flowOf(PirEligibility.Enabled(PirRunMode.SCAN_AND_OPT_OUT)))
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, null)
+
+        // Then
+        verify(mockPirScanCompleteNotifier, never()).onInitialScanStarted()
+    }
+
+    @Test
+    fun whenSavingProfileWithNoBrokersStoredThenBrokerDataIsUpdatedBeforeRespondingSuccess() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.getAllActiveBrokers()).thenReturn(emptyList())
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then the dashboard reads the scan total from stored brokers as soon as the save succeeds
+        val inOrder = inOrder(mockBrokerJsonUpdater, mockJsMessaging)
+        inOrder.verify(mockBrokerJsonUpdater).update()
+        inOrder.verify(mockJsMessaging).onResponse(any())
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenSavingProfileWithBrokersAlreadyStoredThenBrokerDataIsNotUpdated() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.getAllActiveBrokers()).thenReturn(listOf("broker"))
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockBrokerJsonUpdater, never()).update()
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenSavingProfileWithNoBrokersStoredAndBundledBrokersDisabledThenBrokerDataIsStillUpdated() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.getAllActiveBrokers()).thenReturn(emptyList())
+        whenever(mockUseBundledBrokerJsonsToggle.isEnabled()).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then the toggle only governs the bundled fallback, never the network fetch
+        verify(mockBrokerJsonUpdater).update()
+        verifyResponse(jsMessage, true, mockJsMessaging)
+    }
+
+    @Test
+    fun whenSaveFailsThenBrokerDataIsNotUpdated() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(false)
+        whenever(mockRepository.getAllActiveBrokers()).thenReturn(emptyList())
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockBrokerJsonUpdater, never()).update()
+        verifyResponse(jsMessage, false, mockJsMessaging)
+    }
+
+    @Test
+    fun whenOnboardingSavesProfileThenSaveIsForwardedToTheDashboardToPromptForNotifications() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockJsMessageCallback).process(jsMessage.featureName, SAVE_PROFILE.messageName, jsMessage.id, null)
+    }
+
+    @Test
+    fun whenOnboardingSavesProfileAndPromptIsDisabledThenSaveIsNotForwardedToTheDashboard() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockNotificationPermissionPromptToggle.isEnabled()).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockJsMessageCallback, never()).process(any(), any(), anyOrNull(), anyOrNull())
+    }
+
+    @Test
+    fun whenEditingExistingProfileThenSaveIsNotForwardedToTheDashboard() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.getAllUserProfileQueries()).thenReturn(listOf(createProfileQuery()))
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockJsMessageCallback, never()).process(any(), any(), anyOrNull(), anyOrNull())
+    }
+
+    @Test
+    fun whenOnboardingSavesProfileAndRunModeCannotBeResolvedThenSaveIsNotForwardedToTheDashboard() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockPirWorkHandler.canRunPir()).thenReturn(
+            flowOf(PirEligibility.Disabled(DisabledReason.REPOSITORY_UNAVAILABLE)),
+        )
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockJsMessageCallback, never()).process(any(), any(), anyOrNull(), anyOrNull())
+    }
+
+    @Test
+    fun whenOnboardingSaveFailsThenSaveIsNotForwardedToTheDashboard() = runTest {
+        // Given
+        val jsMessage = createJsMessage("""""", SAVE_PROFILE)
+        givenSuccessfulProfileSave()
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(false)
+
+        // When
+        testee.process(jsMessage, mockJsMessaging, mockJsMessageCallback)
+
+        // Then
+        verify(mockJsMessageCallback, never()).process(any(), any(), anyOrNull(), anyOrNull())
+    }
+
+    private suspend fun givenSuccessfulProfileSave() {
+        val currentYear = 2025
+        whenever(mockPirWebProfileStateHolder.isProfileComplete).thenReturn(true)
+        whenever(mockCurrentTimeProvider.localDateTimeNow()).thenReturn(LocalDateTime.of(currentYear, 6, 15, 10, 30))
+        whenever(mockPirWebProfileStateHolder.toProfileQueries(currentYear)).thenReturn(listOf(createProfileQuery()))
+        whenever(mockRepository.getValidUserProfileQueries()).thenReturn(emptyList())
+        whenever(mockRepository.getAllExtractedProfiles()).thenReturn(emptyList())
+        whenever(mockRepository.updateProfileQueries(any(), any(), any())).thenReturn(true)
+    }
+
+    private fun verifyStartAndScheduleInitialScan(expectedExecutionType: PirExecutionType) {
+        val intentCaptor = argumentCaptor<Intent>()
+        verify(mockContext).startForegroundService(intentCaptor.capture())
+
+        val capturedIntent = intentCaptor.firstValue
+        assertEquals(PirForegroundScanService::class.java.name, capturedIntent.component?.className)
+        assertEquals(expectedExecutionType.name, capturedIntent.getStringExtra("extra_execution_type"))
+
+        verify(mockScanScheduler).scheduleScans()
+    }
+}

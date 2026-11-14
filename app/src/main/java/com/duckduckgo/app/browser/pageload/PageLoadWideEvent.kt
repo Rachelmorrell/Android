@@ -1,0 +1,445 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.pageload
+
+import android.annotation.SuppressLint
+import com.duckduckgo.app.browser.UriString
+import com.duckduckgo.app.browser.pageloadpixel.PageLoadedSites
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.statistics.wideevents.CleanupPolicy
+import com.duckduckgo.app.statistics.wideevents.FlowStatus
+import com.duckduckgo.app.statistics.wideevents.WideEventClient
+import com.duckduckgo.app.statistics.wideevents.WideEventDefinition
+import com.duckduckgo.autoconsent.api.Autoconsent
+import com.duckduckgo.browser.api.WebViewVersionProvider
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.contentscopescripts.api.ContentScopeOptimizations
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * Tracks page load events as Wide Event flows with multi-phase tracking.
+ * Manages flow lifecycle: page_start → page_visible → page_escaped_max_progress → page_finish
+ *
+ * A flow is identified by the navigationId it was started with, never by url: callers report against a load after the
+ * point where its url can still change under them (redirects) or where the load can already have been replaced, so a
+ * url-keyed flow both loses the events of its own load and can be claimed by a later one.
+ */
+interface PageLoadWideEvent {
+    /**
+     * Called when a page starts loading.
+     * Starting a load ends whatever load was previously tracked for this tab, whether or not [url] is tracked: the
+     * previous flow can no longer receive events, and is completed as cancelled so the load it was measuring stays
+     * countable as one that was superseded, rather than being dropped or left to age into an unaccounted outcome.
+     * @param tabId The unique identifier for the tab
+     * @param url The URL of the page being loaded
+     * @param navigationId Identifies this load for every measurement reported against it later. Must be unique for the
+     * lifetime of the process, and the same value must be passed to every other callback for this load.
+     */
+    fun onPageStarted(tabId: String, url: String, navigationId: Long)
+
+    /**
+     * Called when a page becomes visible to the user.
+     * @param tabId The unique identifier for the tab
+     * @param navigationId The id given to [onPageStarted] for the load this belongs to
+     * @param progress The current page load progress (0-100)
+     */
+    fun onPageVisible(tabId: String, navigationId: Long, progress: Int)
+
+    /**
+     * Called when page progress changes and escapes the max progress threshold state.
+     * @param tabId The unique identifier for the tab
+     * @param navigationId The id given to [onPageStarted] for the load this belongs to
+     */
+    fun onProgressChanged(tabId: String, navigationId: Long)
+
+    /**
+     * Called once the active content scope experiments have been resolved, which page start awaits before it can inject.
+     * @param tabId The unique identifier for the tab
+     * @param navigationId The id given to [onPageStarted] for the navigation that triggered the injection
+     */
+    fun onContentScopeExperimentsResolved(tabId: String, navigationId: Long)
+
+    /**
+     * Called once every [com.duckduckgo.browser.api.JsInjectorPlugin] has run for this navigation, content scope
+     * scripts among them.
+     * @param tabId The unique identifier for the tab
+     * @param navigationId The id given to [onPageStarted] for the navigation that triggered the injection
+     */
+    fun onJsInjectionComplete(tabId: String, navigationId: Long)
+
+    /**
+     * Called when a page finishes loading (either successfully or with an error).
+     * @param tabId The unique identifier for the tab
+     * @param navigationId The id given to [onPageStarted] for the load that finished
+     * @param errorDescription Optional error description. If null, indicates successful load.
+     * @param isTabInForegroundOnFinish Whether the tab was in the foreground when finished
+     * @param activeRequestsOnLoadStart Number of parallel requests when page load started
+     * @param concurrentRequestsOnFinish Number of concurrent requests when page finished
+     */
+    fun onPageLoadFinished(
+        tabId: String,
+        navigationId: Long,
+        errorDescription: String? = null,
+        isTabInForegroundOnFinish: Boolean,
+        activeRequestsOnLoadStart: Int,
+        concurrentRequestsOnFinish: Int,
+    )
+}
+
+@ContributesBinding(AppScope::class)
+@SingleIn(AppScope::class)
+class RealPageLoadWideEvent @Inject constructor(
+    private val wideEventClient: WideEventClient,
+    private val webViewVersionProvider: WebViewVersionProvider,
+    private val autoconsent: Autoconsent,
+    private val contentScopeOptimizations: ContentScopeOptimizations,
+    private val androidBrowserConfigFeature: Lazy<AndroidBrowserConfigFeature>,
+    private val currentTimeProvider: CurrentTimeProvider,
+    private val dispatchers: DispatcherProvider,
+    @AppCoroutineScope appCoroutineScope: CoroutineScope,
+) : PageLoadWideEvent {
+
+    // This is to ensure modifications of the wide event are serialized
+    @SuppressLint("AvoidComputationUsage")
+    private val coroutineScope = CoroutineScope(
+        context = appCoroutineScope.coroutineContext +
+            dispatchers.computation().limitedParallelism(1),
+    )
+
+    private val mutex = Mutex()
+    private val activeFlows = ConcurrentHashMap<String, PageLoadState>()
+
+    override fun onPageStarted(tabId: String, url: String, navigationId: Long) {
+        val startedAt = currentTimeProvider.elapsedRealtime()
+        coroutineScope.launch {
+            mutex.withLock {
+                if (!isFeatureEnabled()) return@launch
+
+                activeFlows.remove(tabId)?.let { previous ->
+                    reportSupersededLoad(tabId, previous, supersedingUrl = url)
+                }
+
+                if (!shouldTrackUrl(url)) return@launch
+
+                val result = wideEventClient.flowStart(
+                    name = PAGE_LOAD_FEATURE_NAME,
+                    cleanupPolicy = CleanupPolicy.OnTimeout(CLEANUP_TIMEOUT),
+                    samplingProbability = SAMPLING_PROBABILITY,
+                    definition = WideEventDefinition(version = DEFINITION_VERSION),
+                )
+
+                result.onSuccess { flowId ->
+                    activeFlows[tabId] = PageLoadState(flowId, url, navigationId, startedAt)
+                    logcat { "Page load flow started: tabId=$tabId, url=$url, flowId=$flowId, navigationId=$navigationId" }
+
+                    wideEventClient.flowStep(
+                        wideEventId = flowId,
+                        stepName = STEP_PAGE_START,
+                    )
+
+                    wideEventClient.intervalStart(
+                        wideEventId = flowId,
+                        key = KEY_ELAPSED_TIME_TO_FINISH,
+                        buckets = PAGE_LOAD_INTERVAL_BUCKETS,
+                    )
+
+                    wideEventClient.intervalStart(
+                        wideEventId = flowId,
+                        key = KEY_ELAPSED_TIME_TO_VISIBLE,
+                        buckets = PAGE_LOAD_INTERVAL_BUCKETS,
+                    )
+
+                    wideEventClient.intervalStart(
+                        wideEventId = flowId,
+                        key = KEY_ELAPSED_TIME_TO_ESCAPED_FIXED_PROGRESS,
+                        buckets = PAGE_LOAD_INTERVAL_BUCKETS,
+                    )
+                }.onFailure { error ->
+                    logcat { "Failed to start page load flow for tabId=$tabId: ${error.message}" }
+                }
+            }
+        }
+    }
+
+    override fun onPageVisible(tabId: String, navigationId: Long, progress: Int) {
+        updateWideEventAsync(tabId, navigationId, onceForStep = STEP_PAGE_VISIBLE) { state ->
+            wideEventClient.intervalEnd(
+                wideEventId = state.flowId,
+                key = KEY_ELAPSED_TIME_TO_VISIBLE,
+            )
+
+            wideEventClient.flowStep(
+                wideEventId = state.flowId,
+                stepName = STEP_PAGE_VISIBLE,
+                metadata = mapOf(
+                    KEY_PROGRESS to (progress >= FIXED_PROGRESS_THRESHOLD).toString(),
+                ),
+            )
+
+            logcat { "Page visible recorded: flowId=${state.flowId}, progress=$progress" }
+        }
+    }
+
+    override fun onContentScopeExperimentsResolved(tabId: String, navigationId: Long) {
+        recordElapsedSincePageStart(
+            tabId = tabId,
+            navigationId = navigationId,
+            stepName = STEP_CONTENT_SCOPE_EXPERIMENTS_RESOLVED,
+            key = KEY_ELAPSED_TIME_TO_CONTENT_SCOPE_EXPERIMENTS,
+        )
+    }
+
+    override fun onJsInjectionComplete(tabId: String, navigationId: Long) {
+        recordElapsedSincePageStart(
+            tabId = tabId,
+            navigationId = navigationId,
+            stepName = STEP_JS_INJECTION_COMPLETE,
+            key = KEY_ELAPSED_TIME_TO_JS_INJECTION_COMPLETE,
+        )
+    }
+
+    override fun onProgressChanged(tabId: String, navigationId: Long) {
+        updateWideEventAsync(tabId, navigationId, onceForStep = STEP_PAGE_ESCAPED_FIXED_PROGRESS) { state ->
+            wideEventClient.intervalEnd(
+                wideEventId = state.flowId,
+                key = KEY_ELAPSED_TIME_TO_ESCAPED_FIXED_PROGRESS,
+            )
+            wideEventClient.flowStep(
+                wideEventId = state.flowId,
+                stepName = STEP_PAGE_ESCAPED_FIXED_PROGRESS,
+            )
+            logcat { "Exited max progress threshold: flowId=${state.flowId}" }
+        }
+    }
+
+    override fun onPageLoadFinished(
+        tabId: String,
+        navigationId: Long,
+        errorDescription: String?,
+        isTabInForegroundOnFinish: Boolean,
+        activeRequestsOnLoadStart: Int,
+        concurrentRequestsOnFinish: Int,
+    ) {
+        updateWideEventAsync(tabId, navigationId) { state ->
+            val flowId = state.flowId
+            activeFlows.remove(tabId)
+            val isSuccess = errorDescription == null
+            val outcome = if (isSuccess) "success" else "error"
+
+            wideEventClient.intervalEnd(
+                wideEventId = flowId,
+                key = KEY_ELAPSED_TIME_TO_FINISH,
+            )
+
+            wideEventClient.flowStep(
+                wideEventId = flowId,
+                stepName = STEP_PAGE_FINISH,
+                success = isSuccess,
+                metadata = mutableMapOf<String, String>().apply {
+                    put(KEY_OUTCOME, outcome)
+                    errorDescription?.let { put(KEY_ERROR_CODE, it) }
+                },
+            )
+
+            val flowStatus = if (isSuccess) {
+                FlowStatus.Success
+            } else {
+                FlowStatus.Failure(errorDescription ?: "")
+            }
+            wideEventClient.flowFinish(
+                wideEventId = flowId,
+                status = flowStatus,
+                metadata = loadConditions() + mapOf(
+                    KEY_IS_TAB_IN_FOREGROUND_ON_FINISH to isTabInForegroundOnFinish.toString(),
+                    KEY_ACTIVE_REQUESTS_ON_LOAD_START to activeRequestsOnLoadStart.toString(),
+                    KEY_CONCURRENT_REQUESTS_ON_FINISH to concurrentRequestsOnFinish.toString(),
+                ),
+            )
+
+            logcat { "Page load finished: tabId=$tabId, flowId=$flowId, outcome=$outcome" }
+        }
+    }
+
+    private suspend fun reportSupersededLoad(tabId: String, previous: PageLoadState, supersedingUrl: String) {
+        if (previous.isStale()) {
+            logcat { "Leaving stale flow ${previous.flowId} for tabId=$tabId to the cleanup policy" }
+            return
+        }
+        val reason = if (previous.url == supersedingUrl) REASON_SUPERSEDED_SAME_URL else REASON_SUPERSEDED_DIFFERENT_URL
+        logcat { "Cancelling flow ${previous.flowId} for tabId=$tabId as $reason (${previous.url} → $supersedingUrl)" }
+        wideEventClient.flowFinish(
+            wideEventId = previous.flowId,
+            status = FlowStatus.Cancelled,
+            metadata = loadConditions() + mapOf(KEY_CANCELLATION_REASON to reason),
+        )
+    }
+
+    private suspend fun loadConditions(): Map<String, String> {
+        val optimizations = contentScopeOptimizations.current()
+        return mapOf(
+            KEY_WEBVIEW_VERSION to webViewVersionProvider.getMajorVersion(),
+            KEY_CPM_ENABLED to autoconsent.isAutoconsentEnabled().toString(),
+            KEY_CONTENT_SCOPE_INJECTION_OPTIMIZED to optimizations.injectionOptimized.toString(),
+            KEY_CONTENT_SCOPE_MESSAGING_OPTIMIZED to optimizations.messagingOptimized.toString(),
+            KEY_CONTENT_SCOPE_EXPERIMENTS_CACHED to optimizations.experimentsCached.toString(),
+        )
+    }
+
+    private fun shouldTrackUrl(url: String): Boolean {
+        if (url.isBlank()) return false
+        if (url == ABOUT_BLANK) return false
+        return runCatching {
+            PageLoadedSites.perfSites.any { site -> UriString.sameOrSubdomain(url, site) }
+        }.getOrDefault(false)
+    }
+
+    /**
+     * These durations are milliseconds wide, so they cannot be measured with [WideEventClient.intervalStart] /
+     * [WideEventClient.intervalEnd].
+     */
+    private fun recordElapsedSincePageStart(
+        tabId: String,
+        navigationId: Long,
+        stepName: String,
+        key: String,
+    ) {
+        val measuredAt = currentTimeProvider.elapsedRealtime()
+        updateWideEventAsync(tabId, navigationId, onceForStep = stepName) { state ->
+            val bucket = lowerBoundBucket(measuredAt - state.startedAt)
+            wideEventClient.flowStep(
+                wideEventId = state.flowId,
+                stepName = stepName,
+                metadata = mapOf(key to bucket),
+            )
+            logcat { "Recorded $key=$bucket for flowId=${state.flowId}" }
+        }
+    }
+
+    private fun lowerBoundBucket(durationMs: Long): String =
+        (CONTENT_SCOPE_BUCKETS_MS.lastOrNull { it <= durationMs } ?: 0L).toString()
+
+    private fun updateWideEventAsync(
+        tabId: String,
+        navigationId: Long,
+        onceForStep: String? = null,
+        operation: suspend (PageLoadState) -> Unit,
+    ) {
+        coroutineScope.launch {
+            mutex.withLock {
+                if (!isFeatureEnabled()) return@withLock
+                val state = activeFlowFor(tabId, navigationId) ?: return@withLock
+                if (onceForStep != null && !state.recordedSteps.add(onceForStep)) {
+                    logcat { "Ignoring repeat $onceForStep for flowId=${state.flowId}" }
+                    return@withLock
+                }
+                operation(state)
+            }
+        }
+    }
+
+    private fun activeFlowFor(tabId: String, navigationId: Long): PageLoadState? {
+        val state = activeFlows[tabId]
+        if (state == null) {
+            logcat { "No active flow found for tabId=$tabId" }
+            return null
+        }
+        if (state.navigationId != navigationId) {
+            logcat { "Dropping event from navigation $navigationId, tabId=$tabId is on ${state.navigationId}" }
+            return null
+        }
+        if (state.isStale()) return null
+        return state
+    }
+
+    private suspend fun isFeatureEnabled(): Boolean = withContext(dispatchers.io()) {
+        androidBrowserConfigFeature.value.sendPageLoadWideEvent().isEnabled()
+    }
+
+    private inner class PageLoadState(
+        val flowId: Long,
+        val url: String,
+        val navigationId: Long,
+        val startedAt: Long,
+        val createdAt: Long = currentTimeProvider.currentTimeMillis(),
+    ) {
+        val recordedSteps: MutableSet<String> = mutableSetOf()
+
+        fun isStale(): Boolean =
+            currentTimeProvider.currentTimeMillis() - createdAt > CLEANUP_TIMEOUT.inWholeMilliseconds
+    }
+
+    private companion object {
+        const val ABOUT_BLANK = "about:blank"
+        val CLEANUP_TIMEOUT = 5.minutes
+        val PAGE_LOAD_INTERVAL_BUCKETS: Set<Duration> = setOf(
+            1.seconds,
+            2.seconds,
+            3.seconds,
+            4.seconds,
+            5.seconds,
+            10.seconds,
+            30.seconds,
+            1.minutes,
+        )
+
+        const val SAMPLING_PROBABILITY = 0.05f
+        val CONTENT_SCOPE_BUCKETS_MS: List<Long> = listOf(5, 10, 25, 50, 100, 200, 400, 800, 1600, 3200, 6400)
+        const val PAGE_LOAD_FEATURE_NAME = "page-load"
+        val DEFINITION_VERSION = WideEventDefinition.Version(minor = 0, patch = 1)
+        const val STEP_PAGE_START = "page_start"
+        const val STEP_PAGE_VISIBLE = "page_visible"
+        const val STEP_PAGE_ESCAPED_FIXED_PROGRESS = "page_escaped_fixed_progress"
+        const val STEP_PAGE_FINISH = "page_finish"
+        const val STEP_CONTENT_SCOPE_EXPERIMENTS_RESOLVED = "page_content_scope_experiments_resolved"
+        const val STEP_JS_INJECTION_COMPLETE = "page_js_injection_complete"
+        const val KEY_ELAPSED_TIME_TO_FINISH = "elapsed_time_to_finish_ms_bucketed"
+        const val KEY_ELAPSED_TIME_TO_VISIBLE = "elapsed_time_to_visible_ms_bucketed"
+        const val KEY_ELAPSED_TIME_TO_ESCAPED_FIXED_PROGRESS = "elapsed_time_to_escaped_fixed_progress_ms_bucketed"
+        const val KEY_ELAPSED_TIME_TO_CONTENT_SCOPE_EXPERIMENTS = "elapsed_time_to_content_scope_experiments_ms_bucketed"
+        const val KEY_ELAPSED_TIME_TO_JS_INJECTION_COMPLETE = "elapsed_time_to_js_injection_complete_ms_bucketed"
+        const val KEY_CONTENT_SCOPE_INJECTION_OPTIMIZED = "content_scope_injection_optimized"
+        const val KEY_CONTENT_SCOPE_MESSAGING_OPTIMIZED = "content_scope_messaging_optimized"
+        const val KEY_CONTENT_SCOPE_EXPERIMENTS_CACHED = "content_scope_experiments_cached"
+        const val KEY_PROGRESS = "progress"
+        const val KEY_OUTCOME = "outcome"
+        const val KEY_ERROR_CODE = "error_code"
+        const val KEY_WEBVIEW_VERSION = "webview_version"
+        const val KEY_CPM_ENABLED = "cpm_enabled"
+        const val KEY_IS_TAB_IN_FOREGROUND_ON_FINISH = "is_tab_in_foreground_on_finish"
+        const val KEY_ACTIVE_REQUESTS_ON_LOAD_START = "active_requests_on_load_start"
+        const val KEY_CONCURRENT_REQUESTS_ON_FINISH = "concurrent_requests_on_finish"
+        const val KEY_CANCELLATION_REASON = "cancellation_reason"
+        const val REASON_SUPERSEDED_SAME_URL = "superseded_same_url"
+        const val REASON_SUPERSEDED_DIFFERENT_URL = "superseded_different_url"
+        const val FIXED_PROGRESS_THRESHOLD = 50
+    }
+}

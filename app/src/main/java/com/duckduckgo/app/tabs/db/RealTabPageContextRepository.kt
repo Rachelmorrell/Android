@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.tabs.db
+
+import com.duckduckgo.app.tabs.model.CachedPageContext
+import com.duckduckgo.app.tabs.model.TabPageContextRepository
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import org.json.JSONObject
+import javax.inject.Inject
+
+@ContributesBinding(AppScope::class)
+@SingleIn(AppScope::class)
+class RealTabPageContextRepository @Inject constructor(
+    private val dao: TabPageContextDao,
+) : TabPageContextRepository {
+
+    override suspend fun storePageContext(tabId: String, url: String, serializedPageContext: String) {
+        val metadata = runCatching { JSONObject(serializedPageContext) }.getOrNull() ?: return
+        if (metadata.optString("mimeType") == "application/pdf" || metadata.has("data")) return
+        dao.insertOrReplace(
+            TabPageContextEntity(
+                tabId = tabId,
+                url = url,
+                serializedPageContext = serializedPageContext,
+                collectedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    override suspend fun getPageContexts(tabIds: List<String>): Map<String, CachedPageContext> {
+        return dao.getByTabIds(tabIds).associate { entity ->
+            entity.tabId to CachedPageContext(
+                tabId = entity.tabId,
+                url = entity.url,
+                serializedPageContext = entity.serializedPageContext,
+                collectedAt = entity.collectedAt,
+            )
+        }
+    }
+
+    override suspend fun deleteAll() {
+        dao.deleteAll()
+    }
+}

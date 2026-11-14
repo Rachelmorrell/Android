@@ -1,0 +1,432 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.pdf
+
+import android.content.Context
+import android.net.Uri
+import android.net.http.SslCertificate
+import android.os.BadParcelableException
+import android.os.Build
+import android.os.Parcel
+import android.provider.OpenableColumns
+import androidx.annotation.VisibleForTesting
+import androidx.core.net.toUri
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.cookies.api.CookieManagerProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.File
+import java.io.IOException
+import java.security.cert.X509Certificate
+import java.util.UUID
+import javax.inject.Inject
+import kotlin.coroutines.coroutineContext
+
+/**
+ * Manages the inline PDF rendering pipeline: eligibility checks, download with
+ * validation, and cache lifecycle.
+ */
+interface InlinePdfHandler {
+
+    /**
+     * Decides how a download response should be handled for PDF rendering.
+     *
+     * - [PdfRenderDecision.Inline]: SDK >= Android 12, MIME or `.pdf` URL extension
+     *   matches, and `Content-Disposition: attachment` not set.
+     * - [PdfRenderDecision.Fallback]: same eligibility but the device is below
+     *   Android 12 — caller should fall back to the standard file download.
+     * - [PdfRenderDecision.NotApplicable]: response is not an inline-eligible PDF.
+     */
+    fun classifyPdfRequest(url: String, contentDisposition: String?, mimeType: String): PdfRenderDecision
+
+    /**
+     * Downloads the PDF at [url] into internal cache for inline rendering.
+     *
+     * Forwards WebView cookies for authenticated downloads, validates the file
+     * starts with `%PDF-` magic bytes, and returns [PdfDownloadResult.Success] on
+     * success.
+     *
+     * Returns [PdfDownloadResult.Failure] with an error category when the network,
+     * server, or file content prevents inline rendering. The SDK gate lives in
+     * [classifyPdfRequest] so callers shouldn't reach this method when ineligible.
+     *
+     * Cancellation-safe: if the calling coroutine is cancelled (e.g. the user
+     * navigates away), the in-flight HTTP request is aborted and any partial
+     * file is deleted.
+     *
+     * @param url the URL of the PDF to download
+     * @param forceRefresh when true, ignore any existing cache entry and re-fetch from the network.
+     *   Used by the user-triggered refresh action so an updated server-side document replaces the
+     *   stale cached copy.
+     * @param browserMode the browser mode whose cookie jar authenticates the download — the caller passes
+     *   its own (frozen) mode so the request carries the cookies of the tab the PDF was opened in.
+     */
+    suspend fun downloadToCache(url: String, forceRefresh: Boolean = false, browserMode: BrowserMode): PdfDownloadResult
+
+    /**
+     * Extracts a sanitized filename from the PDF [url]'s last path segment.
+     *
+     * @param url the URL of the PDF document
+     */
+    fun extractFileName(url: String): String
+
+    /**
+     * Copies an already-local PDF at [uri] (a content:// URI delivered by an external "Open with"
+     * intent) into the internal pdf_cache for inline rendering. The PdfViewerHandler activity-alias
+     * only declares scheme="content", so file:// URIs never reach this method in practice.
+     *
+     * Must be called while the caller still holds the intent's read-URI grant. Validates the
+     * copied file starts with %PDF- magic bytes and enforces the same LRU cache budget as
+     * [downloadToCache]. No network, cookies, or SSL certificate handling.
+     */
+    suspend fun cacheLocalPdf(uri: Uri): LocalPdfResult
+}
+
+sealed class PdfRenderDecision {
+    data object Inline : PdfRenderDecision()
+    data object Fallback : PdfRenderDecision()
+    data object NotApplicable : PdfRenderDecision()
+}
+
+sealed class PdfDownloadResult {
+    data class Success(val uri: Uri, val certificate: SslCertificate? = null) : PdfDownloadResult()
+    data class Failure(val errorType: PdfErrorType) : PdfDownloadResult()
+}
+
+sealed class LocalPdfResult {
+    data class Success(val uri: Uri, val displayName: String) : LocalPdfResult()
+    data class Failure(val errorType: PdfErrorType) : LocalPdfResult()
+}
+
+enum class PdfErrorType(val paramValue: String) {
+    IO_ERROR("io_error"),
+    SECURITY_ERROR("security_error"),
+    UNKNOWN("unknown"),
+}
+
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class)
+class RealInlinePdfHandler @Inject constructor(
+    private val context: Context,
+    @PdfOkHttpClient private val okHttpClient: OkHttpClient,
+    private val cookieManagerProvider: CookieManagerProvider,
+    private val dispatcherProvider: DispatcherProvider,
+) : InlinePdfHandler {
+
+    override fun classifyPdfRequest(url: String, contentDisposition: String?, mimeType: String): PdfRenderDecision {
+        // downloadToCache fetches via OkHttp, which rejects any scheme other than http/https.
+        // Let data:/file:/content: PDFs fall through to the standard download flow.
+        val scheme = url.toUri().scheme?.lowercase()
+        if (scheme != "http" && scheme != "https") return PdfRenderDecision.NotApplicable
+        // Use lastPathSegment so query strings and fragments don't break the .pdf check
+        // (e.g. signed URLs like https://cdn.example.com/report.pdf?auth=token).
+        val pathEndsInPdf = url.toUri().lastPathSegment?.endsWith(".pdf", ignoreCase = true) == true
+        if (mimeType != "application/pdf" && !pathEndsInPdf) return PdfRenderDecision.NotApplicable
+        if (contentDisposition != null && contentDisposition.trim().startsWith("attachment", ignoreCase = true)) {
+            return PdfRenderDecision.NotApplicable
+        }
+        if (Build.VERSION.SDK_INT < 31) return PdfRenderDecision.Fallback
+        return PdfRenderDecision.Inline
+    }
+
+    private val cacheDir: File
+        get() = File(context.cacheDir, PDF_CACHE_DIR).also { it.mkdirs() }
+
+    private val abandonedDownloadsCleaned: Unit by lazy {
+        cacheDir.listFiles().orEmpty().filter { it.name.endsWith(".part") }.forEach { it.delete() }
+    }
+
+    override suspend fun downloadToCache(
+        url: String,
+        forceRefresh: Boolean,
+        browserMode: BrowserMode,
+    ): PdfDownloadResult = withContext(dispatcherProvider.io()) {
+        val fileName = extractFileName(url)
+        val prefix = "${url.hashCode()}-"
+        val targetFile = File(cacheDir, "$prefix${UUID.randomUUID()}-$fileName.part")
+        try {
+            abandonedDownloadsCleaned
+            val cached = cacheDir.listFiles()?.filter {
+                (it.name.startsWith(prefix) && it.name.endsWith("-$fileName")) || it.name == "$prefix$fileName"
+            }?.maxByOrNull { it.lastModified() }
+            if (!forceRefresh && cached != null && hasPdfMagicBytes(cached)) {
+                cached.setLastModified(System.currentTimeMillis())
+                return@withContext PdfDownloadResult.Success(Uri.fromFile(cached), readCertSidecar(cached))
+            }
+            val requestBuilder = Request.Builder().url(url)
+
+            // The Fire manager (ProfileStore-backed, @UiThread) resolves to null off-main until warmed,
+            // so fall back to the main thread only in that cold case; getCookie itself is thread-safe.
+            val cookieManager = cookieManagerProvider.forMode(browserMode)
+                ?: withContext(dispatcherProvider.main()) { cookieManagerProvider.forMode(browserMode) }
+            val cookie = cookieManager?.getCookie(url)
+            if (cookie != null) {
+                requestBuilder.addHeader("Cookie", cookie)
+            }
+
+            var certificate: SslCertificate? = null
+            executeRequestCancellably(okHttpClient.newCall(requestBuilder.build())).use { response ->
+                if (!response.isSuccessful) {
+                    logcat { "PDF download failed: HTTP ${response.code}" }
+                    return@withContext PdfDownloadResult.Failure(PdfErrorType.UNKNOWN)
+                }
+
+                certificate = response.handshake
+                    ?.peerCertificates
+                    ?.firstOrNull()
+                    ?.let { it as? X509Certificate }
+                    ?.let { SslCertificate(it) }
+
+                response.body?.byteStream()?.use { input ->
+                    targetFile.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } >= 0) {
+                            coroutineContext.ensureActive()
+                            output.write(buffer, 0, bytesRead)
+                        }
+                    }
+                } ?: run {
+                    logcat { "PDF download failed: empty response body" }
+                    return@withContext PdfDownloadResult.Failure(PdfErrorType.UNKNOWN)
+                }
+            }
+
+            coroutineContext.ensureActive()
+
+            if (!hasPdfMagicBytes(targetFile)) {
+                logcat { "PDF download failed: file does not start with %PDF magic bytes" }
+                targetFile.delete()
+                return@withContext PdfDownloadResult.Failure(PdfErrorType.UNKNOWN)
+            }
+
+            val completedFile = File(cacheDir, targetFile.name.removeSuffix(".part"))
+            if (!targetFile.renameTo(completedFile)) throw IOException("Unable to publish cached PDF")
+            certificate?.let { saveCertSidecar(completedFile, it) }
+            enforceCacheBudget(keepFile = completedFile, maxFiles = MAX_CACHED_FILES)
+            PdfDownloadResult.Success(Uri.fromFile(completedFile), certificate)
+        } catch (e: CancellationException) {
+            logcat { "PDF download cancelled, cleaning up partial file" }
+            targetFile.delete()
+            throw e
+        } catch (e: IOException) {
+            logcat { "PDF download failed" }
+            targetFile.delete()
+            PdfDownloadResult.Failure(PdfErrorType.IO_ERROR)
+        } catch (e: SecurityException) {
+            targetFile.delete()
+            logcat { "PDF download denied" }
+            PdfDownloadResult.Failure(PdfErrorType.SECURITY_ERROR)
+        }
+    }
+
+    /**
+     * Executes an OkHttp [call] in a way that respects coroutine cancellation.
+     * When the coroutine is cancelled, the underlying HTTP call is also cancelled.
+     */
+    private suspend fun executeRequestCancellably(call: Call): Response {
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (continuation.isActive) {
+                        continuation.resumeWith(Result.failure(e))
+                    }
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    if (continuation.isActive) {
+                        continuation.resumeWith(Result.success(response))
+                    } else {
+                        // Coroutine was cancelled in the narrow window between the response
+                        // landing and this callback firing — close the body so OkHttp can
+                        // return the underlying connection to the pool.
+                        response.close()
+                    }
+                }
+            })
+        }
+    }
+
+    private fun hasPdfMagicBytes(file: File): Boolean {
+        if (file.length() < PDF_MAGIC_BYTES.size) return false
+        val header = ByteArray(PDF_MAGIC_BYTES.size)
+        file.inputStream().use { it.read(header) }
+        return header.contentEquals(PDF_MAGIC_BYTES)
+    }
+
+    /**
+     * Cap the PDF cache at [maxFiles] entries using LRU eviction.
+     *
+     * Counts only PDF files (cert sidecars are paired data, not independent entries).
+     * If the total exceeds [maxFiles], deletes the oldest non-keep PDFs and their
+     * matching sidecars until exactly [maxFiles] remain. [keepFile] is never evicted,
+     * so a freshly-written entry always survives even when it's the one that pushed
+     * the cache over the cap.
+     */
+    @VisibleForTesting
+    internal fun enforceCacheBudget(keepFile: File, maxFiles: Int) {
+        val dir = cacheDir
+        val keepName = keepFile.name
+        val candidates = dir.listFiles()
+            ?.filter { it.isFile && !it.name.endsWith(".part") && !it.name.endsWith(CERT_SIDECAR_SUFFIX) && it.name != keepName }
+            ?: return
+        val totalFiles = candidates.size + 1
+        if (totalFiles <= maxFiles) return
+
+        val toEvict = totalFiles - maxFiles
+        candidates.sortedBy { it.lastModified() }.take(toEvict).forEach { evicted ->
+            evicted.delete()
+            certSidecarFile(evicted).delete()
+        }
+    }
+
+    private fun certSidecarFile(targetFile: File): File =
+        File(targetFile.parentFile, "${targetFile.name}$CERT_SIDECAR_SUFFIX")
+
+    /**
+     * Marshals the [certificate] via [SslCertificate.saveState] and writes the resulting
+     * Bundle's bytes to a sidecar next to [targetFile].
+     */
+    private fun saveCertSidecar(targetFile: File, certificate: SslCertificate) {
+        val bundle = SslCertificate.saveState(certificate) ?: return
+        val parcel = Parcel.obtain()
+        try {
+            parcel.writeBundle(bundle)
+            certSidecarFile(targetFile).writeBytes(parcel.marshall())
+        } catch (e: IOException) {
+            logcat { "PDF cert sidecar write failed" }
+        } catch (e: BadParcelableException) {
+            logcat { "PDF cert parcelable not conform" }
+        } catch (e: Throwable) {
+            logcat { "PDF cert unexpected error" }
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    /**
+     * Inverse of [saveCertSidecar]. Returns null if the sidecar is missing or unreadable
+     */
+    private fun readCertSidecar(targetFile: File): SslCertificate? {
+        val sidecar = certSidecarFile(targetFile)
+        if (!sidecar.exists()) return null
+        return try {
+            val bytes = sidecar.readBytes()
+            val parcel = Parcel.obtain()
+            try {
+                parcel.unmarshall(bytes, 0, bytes.size)
+                parcel.setDataPosition(0)
+                val bundle = parcel.readBundle(SslCertificate::class.java.classLoader)
+                bundle?.let { SslCertificate.restoreState(it) }
+            } finally {
+                parcel.recycle()
+            }
+        } catch (t: Throwable) {
+            logcat { "PDF cert sidecar read failed" }
+            sidecar.delete()
+            null
+        }
+    }
+
+    override fun extractFileName(url: String): String = sanitizeToPdfFileName(url.toUri().lastPathSegment)
+
+    override suspend fun cacheLocalPdf(uri: Uri): LocalPdfResult = withContext(dispatcherProvider.io()) {
+        val displayName = resolveDisplayName(uri)
+        val targetFile = File(cacheDir, "${uri.toString().hashCode()}-${UUID.randomUUID()}-$displayName.part")
+        try {
+            abandonedDownloadsCleaned
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                targetFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: run {
+                logcat { "Local PDF copy failed: null input stream" }
+                targetFile.delete()
+                return@withContext LocalPdfResult.Failure(PdfErrorType.IO_ERROR)
+            }
+
+            if (!hasPdfMagicBytes(targetFile)) {
+                logcat { "Local PDF rejected: file does not start with %PDF magic bytes" }
+                targetFile.delete()
+                return@withContext LocalPdfResult.Failure(PdfErrorType.UNKNOWN)
+            }
+
+            val completedFile = File(cacheDir, targetFile.name.removeSuffix(".part"))
+            if (!targetFile.renameTo(completedFile)) throw IOException("Unable to publish cached PDF")
+            enforceCacheBudget(keepFile = completedFile, maxFiles = MAX_CACHED_FILES)
+            LocalPdfResult.Success(Uri.fromFile(completedFile), displayName)
+        } catch (e: CancellationException) {
+            logcat { "Local PDF copy cancelled, cleaning up partial file" }
+            targetFile.delete()
+            throw e
+        } catch (e: IOException) {
+            logcat { "Local PDF copy failed" }
+            targetFile.delete()
+            LocalPdfResult.Failure(PdfErrorType.IO_ERROR)
+        } catch (e: SecurityException) {
+            logcat { "Local PDF copy denied" }
+            targetFile.delete()
+            LocalPdfResult.Failure(PdfErrorType.SECURITY_ERROR)
+        }
+    }
+
+    private fun resolveDisplayName(uri: Uri): String {
+        val raw = when (uri.scheme?.lowercase()) {
+            "content" -> queryContentDisplayName(uri) ?: uri.lastPathSegment
+            else -> uri.lastPathSegment
+        }
+        return sanitizeToPdfFileName(raw)
+    }
+
+    private fun sanitizeToPdfFileName(rawName: String?): String {
+        val sanitized = (rawName ?: "document.pdf").replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        return if (sanitized.endsWith(".pdf", ignoreCase = true)) sanitized else "$sanitized.pdf"
+    }
+
+    private fun queryContentDisplayName(uri: Uri): String? {
+        return try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (index >= 0) cursor.getString(index) else null
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            logcat { "Local PDF display name lookup failed" }
+            null
+        }
+    }
+
+    companion object {
+        private const val PDF_CACHE_DIR = "pdf_cache"
+        private val PDF_MAGIC_BYTES = "%PDF-".toByteArray()
+        private const val MAX_CACHED_FILES = 10
+        private const val CERT_SIDECAR_SUFFIX = ".cert"
+    }
+}

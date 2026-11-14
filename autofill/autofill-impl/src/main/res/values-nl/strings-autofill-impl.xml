@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Instellen in Instellingen</b></string>
+
+    <string name="saveLoginDialogButtonSave">Wachtwoord opslaan</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Wachtwoord opslaan</string>
+    <string name="saveLoginDialogNotNow">Niet opslaan</string>
+    <string name="saveLoginDialogTitle">Je wachtwoord opslaan?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Meer opties</string>
+
+    <string name="useSavedLoginDialogTitle">Een opgeslagen wachtwoord gebruiken?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">Wachtwoord voor %1$s</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Wachtwoord voor website</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">Van deze website</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">Van %1$s</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Wachtwoord bijwerken</string>
+    <string name="updateLoginDialogButtonNotNow">Niet opslaan</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Gebruikersnaam bijwerken?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Gebruikersnaam bijwerken</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Wachtwoord bijwerken voor \n%1$s?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo werkt dit opgeslagen wachtwoord op je apparaat bij.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Dialoogvenster Automatisch invullen sluiten</string>
+
+    <string name="credentialManagementEditUsernameHint">Gebruikersnaam</string>
+    <string name="credentialManagementEditPasswordHint">Wachtwoord</string>
+    <string name="credentialManagementEditWebsiteHint">URL van de website</string>
+    <string name="credentialManagementEditNotesHint">Opmerkingen</string>
+    <string name="credentialManagementEditButtonDelete">Verwijderen</string>
+    <string name="credentialManagementEditButtonSaveChanges">Wijzigingen opslaan</string>
+    <string name="credentialManagementEditButtonCopyUsername">Gebruikersnaam kopiëren</string>
+    <string name="credentialManagementEditButtonCopyPassword">Wachtwoord kopiëren</string>
+
+    <string name="credentialManagementViewMenuEdit">Bewerken</string>
+    <string name="credentialManagementViewMenuDelete">Verwijderen</string>
+
+    <string name="credentialManagementSuggestionsLabel">Aanbevolen</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Automatisch invullen voor wachtwoorden is niet beschikbaar omdat je versie van Android WebView verouderd of niet compatibel is.</string>
+
+    <string name="autofillManagementSearchClearDescription">Zoekinvoer wissen</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Geen resultaten voor \'%1$s\'</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Annuleren</string>
+    <string name="autofillDeleteLoginDialogDelete">Verwijderen</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Gebruikersnaam gekopieerd</string>
+    <string name="autofillManagementPasswordCopied">Wachtwoord gekopieerd</string>
+
+    <string name="autofill_password_generation_offer_title">Een sterk wachtwoord van DuckDuckGo gebruiken?</string>
+    <string name="autofill_password_generation_offer_accept">Sterk wachtwoord gebruiken</string>
+    <string name="autofill_password_generation_offer_decline">Zelf wachtwoord aanmaken</string>
+
+    <string name="deviceNotSupportedTitle">Apparaat wordt niet ondersteund</string>
+
+    <string name="autofillManagementUndoDeletion">Ongedaan maken</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Website openen</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Privé-Duck Address deactiveren?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-mails die naar %1$s worden gestuurd, worden niet meer doorgestuurd naar je inbox.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Deactiveren</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Privé-Duck Address opnieuw activeren?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-mails die naar %1$s worden gestuurd, worden opnieuw doorgestuurd naar je inbox.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Opnieuw activeren</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Actief</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Bezig met activeren…</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Gedeactiveerd</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Bezig met deactiveren…</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Beheren van dit adres is tijdelijk niet beschikbaar.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated."><annotation type="enable_duck_address">Schakel Email Protection in</annotation> om Duck Adresses op dit apparaat te beheren.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">E-mailadres selecteren</string>
+    <string name="autofillTooltipUseYourAliasDescription">E-mailtrackers blokkeren</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Privé-Duck Address genereren</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">E-mailtrackers blokkeren en adres verbergen</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Je kunt dit op elk moment uitschakelen in de instellingen.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Blijf opslaan</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Uitschakelen</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">Je e-mailadres verbergen en\n trackers blokkeren</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">E-mailbescherming</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Maak een uniek, willekeurig adres dat ook verborgen trackers verwijdert en e-mails doorstuurt naar je inbox.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">Mijn e-mailadres beschermen</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Niet meer weergeven</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Als je nu afsluit, wordt je Duck Address niet opgeslagen</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Doorgaan met instellen</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Instellen beëindigen</string>
+
+    <string name="autofillManagementScreenTitle">Wachtwoorden</string>
+    <string name="autofillManagementScreenTitleNew">Wachtwoorden en automatisch invullen</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Nog geen wachtwoorden opgeslagen</string>
+    <string name="credentialManagementAutofillToggleLabel">Wachtwoorden opslaan en automatisch invullen</string>
+    <string name="credentialManagementAutofillSubtitle">Wachtwoorden worden versleuteld. Niemand anders dan jij kunt ze zien, zelfs wij niet. <annotation type="learn_more_link">Meer informatie</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Beveiliging met wachtwoordbeheerder</string>
+    <string name="saveLoginDialogSubtitle">Sla je wachtwoord veilig op je apparaat op met DuckDuckGo wachtwoorden en automatisch invullen.</string>
+    <string name="autofillManagementAddLogin">Wachtwoord toevoegen</string>
+    <string name="credentialManagementEditLoginTitleHint">Titel</string>
+    <string name="autofillManagementDeletedConfirmation">Wachtwoord verwijderd</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Laatst bijgewerkt op %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Wil je wachtwoorden blijven opslaan?</string>
+    <string name="deviceNotSupportedSubtitle">Om wachtwoorden veilig op te slaan, moeten we ze versleutelen en opslaan op je apparaat. Omdat je apparaat geen versleutelde opslag ondersteunt, kunnen wachtwoorden niet worden opgeslagen en automatisch worden aangevuld.</string>
+    <string name="autofill_password_generation_offer_message">Wachtwoorden worden veilig opgeslagen op je apparaat.</string>
+    <string name="autofillManagementSearchLogins">Wachtwoorden zoeken</string>
+    <string name="biometric_prompt_title">Wachtwoorden vergrendeld</string>
+    <string name="autofill_auth_text_for_access">Ontgrendel het apparaat om toegang te krijgen tot wachtwoorden</string>
+    <string name="managementDisabledModeTitle">Beveilig je apparaat om wachtwoorden op te slaan</string>
+    <string name="managementDisabledModeSubtitle">Je hebt een vergrendelingspatroon, pincode of biometrische gegevens nodig om je aanmeldgegevens te beschermen.</string>
+    <string name="credentialManagementEditTitle">Wachtwoord bewerken</string>
+
+    <string name="credentials_limit_warning"><b>Synchronisatie onderbroken</b>\nJe hebt het maximale aantal wachtwoorden bereikt. Verwijder er een paar om de synchronisatie te hervatten.\n\n<annotation type="manage_logins">Wachtwoorden beheren</annotation></string>
+    <string name="credentials_limit_warning_notif"><b></b>\nJe hebt het maximale aantal wachtwoorden bereikt. Verwijder enkele wachtwoorden om de synchronisatie te hervatten.</string>
+    <string name="credentials_invalid_request_warning"><b>Synchronisatie onderbroken</b>\nSommige wachtwoorden hebben de verkeerde indeling of zijn te lang en werden niet gesynchroniseerd.\n\n<annotation type="manage_logins">Wachtwoorden beheren</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Synchronisatie onderbroken</b>\nSommige wachtwoorden hebben de verkeerde indeling of zijn te lang en werden niet gesynchroniseerd.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Nooit vragen voor deze site</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Nee, bedankt</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Als je uitgesloten sites opnieuw instelt, zie je de volgende keer dat je bij een van deze sites inlogt een melding om je wachtwoord op te slaan.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Uitgesloten sites opnieuw instellen</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Uitgesloten sites opnieuw instellen?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Herstel</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Annuleren</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Alle wachtwoorden verwijderen</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d wachtwoord verwijderd</item>
+        <item quantity="other">%1$d wachtwoorden verwijderd</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Verifieer om te bevestigen dat je alle wachtwoorden wilt verwijderen</string>
+    <string name="autofill_title_text_for_delete_all">Alle wachtwoorden verwijderen</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">Je wachtwoord voor %1$s  kan niet worden gesynchroniseerd omdat sommige velden de tekenlimiet overschrijden.</item>
+        <item quantity="other">Je wachtwoorden voor %1$s en %2$d andere websites kunnen niet worden gesynchroniseerd omdat sommige velden de tekenlimiet overschrijden.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Wachtwoorden beheren</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Je wachtwoord wordt van dit apparaat verwijderd.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Je wachtwoord wordt van dit apparaat verwijderd.</item>
+        <item quantity="other">Je wachtwoorden worden van dit apparaat verwijderd.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Je wachtwoord wordt verwijderd van alle gesynchroniseerde apparaten.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Je wachtwoord wordt verwijderd van alle gesynchroniseerde apparaten.</item>
+        <item quantity="other">Je wachtwoorden worden verwijderd van alle gesynchroniseerde apparaten.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Weet je zeker dat je dit wachtwoord wilt verwijderen?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Weet je zeker dat je %1$d wachtwoord wilt verwijderen?</item>
+        <item quantity="other">Weet je zeker dat je %1$d wachtwoorden wilt verwijderen?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Zorg ervoor dat je nog steeds toegang hebt tot je account.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Zorg ervoor dat je nog steeds toegang hebt tot je account.</item>
+        <item quantity="other">Zorg ervoor dat je nog steeds toegang hebt tot je accounts.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Je kunt opgeslagen wachtwoorden uit een andere browser importeren in DuckDuckGo.</string>
+
+    <string name="autofillManagementImportPasswords">Wachtwoorden importeren</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Wachtwoorden bureaublad synchroniseren</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Wachtwoorden importeren</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Synchroniseren van desktopwachtwoorden</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">Importeer wachtwoorden in de desktopversie van de DuckDuckGo-browser en synchroniseer ze vervolgens tussen apparaten.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Download de desktopbrowser</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">DuckDuckGo-browser downloaden voor Mac of Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Zoek privé en blokkeer trackers met de DuckDuckGo-desktopbrowser. Bezoek deze link op je computer en download de browser vandaag nog.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Synchroniseren met de desktop</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Importeren vanuit de desktopbrowser:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Open DuckDuckGo op Mac of Windows</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Ga naar <b>Instellingen</b> > <b>wachtwoorden</b>]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Selecteer <b>Wachtwoorden importeren</b>... en volg de stappen om te importeren]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Na het importeren op uw computer, kunt u synchronisatie instellen op dit apparaat</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Desktop-app downloaden</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">DuckDuckGo downloaden voor Mac of Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">Ga op je computer naar:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Meld een probleem met automatisch invullen</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Anoniem melden dat automatisch invullen niet werkt op deze site. Wachtwoorden worden nooit gedeeld.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Rapporteren dat automatisch invullen niet werkt op %1$s?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">Rapporten die worden verzonden naar DuckDuckGo zijn anoniem en bevatten geen gebruikersnaam, wachtwoord of andere persoonlijk identificeerbare informatie.\n\nHet rapport bevat alleen de URL van de website en de status van sommige instellingen voor automatisch invullen.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Verzend Rapport</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Annuleren</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Bedankt! Jouw rapport helpt ons DuckDuckGo beter te maken voor iedereen.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Belangrijkste kenmerken</string>
+    <string name="onboardingSaveDialogFeature1Title">Naadloze aanmeldingen</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Je hoeft geen inloggegevens te onthouden.</string>
+    <string name="onboardingSaveDialogFeature2Title">Veilige opslag</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Wachtwoorden worden versleuteld, opgeslagen op het apparaat en vergrendeld met je Android-patroon of PIN-code.</string>
+    <string name="onboardingSaveDialogFeature3Title">Synchroniseren tussen apparaten</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">End-to-end versleuteld en eenvoudig in te stellen als je er klaar voor bent.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Je kunt het opslaan van wachtwoorden op elk gewenst moment uitschakelen.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Open Instellingen</string>
+
+    <string name="newTabPageShortcutPasswords">Wachtwoorden</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Wachtwoorden importeren</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d wachtwoorden geïmporteerd van Google</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d wachtwoorden geïmporteerd uit CSV-bestand</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Wachtwoorden importeren van Google</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Wachtwoorden importeren van Google</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Wachtwoorden bureaublad synchroniseren</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Wachtwoorden bureaublad synchroniseren</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Wachtwoorden importeren van Google</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google kan je vragen om in te loggen of je wachtwoord in te voeren ter bevestiging.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Je apparaat kan je vragen om je pincode, wachtwoord of patroon in te voeren ter bevestiging.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Importeren van Google</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Kies een CSV-bestand</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Importeren vanuit de desktopbrowser</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Importeren naar DuckDuckGo</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Importeren voltooid</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Ik snap het</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Wachtwoord importeren mislukt</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Overgeslagen (duplicaat of ongeldig): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Wachtwoorden geïmporteerd: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Wachtwoorden openen</string>
+    <string name="autofill_service_select_password_activity">Selecteer een opgeslagen wachtwoord</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Wachtwoorden en automatisch invullen</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Uitgesloten sites opnieuw instellen?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Als je uitgesloten sites opnieuw instelt, zie je de volgende keer dat je bij een van deze sites inlogt een melding om je wachtwoord op te slaan.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Herstel</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Annuleren</string>
+    <string name="autofillSettingsPasswordsEntry">Wachtwoorden</string>
+    <string name="autofillSettingsAutofillToggleLabel">Vragen om op te slaan en automatisch in te vullen</string>
+    <string name="autofillSettingsAutofillSubtitle">Wachtwoorden worden versleuteld. Niemand anders dan jij kunt ze zien, zelfs wij niet. <annotation type="learn_more_link">Meer informatie</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Wachtwoorden importeren</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Wachtwoorden importeren van Google</string>
+    <string name="autofillSettingsImportFromDesktopSync">Wachtwoorden bureaublad synchroniseren</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Uitgesloten sites opnieuw instellen</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Breng je wachtwoorden van&lt;br /&gt;Google over naar DuckDuckGo</string>
+    <string name="passwords_import_promo_subtitle">Importeer snel en veilig je wachtwoorden naar DuckDuckGo. Google kan je vragen om je wachtwoord in te voeren.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Importeer snel en veilig je wachtwoorden naar DuckDuckGo. Je apparaat kan je vragen om je pincode, wachtwoord of patroon in te voeren ter bevestiging.</string>
+    <string name="passwords_import_promo_action">Importeren van Google</string>
+    <string name="passwords_import_promo_in_browser_title">Breng je wachtwoorden van Google naar DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Importeer je wachtwoorden van Google naar DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Niet opnieuw vragen</string>
+    <string name="passwords_import_promo_in_settings_title">Wachtwoorden importeren van Google</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Verbergen</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Importeren naar DuckDuckGo</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Geïmporteerd vanuit Chrome</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Bladwijzers importeren uit Google</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google kan je vragen om in te loggen of je wachtwoord in te voeren ter bevestiging.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Importeren van Google</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Bladwijzerbestand selecteren...</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Bladwijzers importeren</string>
+    <string name="importBookmarksProgressTitle">Importeren van Google…</string>
+    <string name="importBookmarksProgressSubtitle">Houd dit scherm open en wacht even — het zou niet langer dan een minuut of twee moeten duren.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google kan je vragen om in te loggen of je wachtwoord in te voeren ter bevestiging.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google stuurt je mogelijk een e-mail ter bevestiging dat je bladwijzers worden geëxporteerd.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Import annuleren?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Je bladwijzers worden niet geïmporteerd als je nu annuleert.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Importeren annuleren</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Doorgaan</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Bladwijzers: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Sluiten</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Er is iets misgegaan</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Controleer of je verbinding hebt met internet en probeer het opnieuw.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Importeren voltooid!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Wacht even — houd dit venster open. Het zou niet langer dan een minuut of twee moeten duren.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google kan om je wachtwoord vragen.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google stuurt je een e-mail om te bevestigen dat je gegevens zijn geëxporteerd. Je hoeft niets te doen.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Importeren voltooid!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Bladwijzers geïmporteerd: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Breng je wachtwoorden van Google naar DuckDuckGo.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Wachtwoorden importeren van Google</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Breng je bladwijzers van Google naar DuckDuckGo.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Bladwijzers importeren uit Google</string>
+
+</resources>

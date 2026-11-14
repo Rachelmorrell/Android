@@ -16,12 +16,17 @@
 
 plugins {
     id 'com.android.library'
-    id 'kotlin-android'
+    id 'dev.zacsweers.metro'
 }
 
 apply from: "$rootProject.projectDir/gradle/android-library.gradle"
 
+android {
+    namespace 'com.duckduckgo.di'
+}
+
 dependencies {
-    implementation Google.dagger
-    implementation Kotlin.stdlib.jdk7
+    implementation AndroidX.fragment.ktx
+    implementation AndroidX.appCompat
+    api "dev.zacsweers.metro:runtime:_"
 }

@@ -1,0 +1,412 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.cta.ui
+
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.core.net.toUri
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer
+import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
+import com.duckduckgo.app.cta.db.DismissedCtaDao
+import com.duckduckgo.app.cta.model.CtaId.DAX_DIALOG_NETWORK
+import com.duckduckgo.app.cta.model.CtaId.DAX_DIALOG_OTHER
+import com.duckduckgo.app.cta.model.CtaId.DAX_DIALOG_SERP
+import com.duckduckgo.app.cta.model.CtaId.DAX_DIALOG_TRACKERS_FOUND
+import com.duckduckgo.app.cta.model.CtaId.DAX_END
+import com.duckduckgo.app.cta.model.CtaId.DAX_FIRE_BUTTON
+import com.duckduckgo.app.cta.model.CtaId.DAX_INTRO_PRIVACY_PRO
+import com.duckduckgo.app.cta.model.CtaId.DAX_INTRO_VISIT_SITE
+import com.duckduckgo.app.global.install.AppInstallStore
+import com.duckduckgo.app.global.model.Site
+import com.duckduckgo.app.onboarding.FakeContextualOnboardingTimeLimit
+import com.duckduckgo.app.onboarding.store.AppStage
+import com.duckduckgo.app.onboarding.store.OnboardingStore
+import com.duckduckgo.app.onboarding.store.UserStageStore
+import com.duckduckgo.app.onboarding.ui.page.extendedonboarding.ExtendedOnboardingFeatureToggles
+import com.duckduckgo.app.privacy.db.UserAllowListRepository
+import com.duckduckgo.app.privacy.model.HttpsStatus
+import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.app.tabs.model.AggregateTabProvider
+import com.duckduckgo.app.trackerdetection.model.Entity
+import com.duckduckgo.app.trackerdetection.model.TdsEntity
+import com.duckduckgo.app.trackerdetection.model.TrackingEvent
+import com.duckduckgo.app.widget.ui.WidgetCapabilities
+import com.duckduckgo.brokensite.api.BrokenSitePrompt
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.ui.store.AppTheme
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
+import com.duckduckgo.onboarding.api.LinearOnboardingState
+import com.duckduckgo.onboarding.api.cta.ContextualCtaSuppressorPlugin
+import com.duckduckgo.subscriptions.api.SubscriptionPromoCtaShownPlugin
+import com.duckduckgo.subscriptions.api.Subscriptions
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.whenever
+
+@RunWith(AndroidJUnit4::class)
+class OnboardingDaxDialogTests {
+
+    private lateinit var testee: CtaViewModel
+
+    @get:Rule
+    @Suppress("unused")
+    val coroutineRule = CoroutineTestRule()
+
+    @get:Rule
+    @Suppress("unused")
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    private val appInstallStore: AppInstallStore = mock()
+    private val pixel: Pixel = mock()
+    private val widgetCapabilities: WidgetCapabilities = mock()
+    private val dismissedCtaDao: DismissedCtaDao = mock()
+    private val userAllowListRepository: UserAllowListRepository = mock()
+    private val settingsDataStore: SettingsDataStore = mock()
+    private val onboardingStore: OnboardingStore = mock()
+    private val userStageStore: UserStageStore = mock()
+    private val aggregateTabProvider: AggregateTabProvider = mock()
+    private val extendedOnboardingFeatureToggles: ExtendedOnboardingFeatureToggles = mock()
+    private val mockDuckPlayer: DuckPlayer = mock()
+    private val mockBrokenSitePrompt: BrokenSitePrompt = mock()
+    private val mockSubscriptions: Subscriptions = mock()
+    private val mockDuckChat: DuckChat = mock()
+    private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector = mock()
+    private val mockAppTheme: AppTheme = org.mockito.kotlin.mock { on { isLightModeEnabled() } doReturn true }
+    private val mockDeviceInfo: DeviceInfo = mock()
+
+    private var canShowContextualCta = true
+    private val contextualCtaSuppressorPlugin: ContextualCtaSuppressorPlugin = org.mockito.kotlin.mock {
+        onBlocking { canShowCta(any()) } doAnswer { canShowContextualCta }
+    }
+    private val contextualCtaSuppressorPlugins = object : PluginPoint<ContextualCtaSuppressorPlugin> {
+        override fun getPlugins() = listOf(contextualCtaSuppressorPlugin)
+    }
+
+    val mockEnabledToggle: Toggle = org.mockito.kotlin.mock { on { it.isEnabled() } doReturn true }
+    val mockDisabledToggle: Toggle = org.mockito.kotlin.mock { on { it.isEnabled() } doReturn false }
+
+    @Before
+    fun before() = runTest {
+        whenever(extendedOnboardingFeatureToggles.privacyProCta()).thenReturn(mockDisabledToggle)
+        whenever(extendedOnboardingFeatureToggles.subscriptionPromoModalCta()).thenReturn(mockDisabledToggle)
+        whenever(extendedOnboardingFeatureToggles.subscriptionPromoModalCtaExistingUsers()).thenReturn(mockDisabledToggle)
+        whenever(mockSubscriptions.isEligible()).thenReturn(false)
+
+        testee = CtaViewModel(
+            appInstallStore,
+            pixel,
+            RealSubscriptionPromoModalDecider(
+                extendedOnboardingFeatureToggles,
+                appInstallStore,
+                settingsDataStore,
+                dismissedCtaDao,
+                mockSubscriptions,
+                coroutineRule.testDispatcherProvider,
+            ),
+            dismissedCtaDao,
+            userAllowListRepository,
+            settingsDataStore,
+            onboardingStore,
+            mock(),
+            userStageStore,
+            aggregateTabProvider,
+            coroutineRule.testDispatcherProvider,
+            mockDuckChat,
+            duckDuckGoUrlDetector,
+            extendedOnboardingFeatureToggles,
+            mockSubscriptions,
+            mockDuckPlayer,
+            mockBrokenSitePrompt,
+            object : PluginPoint<SubscriptionPromoCtaShownPlugin> {
+                override fun getPlugins() = emptyList<SubscriptionPromoCtaShownPlugin>()
+            },
+            contextualCtaSuppressorPlugins,
+            mockAppTheme,
+            mockDeviceInfo,
+            coroutineRule.testScope,
+            mock(LinearOnboardingOrchestrator::class.java).apply {
+                whenever(state).thenReturn(MutableStateFlow(LinearOnboardingState.NotStarted))
+            },
+            mock(),
+            FakeContextualOnboardingTimeLimit(),
+            FakeSyncAfterDeviceTransferPrompt(),
+        )
+    }
+
+    @Test
+    fun whenOnboardingActiveThenOnboardingIsNotComplete() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertFalse(onboardingComplete)
+    }
+
+    @Test
+    fun whenDaxDialogEndAndDaxDialogNetworkShownThenOnboardingComplete() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_NETWORK)).thenReturn(true)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(onboardingComplete)
+    }
+
+    @Test
+    fun whenDaxDialogEndAndDaxDialogTrackersFoundThenOnboardingComplete() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(true)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(onboardingComplete)
+    }
+
+    @Test
+    fun whenDaxDialogEndAndDaxDialogOtherFoundThenOnboardingComplete() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_OTHER)).thenReturn(true)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(onboardingComplete)
+    }
+
+    @Test
+    fun whenDaxDialogEndNotShownThenOnboardingNotComplete() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(false)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertFalse(onboardingComplete)
+    }
+
+    @Test
+    fun whenHideTipsThenOnboardingComplete() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(onboardingComplete)
+    }
+
+    @Test
+    fun whenOnboardingDismissedThenOnboardingComplete() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(false)
+
+        val onboardingComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(onboardingComplete)
+    }
+
+    @Test
+    fun whenOnboardingCompleteThenAreBubbleDaxDialogsCompletedIsTrue() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.ESTABLISHED)
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_SERP)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_FIRE_BUTTON)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(false)
+
+        val inContextDaxDialogsComplete = testee.areBubbleDaxDialogsCompleted()
+        assertTrue(inContextDaxDialogsComplete)
+    }
+
+    @Test
+    fun whenAllInContextDialogsShownThenAreInContextDialogsCompletedIsTrue() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_SERP)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_FIRE_BUTTON)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(true)
+
+        whenever(dismissedCtaDao.exists(DAX_INTRO_VISIT_SITE)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_INTRO_PRIVACY_PRO)).thenReturn(false)
+
+        val inContextDaxDialogsComplete = testee.areInContextDaxDialogsCompleted()
+        assertTrue(inContextDaxDialogsComplete)
+    }
+
+    @Test
+    fun whenNotAllInContextDialogsShownThenAreInContextDialogsCompletedIsFalse() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_SERP)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_FIRE_BUTTON)).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(true)
+
+        val inContextDaxDialogsComplete = testee.areInContextDaxDialogsCompleted()
+        assertFalse(inContextDaxDialogsComplete)
+    }
+
+    @Test
+    fun whenHideTipsSetThenAreInContextDialogsCompletedIsTrue() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_SERP)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_FIRE_BUTTON)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_NETWORK)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_INTRO_PRIVACY_PRO)).thenReturn(false)
+
+        val inContextDaxDialogsComplete = testee.areInContextDaxDialogsCompleted()
+        assertTrue(inContextDaxDialogsComplete)
+    }
+
+    @Test
+    fun whenOnboardingCompleteThenAreInContextDialogsCompletedIsTrue() = runTest {
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.ESTABLISHED)
+        whenever(settingsDataStore.hideTips).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_SERP)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_DIALOG_TRACKERS_FOUND)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_FIRE_BUTTON)).thenReturn(false)
+        whenever(dismissedCtaDao.exists(DAX_END)).thenReturn(false)
+
+        val inContextDaxDialogsComplete = testee.areInContextDaxDialogsCompleted()
+        assertTrue(inContextDaxDialogsComplete)
+    }
+
+    @Test
+    fun whenHideTipsButLessThanSevenDaysSinceInstallThenRefreshCtaDoesNotReturnSubscriptionCta() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+        whenever(appInstallStore.installTimestamp).thenReturn(System.currentTimeMillis() - 3 * 24 * 3600 * 1000L)
+        whenever(dismissedCtaDao.exists(DAX_INTRO_PRIVACY_PRO)).thenReturn(false)
+        whenever(extendedOnboardingFeatureToggles.privacyProCta()).thenReturn(mockEnabledToggle)
+        whenever(mockSubscriptions.isEligible()).thenReturn(true)
+
+        val result = testee.refreshCta(
+            coroutineRule.testDispatcherProvider.io(),
+            isBrowserShowing = false,
+            site = null,
+            detectedRefreshPatterns = emptySet(),
+            brokenSitePromptUrl = null,
+        )
+
+        assertFalse(result is SubscriptionPromoModalCta)
+    }
+
+    @Test
+    fun whenHideTipsAndSevenDaysButSubscriptionAlreadyDismissedThenRefreshCtaDoesNotReturnSubscriptionCta() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+        whenever(appInstallStore.installTimestamp).thenReturn(System.currentTimeMillis() - 8 * 24 * 3600 * 1000L)
+        whenever(dismissedCtaDao.exists(DAX_INTRO_PRIVACY_PRO)).thenReturn(true)
+        whenever(extendedOnboardingFeatureToggles.privacyProCta()).thenReturn(mockEnabledToggle)
+        whenever(mockSubscriptions.isEligible()).thenReturn(true)
+
+        val result = testee.refreshCta(
+            coroutineRule.testDispatcherProvider.io(),
+            isBrowserShowing = false,
+            site = null,
+            detectedRefreshPatterns = emptySet(),
+            brokenSitePromptUrl = null,
+        )
+
+        assertFalse(result is SubscriptionPromoModalCta)
+    }
+
+    @Test
+    fun whenHideTipsAndSevenDaysButSkippedOnboardingToggleOffThenRefreshCtaDoesNotReturnSubscriptionCta() = runTest {
+        whenever(settingsDataStore.hideTips).thenReturn(true)
+        whenever(appInstallStore.installTimestamp).thenReturn(System.currentTimeMillis() - 8 * 24 * 3600 * 1000L)
+        whenever(dismissedCtaDao.exists(DAX_INTRO_PRIVACY_PRO)).thenReturn(false)
+        whenever(extendedOnboardingFeatureToggles.privacyProCta()).thenReturn(mockEnabledToggle)
+        whenever(extendedOnboardingFeatureToggles.subscriptionPromoModalCta()).thenReturn(mockDisabledToggle)
+        whenever(mockSubscriptions.isEligible()).thenReturn(true)
+
+        val result = testee.refreshCta(
+            coroutineRule.testDispatcherProvider.io(),
+            isBrowserShowing = false,
+            site = null,
+            detectedRefreshPatterns = emptySet(),
+            brokenSitePromptUrl = null,
+        )
+
+        assertFalse(result is SubscriptionPromoModalCta)
+    }
+
+    @Test
+    fun whenContextualCtaSuppressorPluginSuppressesThenRefreshCtaReturnsNull() = runTest {
+        canShowContextualCta = false
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        val site = site(url = "http://www.facebook.com", entity = TdsEntity("Facebook", "Facebook", 9.0))
+
+        val result = testee.refreshCta(
+            coroutineRule.testDispatcherProvider.io(),
+            isBrowserShowing = true,
+            site = site,
+            detectedRefreshPatterns = emptySet(),
+            brokenSitePromptUrl = null,
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenContextualCtaSuppressorPluginDoesNotSuppressThenRefreshCtaReturnsCta() = runTest {
+        canShowContextualCta = true
+        whenever(userStageStore.getUserAppStage()).thenReturn(AppStage.DAX_ONBOARDING)
+        val site = site(url = "http://www.facebook.com", entity = TdsEntity("Facebook", "Facebook", 9.0))
+
+        val result = testee.refreshCta(
+            coroutineRule.testDispatcherProvider.io(),
+            isBrowserShowing = true,
+            site = site,
+            detectedRefreshPatterns = emptySet(),
+            brokenSitePromptUrl = null,
+        )
+
+        assertTrue(result is DaxMainNetworkContextualCta)
+    }
+
+    private fun site(
+        url: String = "http://www.test.com",
+        https: HttpsStatus = HttpsStatus.SECURE,
+        trackerCount: Int = 0,
+        events: List<TrackingEvent> = emptyList(),
+        majorNetworkCount: Int = 0,
+        allTrackersBlocked: Boolean = true,
+        entity: Entity? = null,
+    ): Site {
+        val site: Site = mock()
+        whenever(site.url).thenReturn(url)
+        whenever(site.uri).thenReturn(url.toUri())
+        whenever(site.https).thenReturn(https)
+        whenever(site.entity).thenReturn(entity)
+        whenever(site.trackingEvents).thenReturn(events)
+        whenever(site.trackerCount).thenReturn(trackerCount)
+        whenever(site.majorNetworkCount).thenReturn(majorNetworkCount)
+        whenever(site.allTrackersBlocked).thenReturn(allTrackersBlocked)
+        return site
+    }
+}

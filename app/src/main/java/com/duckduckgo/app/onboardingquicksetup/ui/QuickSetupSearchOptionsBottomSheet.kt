@@ -1,0 +1,145 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.onboardingquicksetup.ui
+
+import android.content.Context
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.core.os.bundleOf
+import androidx.fragment.app.setFragmentResult
+import com.duckduckgo.app.browser.databinding.BottomSheetQuickSetupSearchOptionsBinding
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.applyBottomSystemBarInsetPadding
+import com.duckduckgo.common.ui.setRoundCorners
+import com.duckduckgo.common.ui.store.AppBrandDesignUpdateToggles
+import com.duckduckgo.common.ui.store.AppTheme
+import com.duckduckgo.common.utils.extensions.html
+import com.duckduckgo.di.android.support.AndroidSupportInjection
+import com.duckduckgo.di.scopes.FragmentScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import javax.inject.Inject
+import com.duckduckgo.app.browser.R as BrowserR
+import com.duckduckgo.mobile.android.R as CommonR
+
+@InjectWith(FragmentScope::class)
+class QuickSetupSearchOptionsBottomSheet : BottomSheetDialogFragment() {
+
+    @Inject
+    lateinit var appTheme: AppTheme
+
+    @Inject
+    lateinit var appBrandDesignUpdateToggles: AppBrandDesignUpdateToggles
+
+    private var initialWithAi: Boolean = true
+    private var withAi: Boolean = true
+
+    private var binding: BottomSheetQuickSetupSearchOptionsBinding? = null
+
+    override fun onAttach(context: Context) {
+        AndroidSupportInjection.inject(this)
+        super.onAttach(context)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        initialWithAi = requireArguments().getBoolean(ARG_INITIAL_WITH_AI, true)
+        withAi = savedInstanceState?.getBoolean(STATE_WITH_AI) ?: initialWithAi
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?,
+    ): View {
+        val binding = BottomSheetQuickSetupSearchOptionsBinding.inflate(inflater, container, false)
+        if (appBrandDesignUpdateToggles.radius().isEnabled()) {
+            binding.root.applyRadiusOverlayToSheetBackground()
+        }
+        this.binding = binding
+
+        with(binding.inputScreenPicker) {
+            setLightMode(appTheme.isLightModeEnabled())
+            setSelection(this@QuickSetupSearchOptionsBottomSheet.withAi, BrandDesignInputScreenPicker.Transition.ANIMATE)
+            setOnSelectionChangedListener { selected ->
+                this@QuickSetupSearchOptionsBottomSheet.withAi = selected
+                setSelection(selected, BrandDesignInputScreenPicker.Transition.CROSSFADE_ANIMATE)
+                setFragmentResult(REQUEST_KEY, bundleOf(RESULT_KEY_WITH_AI to selected))
+            }
+        }
+        binding.quickSetupSearchOptionsCaption.text =
+            getString(BrowserR.string.preOnboardingInputScreenDescription).html(requireContext())
+        binding.quickSetupSearchOptionsDoneButton.setOnClickListener {
+            dismiss()
+        }
+        binding.quickSetupSearchOptionsCloseButton.setOnClickListener {
+            dismiss()
+        }
+        binding.root.applyBottomSystemBarInsetPadding()
+        return binding.root
+    }
+
+    override fun getTheme(): Int = com.duckduckgo.mobile.android.R.style.Widget_DuckDuckGo_BottomSheetDialog_EdgeToEdge
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): android.app.Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+        dialog.behavior.state = BottomSheetBehavior.STATE_EXPANDED
+        dialog.behavior.isDraggable = false
+        dialog.setOnShowListener {
+            dialog.setRoundCorners(
+                CommonR.attr.daxOnboardingSheetRadius,
+                CommonR.dimen.onboardingBottomSheetCornerRadius,
+            )
+        }
+        return dialog
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_WITH_AI, withAi)
+    }
+
+    override fun onDestroyView() {
+        binding?.inputScreenPicker?.cancelLottieAnimations()
+        binding = null
+        super.onDestroyView()
+    }
+
+    companion object {
+        private const val ARG_INITIAL_WITH_AI = "initialWithAi"
+        private const val STATE_WITH_AI = "withAi"
+
+        const val TAG = "QuickSetupSearchOptionsBottomSheetFragment"
+
+        /** Fragment-result request key. The host registers a listener under this key. */
+        const val REQUEST_KEY = "QuickSetupSearchOptionsResult"
+
+        /** Bundle key for the chosen `withAi` Boolean (true = Search + Duck.ai, false = Search Only). */
+        const val RESULT_KEY_WITH_AI = "withAi"
+
+        fun newInstance(initialWithAi: Boolean): QuickSetupSearchOptionsBottomSheet {
+            return QuickSetupSearchOptionsBottomSheet().apply {
+                arguments = Bundle().apply {
+                    putBoolean(ARG_INITIAL_WITH_AI, initialWithAi)
+                }
+            }
+        }
+    }
+}

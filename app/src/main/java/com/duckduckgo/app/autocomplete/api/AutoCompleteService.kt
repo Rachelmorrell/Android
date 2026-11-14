@@ -16,20 +16,25 @@
 
 package com.duckduckgo.app.autocomplete.api
 
-import com.duckduckgo.app.global.AppUrl
-import io.reactivex.Observable
+import com.duckduckgo.codegen.annotations.ContributesNonCachingServiceApi
+import com.duckduckgo.common.utils.AppUrl
+import com.duckduckgo.di.scopes.AppScope
 import retrofit2.http.GET
 import retrofit2.http.Query
 import java.util.*
 
+@ContributesNonCachingServiceApi(AppScope::class)
 interface AutoCompleteService {
 
     @GET("${AppUrl.Url.API}/ac/")
-    fun autoComplete(
+    suspend fun autoComplete(
         @Query("q") query: String,
         @Query("kl") languageCode: String = Locale.getDefault().language,
-        @Query("is_nav") nav: String = "1"
-    ): Observable<List<AutoCompleteServiceRawResult>>
+        @Query("is_nav") nav: String = "1",
+    ): List<AutoCompleteServiceRawResult>
 }
 
-data class AutoCompleteServiceRawResult(val phrase: String, val isNav: Boolean?)
+data class AutoCompleteServiceRawResult(
+    val phrase: String,
+    val isNav: Boolean?,
+)

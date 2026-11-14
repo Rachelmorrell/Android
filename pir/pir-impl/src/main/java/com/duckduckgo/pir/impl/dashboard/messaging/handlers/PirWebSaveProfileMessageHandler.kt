@@ -1,0 +1,276 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.dashboard.messaging.handlers
+
+import android.content.Context
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.js.messaging.api.JsMessage
+import com.duckduckgo.js.messaging.api.JsMessageCallback
+import com.duckduckgo.js.messaging.api.JsMessaging
+import com.duckduckgo.pir.impl.PirRemoteFeatures
+import com.duckduckgo.pir.impl.brokers.BrokerJsonUpdater
+import com.duckduckgo.pir.impl.checker.DisabledReason
+import com.duckduckgo.pir.impl.checker.PirEligibility
+import com.duckduckgo.pir.impl.checker.PirRunMode
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.checker.runModeOrNull
+import com.duckduckgo.pir.impl.dashboard.messaging.PirDashboardWebMessages
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse
+import com.duckduckgo.pir.impl.dashboard.state.PirWebProfileStateHolder
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.notifications.PirScanCompleteNotifier
+import com.duckduckgo.pir.impl.onboarding.experiment.SubscriptionOnboardingExperimentMetrics
+import com.duckduckgo.pir.impl.scan.PirForegroundScanService
+import com.duckduckgo.pir.impl.scan.PirScanScheduler
+import com.duckduckgo.pir.impl.scheduling.JobRecordUpdater
+import com.duckduckgo.pir.impl.scheduling.PirExecutionType
+import com.duckduckgo.pir.impl.store.PirFreemiumDataStore
+import com.duckduckgo.pir.impl.store.PirRepository
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import logcat.logcat
+import javax.inject.Inject
+
+/**
+ * Handles the message from Web to store the user profile information to local storage.
+ */
+@ContributesIntoSet(
+    scope = ActivityScope::class,
+    binding = binding<PirWebJsMessageHandler>(),
+)
+class PirWebSaveProfileMessageHandler @Inject constructor(
+    private val pirWebProfileStateHolder: PirWebProfileStateHolder,
+    private val repository: PirRepository,
+    private val dispatcherProvider: DispatcherProvider,
+    private val context: Context,
+    private val scanScheduler: PirScanScheduler,
+    private val currentTimeProvider: CurrentTimeProvider,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val jobRecordUpdater: JobRecordUpdater,
+    private val subscriptionOnboardingExperimentMetrics: SubscriptionOnboardingExperimentMetrics,
+    private val pirWorkHandler: PirWorkHandler,
+    private val pirRemoteFeatures: PirRemoteFeatures,
+    private val pirFreemiumDataStore: PirFreemiumDataStore,
+    private val pirScanCompleteNotifier: PirScanCompleteNotifier,
+    private val brokerJsonUpdater: BrokerJsonUpdater,
+) : PirWebJsMessageHandler() {
+
+    override val message = PirDashboardWebMessages.SAVE_PROFILE
+
+    override fun process(
+        jsMessage: JsMessage,
+        jsMessaging: JsMessaging,
+        jsMessageCallback: JsMessageCallback?,
+    ) {
+        logcat { "PIR-WEB: PirWebSaveProfileMessageHandler: process $jsMessage" }
+
+        // validate that we have the complete profile information
+        if (!pirWebProfileStateHolder.isProfileComplete) {
+            logcat { "PIR-WEB: PirWebSaveProfileMessageHandler: incomplete profile information" }
+            jsMessaging.sendResponse(
+                jsMessage = jsMessage,
+                response = PirWebMessageResponse.DefaultResponse.ERROR,
+            )
+            return
+        }
+
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            // capture before update so we can tell onboarding (no prior profiles) vs profile edit
+            val hadExistingProfiles = repository.getAllUserProfileQueries().isNotEmpty()
+
+            val isProfileUpdateSuccess = handleProfileQueryUpdates()
+
+            if (!isProfileUpdateSuccess) {
+                logcat { "PIR-WEB: PirWebSaveProfileMessageHandler: failed to save all user profiles" }
+                jsMessaging.sendResponse(
+                    jsMessage = jsMessage,
+                    response = PirWebMessageResponse.DefaultResponse.ERROR,
+                )
+                return@launch
+            }
+
+            // ensure broker data is present so dashboard is displayed correctly
+            updateBrokerDataIfNoneStored()
+
+            jsMessaging.sendResponse(
+                jsMessage,
+                response = PirWebMessageResponse.DefaultResponse.SUCCESS,
+            )
+
+            val executionType = if (hadExistingProfiles) {
+                PirExecutionType.MANUAL_EDIT_PROFILE
+            } else {
+                PirExecutionType.MANUAL_INITIAL
+            }
+
+            // must be stored before the scan starts, as the scan service resolves eligibility again
+            // and a free user is only allowed to scan once activated
+            storeFreemiumActivation()
+
+            // re-resolved after activation, which is what turns a non-subscriber into a scan-only user
+            val runMode = pirWorkHandler.canRunPir().firstOrNull().runModeOrNull
+
+            // marked before the scan starts, as the run that finishes this scan is the one that takes it
+            if (runMode != null) {
+                pirScanCompleteNotifier.onInitialScanStarted()
+            }
+
+            // start the initial scan at this point as startScanAndOptOut message is not reliable
+            startAndScheduleInitialScan(executionType, runMode)
+
+            if (!hadExistingProfiles) {
+                subscriptionOnboardingExperimentMetrics.firePirActivated()
+
+                if (runMode != null) {
+                    promptForNotificationPermission(jsMessage, jsMessageCallback)
+                }
+            }
+
+            pirWebProfileStateHolder.clear()
+        }
+    }
+
+    /**
+     * Asking for the permission needs the dashboard activity, which this handler cannot reach directly,
+     * so the completed save is forwarded to the activity's callback instead.
+     */
+    private fun promptForNotificationPermission(
+        jsMessage: JsMessage,
+        jsMessageCallback: JsMessageCallback?,
+    ) {
+        if (!pirRemoteFeatures.notificationPermissionPrompt().isEnabled()) return
+
+        jsMessageCallback?.process(jsMessage.featureName, jsMessage.method, jsMessage.id, null)
+    }
+
+    /**
+     * Storing the profile queries is a bit more complex than just replacing them as we need to consider
+     * that some profile queries might have already extracted profiles associated to them. In that case,
+     * we cannot delete those profile queries but we need to mark them as deprecated instead.
+     *
+     * This is so that the opt-outs for those deprecated profiles can be completed.
+     *
+     * https://app.asana.com/1/137249556945/project/481882893211075/task/1211369193255074?focus=true
+     */
+    private suspend fun handleProfileQueryUpdates(): Boolean {
+        // profiles queries that already exist in the database
+        val existingProfileQueries = repository.getValidUserProfileQueries()
+
+        // new profile queries that are the result of user changes (editing names or addresses)
+        val newProfileQueries = pirWebProfileStateHolder.toProfileQueries(currentTimeProvider.localDateTimeNow().year)
+
+        // the profile queries we need to create are the one that exist in the new ones but not in the database
+        val profileQueriesToCreate = newProfileQueries.filter { newProfileQuery ->
+            existingProfileQueries.none { existingProfileQuery ->
+                // ignore ID when comparing as database profile queries will have an actual id
+                newProfileQuery == existingProfileQuery.copy(id = 0)
+            }
+        }
+
+        // the ones that we need to remove are the ones that exist in the database but not in the new ones
+        val profileQueriesToRemove = existingProfileQueries.filter { existingProfileQuery ->
+            newProfileQueries.none { newProfileQuery ->
+                // ignore ID when comparing as database profile queries will have an actual id
+                newProfileQuery == existingProfileQuery.copy(id = 0)
+            }
+        }.toMutableList()
+
+        // if profile query has extracted profiles associated to it, do not delete it but mark it as deprecated
+        val profileQueriesToUpdate = mutableListOf<ProfileQuery>()
+
+        val extractedProfilesMap = repository.getAllExtractedProfiles()
+            .groupBy { it.profileQueryId }
+
+        profileQueriesToRemove.removeAll { profileQueryToRemove ->
+            if (!extractedProfilesMap[profileQueryToRemove.id].isNullOrEmpty()) {
+                // has extracted profiles, mark as deprecated instead of removing
+                profileQueriesToUpdate.add(profileQueryToRemove.copy(deprecated = true))
+                true
+            } else {
+                false
+            }
+        }
+
+        if (profileQueriesToCreate.isEmpty() && profileQueriesToUpdate.isEmpty() && profileQueriesToRemove.isEmpty()) {
+            // nothing to do
+            return true
+        }
+
+        // store the profile changes in a single transaction to ensure data consistency
+        return repository.updateProfileQueries(
+            profileQueriesToAdd = profileQueriesToCreate,
+            profileQueriesToUpdate = profileQueriesToUpdate,
+            profileQueryIdsToDelete = profileQueriesToRemove.map { it.id },
+        ).also {
+            // remove all job records for the profile queries that have been removed as they are no longer needed
+            if (profileQueriesToRemove.isNotEmpty()) {
+                jobRecordUpdater.removeAllJobRecordsForProfiles(profileQueriesToRemove.map { it.id })
+            }
+
+            // keep only job records for brokers that have extracted profiles for the given profile query
+            if (profileQueriesToUpdate.isNotEmpty()) {
+                jobRecordUpdater.removeScanJobRecordsWithNoMatchesForProfiles(profileQueriesToUpdate.map { it.id })
+            }
+        }
+    }
+
+    /**
+     * Ensure broker data is present before starting scan to prevent invalid dashboard state.
+     */
+    private suspend fun updateBrokerDataIfNoneStored() {
+        if (repository.getAllActiveBrokers().isNotEmpty()) return
+
+        logcat { "PIR-WEB: PirWebSaveProfileMessageHandler: no brokers stored, updating broker data" }
+        brokerJsonUpdater.update()
+    }
+
+    /**
+     * A user without a subscription who saves a profile is activating freemium PIR, which is what
+     * later grants them scan-only runs. Any other disabled reason (e.g. an unavailable repository)
+     * says nothing about the subscription, so it must not activate.
+     */
+    private suspend fun storeFreemiumActivation() {
+        if (!pirRemoteFeatures.freemium().isEnabled()) return
+
+        val eligibility = pirWorkHandler.canRunPir().firstOrNull()
+        val isUnsubscribed = (eligibility as? PirEligibility.Disabled)?.reason == DisabledReason.SUBSCRIPTION_EXPIRED
+
+        if (isUnsubscribed && !pirFreemiumDataStore.didActivate) {
+            logcat { "PIR-WEB: PirWebSaveProfileMessageHandler: activating freemium" }
+            pirFreemiumDataStore.activate(currentTimeProvider.currentTimeMillis())
+        }
+    }
+
+    private fun startAndScheduleInitialScan(
+        executionType: PirExecutionType,
+        runMode: PirRunMode?,
+    ) {
+        context.startForegroundService(PirForegroundScanService.intentFor(context, executionType))
+        when (runMode) {
+            PirRunMode.SCAN_AND_OPT_OUT -> scanScheduler.scheduleScans()
+            PirRunMode.SCAN_ONLY -> scanScheduler.scheduleScanOnlyWork()
+            // PIR is not enabled for this user at all; the scan service stops and cancels work itself
+            null -> Unit
+        }
+    }
+}

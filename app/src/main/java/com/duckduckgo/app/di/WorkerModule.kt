@@ -20,17 +20,24 @@ import android.content.Context
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import androidx.work.WorkerFactory
-import com.duckduckgo.app.global.plugins.worker.WorkerInjectorPluginPoint
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.common.utils.plugins.worker.WorkerInjectorPlugin
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-class WorkerModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object WorkerModule {
 
     @Provides
-    @Singleton
-    fun workManager(context: Context, workerFactory: WorkerFactory): WorkManager {
+    @SingleIn(AppScope::class)
+    fun workManager(
+        context: Context,
+        workerFactory: WorkerFactory,
+    ): WorkManager {
         val config = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
@@ -39,10 +46,10 @@ class WorkerModule {
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun workerFactory(
-        workerInjectorPluginPoint: WorkerInjectorPluginPoint,
+        workerInjectorPluginPoint: PluginPoint<WorkerInjectorPlugin>,
     ): WorkerFactory {
-        return DaggerWorkerFactory(workerInjectorPluginPoint)
+        return InjectingWorkerFactory(workerInjectorPluginPoint)
     }
 }

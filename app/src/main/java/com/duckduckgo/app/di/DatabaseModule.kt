@@ -17,37 +17,21 @@
 package com.duckduckgo.app.di
 
 import android.content.Context
-import android.webkit.WebViewDatabase
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import com.duckduckgo.app.global.db.AppDatabase
-import com.duckduckgo.app.global.db.MigrationsProvider
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.app.browser.DefaultWebViewDatabaseProvider
+import com.duckduckgo.app.browser.WebViewDatabaseProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module(includes = [DaoModule::class])
-class DatabaseModule {
-
-    @Provides
-    @Singleton
-    fun provideWebviewDatabase(context: Context): WebViewDatabase {
-        return WebViewDatabase.getInstance(context)
-    }
+@BindingContainer
+@ContributesTo(AppScope::class)
+object DatabaseModule {
 
     @Provides
-    @Singleton
-    fun provideDatabase(context: Context, migrationsProvider: MigrationsProvider): AppDatabase {
-        return Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
-            .addMigrations(*migrationsProvider.ALL_MIGRATIONS.toTypedArray())
-            .addCallback(migrationsProvider.BOOKMARKS_DB_ON_CREATE)
-            .addCallback(migrationsProvider.CHANGE_JOURNAL_ON_OPEN)
-            .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
-            .build()
-    }
-
-    @Provides
-    fun provideDatabaseMigrations(context: Context): MigrationsProvider {
-        return MigrationsProvider(context)
+    @SingleIn(AppScope::class)
+    fun provideWebViewDatabaseProvider(context: Context): WebViewDatabaseProvider {
+        return DefaultWebViewDatabaseProvider(context)
     }
 }

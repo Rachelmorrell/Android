@@ -16,55 +16,47 @@
 
 package com.duckduckgo.app.onboarding.di
 
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
-import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
 import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserDetector
-import com.duckduckgo.app.browser.favicon.FaviconManager
 import com.duckduckgo.app.global.DefaultRoleBrowserDialog
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.events.db.AppUserEventsRepository
-import com.duckduckgo.app.global.events.db.UserEventsRepository
-import com.duckduckgo.app.global.events.db.UserEventsStore
-import com.duckduckgo.app.onboarding.store.UserStageStore
+import com.duckduckgo.app.global.RealDefaultRoleBrowserDialog
+import com.duckduckgo.app.global.install.AppInstallStore
 import com.duckduckgo.app.onboarding.ui.OnboardingFragmentPageBuilder
 import com.duckduckgo.app.onboarding.ui.OnboardingPageBuilder
 import com.duckduckgo.app.onboarding.ui.OnboardingPageManager
 import com.duckduckgo.app.onboarding.ui.OnboardingPageManagerWithTrackerBlocking
-import com.duckduckgo.app.statistics.VariantManager
-import dagger.Lazy
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class OnboardingModule {
 
     @Provides
     fun onboardingPageManger(
         defaultRoleBrowserDialog: DefaultRoleBrowserDialog,
         onboardingPageBuilder: OnboardingPageBuilder,
-        defaultBrowserDetector: DefaultBrowserDetector
+        defaultBrowserDetector: DefaultBrowserDetector,
     ): OnboardingPageManager {
-        return OnboardingPageManagerWithTrackerBlocking(defaultRoleBrowserDialog, onboardingPageBuilder, defaultBrowserDetector)
+        return OnboardingPageManagerWithTrackerBlocking(
+            defaultRoleBrowserDialog,
+            onboardingPageBuilder,
+            defaultBrowserDetector,
+        )
     }
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun onboardingPageBuilder(): OnboardingPageBuilder {
         return OnboardingFragmentPageBuilder()
     }
 
     @Provides
-    @Singleton
-    fun userEventsRepository(
-        userEventsStore: UserEventsStore,
-        userStageStore: UserStageStore,
-        favoritesRepository: FavoritesRepository,
-        duckDuckGoUrlDetector: DuckDuckGoUrlDetector,
-        faviconManager: Lazy<FaviconManager>,
-        dispatcherProvider: DispatcherProvider,
-        variantManager: VariantManager
-    ): UserEventsRepository {
-        return AppUserEventsRepository(userEventsStore, userStageStore, favoritesRepository, duckDuckGoUrlDetector, faviconManager, dispatcherProvider, variantManager)
-    }
+    fun defaultRoleBrowserDialog(
+        appInstallStore: AppInstallStore,
+        appBuildConfig: AppBuildConfig,
+    ): DefaultRoleBrowserDialog = RealDefaultRoleBrowserDialog(appInstallStore, appBuildConfig)
 }

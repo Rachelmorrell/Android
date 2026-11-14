@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.scan
+
+import android.content.Context
+import android.os.Process
+import androidx.work.WorkerParameters
+import androidx.work.multiprocess.RemoteCoroutineWorker
+import com.duckduckgo.codegen.annotations.ContributesWorker
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.pir.impl.PirFeatureDataCleaner
+import com.duckduckgo.pir.impl.checker.PirEligibility
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.checker.runModeOrNull
+import com.duckduckgo.pir.impl.scheduling.PirExecutionType
+import com.duckduckgo.pir.impl.scheduling.PirJobsRunner
+import com.duckduckgo.pir.impl.wideevents.PirScanWideEvent.CancellationReason
+import kotlinx.coroutines.flow.firstOrNull
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesWorker(AppScope::class)
+class PirScheduledScanRemoteWorker(
+    private val context: Context,
+    workerParameters: WorkerParameters,
+) : RemoteCoroutineWorker(context, workerParameters) {
+    @Inject
+    lateinit var pirJobsRunner: PirJobsRunner
+
+    @Inject
+    lateinit var dispatcherProvider: DispatcherProvider
+
+    @Inject
+    lateinit var pirWorkHandler: PirWorkHandler
+
+    @Inject
+    lateinit var pirFeatureDataCleaner: PirFeatureDataCleaner
+
+    @Inject
+    lateinit var pirForegroundScanServiceMonitor: PirForegroundScanServiceMonitor
+
+    override suspend fun doRemoteWork(): Result {
+        logcat { "PIR-WORKER ($this}: doRemoteWork ${Process.myPid()}" }
+        return try {
+            val eligibility = pirWorkHandler.canRunPir().firstOrNull()
+            if (eligibility is PirEligibility.Disabled) {
+                logcat { "PIR-WORKER ($this}: PIR not allowed to run!" }
+                pirWorkHandler.cancelWork(CancellationReason.fromDisabledReason(eligibility.reason))
+                pirFeatureDataCleaner.removeAllData()
+                return Result.failure()
+            }
+
+            if (pirForegroundScanServiceMonitor.isRunning()) {
+                logcat { "PIR-WORKER ($this}: Foreground scan running, skipping this scheduled run" }
+                return Result.success()
+            }
+
+            val runMode = eligibility.runModeOrNull ?: run {
+                logcat { "PIR-WORKER ($this}: No eligibility emission, cannot resolve run mode!" }
+                return Result.failure()
+            }
+            val result = pirJobsRunner.runEligibleJobs(context.applicationContext, PirExecutionType.SCHEDULED, runMode)
+
+            if (result.isSuccess) {
+                logcat { "PIR-WORKER ($this}: Successfully completed!" }
+                Result.success()
+            } else {
+                logcat { "PIR-WORKER ($this}: Failed to complete." }
+                Result.failure()
+            }
+        } catch (_: Exception) {
+            // this can happen as a result of scanning error or cancellation because PIR is no longer enabled
+            logcat { "PIR-WORKER ($this}: Exception occurred, stopping all work!" }
+            pirJobsRunner.stop()
+            Result.failure()
+        }
+    }
+
+    companion object {
+        internal const val TAG_SCHEDULED_SCAN = "TAG-PIR-SCHEDULED-SCAN"
+    }
+}

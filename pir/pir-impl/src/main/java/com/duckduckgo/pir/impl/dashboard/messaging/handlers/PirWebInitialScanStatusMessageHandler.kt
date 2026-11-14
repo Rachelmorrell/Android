@@ -1,0 +1,180 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.dashboard.messaging.handlers
+
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.js.messaging.api.JsMessage
+import com.duckduckgo.js.messaging.api.JsMessageCallback
+import com.duckduckgo.js.messaging.api.JsMessaging
+import com.duckduckgo.pir.impl.PirRemoteFeatures
+import com.duckduckgo.pir.impl.checker.PirEligibility
+import com.duckduckgo.pir.impl.checker.PirWorkHandler
+import com.duckduckgo.pir.impl.dashboard.messaging.PirDashboardWebMessages
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse.GetDataBrokersResponse.DataBroker
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse.ScanResult
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse.ScanResult.ScanResultAddress
+import com.duckduckgo.pir.impl.dashboard.messaging.model.PirWebMessageResponse.ScannedBroker
+import com.duckduckgo.pir.impl.dashboard.state.PirDashboardInitialScanStateProvider
+import com.duckduckgo.pir.impl.notifications.PirScanCompleteNotifier
+import com.duckduckgo.pir.impl.pixels.PirPixelSender
+import com.duckduckgo.pir.impl.scan.PirForegroundScanServiceStarter
+import com.duckduckgo.pir.impl.store.PirRepository
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import logcat.logcat
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import javax.inject.Inject
+
+/**
+ * Handles the initial scan status message from Web which is used to retrieve the status of the initial scan.
+ */
+@ContributesIntoSet(
+    scope = ActivityScope::class,
+    binding = binding<PirWebJsMessageHandler>(),
+)
+class PirWebInitialScanStatusMessageHandler @Inject constructor(
+    private val dispatcherProvider: DispatcherProvider,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val stateProvider: PirDashboardInitialScanStateProvider,
+    private val pirRepository: PirRepository,
+    private val pirPixelSender: PirPixelSender,
+    private val pirRemoteFeatures: PirRemoteFeatures,
+    private val foregroundScanServiceStarter: PirForegroundScanServiceStarter,
+    private val pirScanCompleteNotifier: PirScanCompleteNotifier,
+    private val pirWorkHandler: PirWorkHandler,
+) : PirWebJsMessageHandler() {
+
+    override val message = PirDashboardWebMessages.INITIAL_SCAN_STATUS
+    private val eligibilityCheckedForResumeScan = AtomicReference<PirEligibility?>(null)
+
+    override fun process(
+        jsMessage: JsMessage,
+        jsMessaging: JsMessaging,
+        jsMessageCallback: JsMessageCallback?,
+    ) {
+        logcat { "PIR-WEB: InitialScanStatusMessageHandler: process $jsMessage" }
+
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            if (!canRunScan()) {
+                jsMessaging.sendResponse(
+                    jsMessage = jsMessage,
+                    response = PirWebMessageResponse.InitialScanResponse.EMPTY,
+                )
+                return@launch
+            }
+
+            // Check once per PirDashboardWebViewActivity launch if we need to resume a scan that was interrupted (e.g., by app kill),
+            // and again if eligibility changes, as a free user who subscribes from the dashboard has it reloaded in place
+            val eligibility = pirWorkHandler.canRunPir().firstOrNull()
+            if (eligibilityCheckedForResumeScan.getAndSet(eligibility) != eligibility) {
+                checkForIncompleteInitialScan()
+            }
+
+            jsMessaging.sendResponse(
+                jsMessage = jsMessage,
+                response = PirWebMessageResponse.InitialScanResponse(
+                    resultsFound = getResultsFound(),
+                    scanProgress = PirWebMessageResponse.InitialScanResponse.ScanProgress(
+                        currentScans = stateProvider.getFullyCompletedBrokersTotal(),
+                        totalScans = stateProvider.getActiveBrokersAndMirrorSitesTotal(),
+                        scannedBrokers = getScannedBrokers(),
+                    ),
+                ),
+            )
+        }
+    }
+
+    private suspend fun canRunScan(): Boolean {
+        return pirRepository.getValidUserProfileQueries().isNotEmpty()
+    }
+
+    /**
+     * Checks if the initial foreground scan should be resumed (was interrupted with remaining brokers).
+     * Emits a pixel to measure how often this scenario occurs, and resumes the scan if the toggle is enabled.
+     */
+    private suspend fun checkForIncompleteInitialScan() {
+        if (!stateProvider.shouldRestartInitialScan()) {
+            logcat { "PIR-WEB: No need to resume scan, it's either not started or already completed" }
+            return
+        }
+
+        // Emit pixel to measure how often interrupted scans could be resumed
+        logcat { "PIR-WEB: Detected opportunity to resume interrupted scan, emitting pixel" }
+        pirPixelSender.reportInitialScanIncomplete()
+
+        if (pirRemoteFeatures.resumeInitialScanOnDashboardOpen().isEnabled()) {
+            logcat { "PIR-WEB: Resuming interrupted initial scan via foreground service" }
+            // marked here too, as a free user who subscribes resumes their initial scan without saving a profile
+            pirScanCompleteNotifier.onInitialScanStarted()
+            foregroundScanServiceStarter.startResumeScan()
+        } else {
+            logcat { "PIR-WEB: Resume-on-dashboard-open is disabled; not starting scan" }
+        }
+    }
+
+    private suspend fun getResultsFound(): List<ScanResult> {
+        return stateProvider.getScanResults().map {
+            ScanResult(
+                id = it.extractedProfile.dbId,
+                dataBroker = DataBroker(
+                    name = it.broker.name,
+                    url = it.broker.url,
+                    optOutUrl = it.broker.optOutUrl,
+                    parentURL = it.broker.parentUrl,
+                ),
+                name = it.extractedProfile.name,
+                addresses = it.extractedProfile.addresses.map { address ->
+                    ScanResultAddress(
+                        city = address.city,
+                        state = address.state,
+                    )
+                },
+                alternativeNames = it.extractedProfile.alternativeNames,
+                relatives = it.extractedProfile.relatives,
+                foundDate = it.extractedProfile.dateAddedInMillis.convertToSeconds(),
+                optOutSubmittedDate = it.optOutSubmittedDateInMillis?.convertToSeconds(),
+                optOutFormSubmittedDate = it.optOutFormSubmittedDateInMillis?.convertToSeconds(),
+                estimatedRemovalDate = it.estimatedRemovalDateInMillis?.convertToSeconds(),
+                removedDate = it.optOutRemovedDateInMillis?.convertToSeconds(),
+                hasMatchingRecordOnParentBroker = it.hasMatchingRecordOnParentBroker,
+            )
+        }
+    }
+
+    private fun Long.convertToSeconds(): Long {
+        return TimeUnit.MILLISECONDS.toSeconds(this)
+    }
+
+    private suspend fun getScannedBrokers(): List<ScannedBroker> {
+        return stateProvider.getAllScannedBrokersStatus().map {
+            ScannedBroker(
+                name = it.broker.name,
+                url = it.broker.url,
+                optOutUrl = it.broker.optOutUrl,
+                parentURL = it.broker.parentUrl,
+                status = it.status.statusName,
+            )
+        }
+    }
+}

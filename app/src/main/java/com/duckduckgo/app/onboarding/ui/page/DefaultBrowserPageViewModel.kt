@@ -19,56 +19,46 @@ package com.duckduckgo.app.onboarding.ui.page
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserDetector
-import com.duckduckgo.app.global.SingleLiveEvent
 import com.duckduckgo.app.global.install.AppInstallStore
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.FragmentScope
 import javax.inject.Inject
-import javax.inject.Provider
 
-class DefaultBrowserPageViewModel(
+@ContributesViewModel(FragmentScope::class)
+class DefaultBrowserPageViewModel @Inject constructor(
     private val defaultBrowserDetector: DefaultBrowserDetector,
     private val pixel: Pixel,
-    private val installStore: AppInstallStore
+    private val installStore: AppInstallStore,
 ) : ViewModel() {
 
     sealed class ViewState {
-        object DefaultBrowserSettingsUI : ViewState()
+        data object DefaultBrowserSettingsUI : ViewState()
         data class DefaultBrowserDialogUI(val showInstructionsCard: Boolean = false) : ViewState()
-        object ContinueToBrowser : ViewState()
+        data object ContinueToBrowser : ViewState()
     }
 
     sealed class Command {
         class OpenDialog(val url: String = DEFAULT_URL) : Command()
-        object OpenSettings : Command()
-        object ContinueToBrowser : Command()
+        data object OpenSettings : Command()
+        data object ContinueToBrowser : Command()
     }
 
     sealed class Origin {
-        object InternalBrowser : Origin()
-        object ExternalBrowser : Origin()
-        object Settings : Origin()
-        object DialogDismissed : Origin()
+        data object InternalBrowser : Origin()
+        data object ExternalBrowser : Origin()
+        data object Settings : Origin()
+        data object DialogDismissed : Origin()
     }
 
     val viewState: MutableLiveData<ViewState> = MutableLiveData()
     val command: SingleLiveEvent<Command> = SingleLiveEvent()
     var timesPressedJustOnce: Int = 0
 
-    private var viewHasShown: Boolean = false
-
     init {
         viewState.value = newViewState()
-    }
-
-    fun pageBecameVisible() {
-        if (!viewHasShown) {
-            viewHasShown = true
-            pixel.fire(AppPixelName.ONBOARDING_DEFAULT_BROWSER_VISUALIZED)
-        }
     }
 
     fun loadUI() {
@@ -77,28 +67,19 @@ class DefaultBrowserPageViewModel(
         }
     }
 
-    fun onContinueToBrowser(userTriedToSetDDGAsDefault: Boolean) {
-        if (!userTriedToSetDDGAsDefault && !defaultBrowserDetector.isDefaultBrowser()) {
-            pixel.fire(AppPixelName.ONBOARDING_DEFAULT_BROWSER_SKIPPED)
-        }
+    fun onContinueToBrowser() {
         command.value = Command.ContinueToBrowser
     }
 
     fun onDefaultBrowserClicked() {
-        var behaviourTriggered = Pixel.PixelValues.DEFAULT_BROWSER_SETTINGS
         val currentState = viewState.value
         if (currentState is ViewState.DefaultBrowserSettingsUI) {
             command.value = Command.OpenSettings
         } else if (currentState is ViewState.DefaultBrowserDialogUI) {
             timesPressedJustOnce++
-            behaviourTriggered = Pixel.PixelValues.DEFAULT_BROWSER_DIALOG
             command.value = Command.OpenDialog()
             viewState.value = currentState.copy(showInstructionsCard = true)
         }
-        val params = mapOf(
-            Pixel.PixelParameter.DEFAULT_BROWSER_BEHAVIOUR_TRIGGERED to behaviourTriggered
-        )
-        pixel.fire(AppPixelName.ONBOARDING_DEFAULT_BROWSER_LAUNCHED, params)
     }
 
     fun handleResult(origin: Origin) {
@@ -122,7 +103,10 @@ class DefaultBrowserPageViewModel(
         }
     }
 
-    private fun reduceToNewState(origin: Origin, navigateToBrowser: Boolean = false) {
+    private fun reduceToNewState(
+        origin: Origin,
+        navigateToBrowser: Boolean = false,
+    ) {
         val newViewState = nextViewState(origin)
 
         if (newViewState == null || navigateToBrowser) {
@@ -153,7 +137,6 @@ class DefaultBrowserPageViewModel(
             if (timesPressedJustOnce < MAX_DIALOG_ATTEMPTS) {
                 timesPressedJustOnce++
                 command.value = Command.OpenDialog()
-                pixel.fire(AppPixelName.ONBOARDING_DEFAULT_BROWSER_SELECTED_JUST_ONCE)
             } else {
                 fireDefaultBrowserPixelAndResetTimesPressedJustOnce(originValue = Pixel.PixelValues.DEFAULT_BROWSER_JUST_ONCE_MAX)
                 navigateToBrowser = true
@@ -168,13 +151,13 @@ class DefaultBrowserPageViewModel(
             installStore.defaultBrowser = true
             val params = mapOf(
                 Pixel.PixelParameter.DEFAULT_BROWSER_SET_FROM_ONBOARDING to true.toString(),
-                Pixel.PixelParameter.DEFAULT_BROWSER_SET_ORIGIN to originValue
+                Pixel.PixelParameter.DEFAULT_BROWSER_SET_ORIGIN to originValue,
             )
             pixel.fire(AppPixelName.DEFAULT_BROWSER_SET, params)
         } else {
             installStore.defaultBrowser = false
             val params = mapOf(
-                Pixel.PixelParameter.DEFAULT_BROWSER_SET_ORIGIN to originValue
+                Pixel.PixelParameter.DEFAULT_BROWSER_SET_ORIGIN to originValue,
             )
             pixel.fire(AppPixelName.DEFAULT_BROWSER_NOT_SET, params)
         }
@@ -197,21 +180,5 @@ class DefaultBrowserPageViewModel(
     companion object {
         const val MAX_DIALOG_ATTEMPTS = 2
         const val DEFAULT_URL = "https://duckduckgo.com"
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class DefaultBrowserPageViewModelFactory @Inject constructor(
-    private val defaultBrowserDetector: Provider<DefaultBrowserDetector>,
-    private val pixel: Provider<Pixel>,
-    private val installStore: Provider<AppInstallStore>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(DefaultBrowserPageViewModel::class.java) -> (DefaultBrowserPageViewModel(defaultBrowserDetector.get(), pixel.get(), installStore.get()) as T)
-                else -> null
-            }
-        }
     }
 }

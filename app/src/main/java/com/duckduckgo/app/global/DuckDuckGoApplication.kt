@@ -16,152 +16,243 @@
 
 package com.duckduckgo.app.global
 
-import android.app.Application
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import android.os.Build
+import android.os.StrictMode
+import android.os.StrictMode.ThreadPolicy
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.duckduckgo.app.browser.BuildConfig
 import com.duckduckgo.app.di.AppComponent
+import com.duckduckgo.app.di.AppComponentFactory
 import com.duckduckgo.app.di.AppCoroutineScope
-import com.duckduckgo.app.di.DaggerAppComponent
-import com.duckduckgo.app.fire.FireActivity
-import com.duckduckgo.app.fire.UnsentForgetAllPixelStore
-import com.duckduckgo.app.global.plugins.PluginPoint
-import com.duckduckgo.app.pixels.AppPixelName
-import com.duckduckgo.app.pixels.AppPixelName.APP_LAUNCH
-import com.duckduckgo.app.referral.AppInstallationReferrerStateListener
-import com.duckduckgo.app.statistics.pixels.Pixel
-import dagger.android.AndroidInjector
-import dagger.android.DispatchingAndroidInjector
-import dagger.android.HasAndroidInjector
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.app.lifecycle.PirProcessLifecycleObserver
+import com.duckduckgo.app.lifecycle.VpnProcessLifecycleObserver
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.di.android.AndroidInjector
+import com.duckduckgo.di.android.HasInjector
+import com.duckduckgo.di.android.getFactory
+import com.duckduckgo.referral.api.AppInstallationReferrerStateListener
+import dev.zacsweers.metro.HasMemberInjections
 import io.reactivex.exceptions.UndeliverableException
 import io.reactivex.plugins.RxJavaPlugins
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import timber.log.Timber
+import kotlinx.coroutines.*
+import logcat.AndroidLogcatLogger
+import logcat.LogPriority.VERBOSE
+import logcat.LogPriority.WARN
+import logcat.asLog
+import logcat.logcat
+import java.io.File
 import javax.inject.Inject
 
-open class DuckDuckGoApplication : HasAndroidInjector, Application(), LifecycleObserver {
+private const val VPN_PROCESS_NAME = "vpn"
+private const val PIR_PROCESS_NAME = "pir"
+
+@HasMemberInjections
+open class DuckDuckGoApplication : HasInjector, MultiProcessApplication() {
 
     @Inject
-    lateinit var androidInjector: DispatchingAndroidInjector<Any>
-
-    @Inject
-    lateinit var pixel: Pixel
-
-    @Inject
-    lateinit var unsentForgetAllPixelStore: UnsentForgetAllPixelStore
-
-    @Inject
-    lateinit var alertingUncaughtExceptionHandler: AlertingUncaughtExceptionHandler
+    lateinit var uncaughtExceptionHandler: Thread.UncaughtExceptionHandler
 
     @Inject
     lateinit var referralStateListener: AppInstallationReferrerStateListener
 
     @Inject
-    lateinit var lifecycleObserverPluginPoint: PluginPoint<LifecycleObserver>
+    lateinit var primaryLifecycleObserverPluginPoint: PluginPoint<MainProcessLifecycleObserver>
+
+    @Inject
+    lateinit var vpnLifecycleObserverPluginPoint: PluginPoint<VpnProcessLifecycleObserver>
+
+    @Inject
+    lateinit var pirLifecycleObserverPluginPoint: PluginPoint<PirProcessLifecycleObserver>
+
+    @Inject
+    lateinit var activityLifecycleCallbacks: PluginPoint<com.duckduckgo.browser.api.ActivityLifecycleCallbacks>
 
     @Inject
     @AppCoroutineScope
     lateinit var appCoroutineScope: CoroutineScope
 
-    private var launchedByFireAction: Boolean = false
+    @Inject
+    lateinit var injectorFactoryMap: com.duckduckgo.di.android.InjectorFactoryMap
+
+    @Inject
+    lateinit var dispatchers: DispatcherProvider
 
     private val applicationCoroutineScope = CoroutineScope(SupervisorJob())
 
-    open lateinit var daggerAppComponent: AppComponent
+    open lateinit var appComponent: AppComponent
 
-    override fun onCreate() {
-        super.onCreate()
-
+    override fun onMainProcessCreate() {
         configureLogging()
-        Timber.i("Application Started")
-        if (appIsRestarting()) return
+        logcat { "onMainProcessCreate $currentProcessName with pid=${android.os.Process.myPid()}" }
 
-        Timber.i("Creating DuckDuckGoApplication")
+        configureStrictMode()
         configureDependencyInjection()
+        setupActivityLifecycleCallbacks()
         configureUncaughtExceptionHandler()
 
+        // Deprecated, we need to move all these into AppLifecycleEventObserver
         ProcessLifecycleOwner.get().lifecycle.apply {
-            addObserver(this@DuckDuckGoApplication)
-            lifecycleObserverPluginPoint.getPlugins().forEach {
-                Timber.d("Registering application lifecycle observer: ${it.javaClass.canonicalName}")
+            primaryLifecycleObserverPluginPoint.getPlugins().forEach {
                 addObserver(it)
             }
         }
 
-        submitUnsentFirePixels()
-
-        appCoroutineScope.launch {
+        appCoroutineScope.launch(dispatchers.io()) {
             referralStateListener.initialiseReferralRetrieval()
         }
     }
 
-    private fun configureUncaughtExceptionHandler() {
-        Thread.setDefaultUncaughtExceptionHandler(alertingUncaughtExceptionHandler)
-        RxJavaPlugins.setErrorHandler { throwable ->
-            if (throwable is UndeliverableException) {
-                Timber.w(throwable, "An exception happened inside RxJava code but no subscriber was still around to handle it")
-            } else {
-                alertingUncaughtExceptionHandler.uncaughtException(Thread.currentThread(), throwable)
+    override fun onSecondaryProcessCreate(shortProcessName: String) {
+        if (shortProcessName != "UNKNOWN") {
+            runInSecondaryProcessNamed(shortProcessName) {
+                configureLogging()
+                logcat { "Init for secondary process $shortProcessName with pid=${android.os.Process.myPid()}" }
+                configureStrictMode()
+                configureDependencyInjection()
+                configureUncaughtExceptionHandler()
+
+                if (shortProcessName == VPN_PROCESS_NAME) {
+                    // ProcessLifecycleOwner doesn't know about secondary processes, so the callbacks are our own callbacks and limited to onCreate which
+                    // is good enough.
+                    // See https://developer.android.com/reference/android/arch/lifecycle/ProcessLifecycleOwner#get
+                    ProcessLifecycleOwner.get().lifecycle.apply {
+                        vpnLifecycleObserverPluginPoint.getPlugins().forEach {
+                            it.onVpnProcessCreated()
+                        }
+                    }
+                }
+
+                if (shortProcessName == PIR_PROCESS_NAME) {
+                    // ProcessLifecycleOwner doesn't know about secondary processes, so the callbacks are our own callbacks and limited to onCreate which
+                    // is good enough.
+                    // See https://developer.android.com/reference/android/arch/lifecycle/ProcessLifecycleOwner#get
+                    ProcessLifecycleOwner.get().lifecycle.apply {
+                        logcat { "PIR-LIFECYCLE: New PIR process created with pid=${android.os.Process.myPid()}" }
+                        pirLifecycleObserverPluginPoint.getPlugins().forEach {
+                            it.onPirProcessCreated()
+                        }
+                    }
+                }
             }
         }
     }
 
-    private fun appIsRestarting(): Boolean {
-        if (FireActivity.appRestarting(this)) {
-            Timber.i("App restarting")
-            return true
+    private fun setupActivityLifecycleCallbacks() {
+        activityLifecycleCallbacks.getPlugins().forEach { registerActivityLifecycleCallbacks(it) }
+    }
+
+    private fun configureUncaughtExceptionHandler() {
+        Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler)
+        RxJavaPlugins.setErrorHandler { throwable ->
+            if (throwable is UndeliverableException) {
+                logcat(WARN) { "An exception happened inside RxJava code but no subscriber was still around to handle it: ${throwable.asLog()}" }
+            } else {
+                uncaughtExceptionHandler.uncaughtException(Thread.currentThread(), throwable)
+            }
         }
-        return false
     }
 
     private fun configureLogging() {
-        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
+        AndroidLogcatLogger.installOnDebuggableApp(
+            application = this,
+            minPriority = VERBOSE,
+        )
     }
 
-    protected open fun configureDependencyInjection() {
-        daggerAppComponent = DaggerAppComponent.builder()
-            .application(this)
-            .applicationCoroutineScope(applicationCoroutineScope)
-            .build()
-        daggerAppComponent.inject(this)
+    private fun configureDependencyInjection() {
+        appComponent = AppComponentFactory.create(this, applicationCoroutineScope)
+        appComponent.inject(this)
     }
 
-    private fun submitUnsentFirePixels() {
-        val count = unsentForgetAllPixelStore.pendingPixelCountClearData
-        Timber.i("Found $count unsent clear data pixels")
-        if (count > 0) {
-            val timeDifferenceMillis = System.currentTimeMillis() - unsentForgetAllPixelStore.lastClearTimestamp
-            if (timeDifferenceMillis <= APP_RESTART_CAUSED_BY_FIRE_GRACE_PERIOD) {
-                Timber.i("The app was re-launched as a result of the fire action being triggered (happened ${timeDifferenceMillis}ms ago)")
-                launchedByFireAction = true
+    private fun configureStrictMode() {
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(
+                ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()
+                    .penaltyLog()
+                    .penaltyDropBox()
+                    .build(),
+            )
+            if (Build.VERSION.SDK_INT >= 31) {
+                StrictMode.setVmPolicy(
+                    StrictMode.VmPolicy.Builder()
+                        .detectUnsafeIntentLaunch()
+                        .penaltyLog()
+                        .penaltyDeath()
+                        .build(),
+                )
             }
-            for (i in 1..count) {
-                pixel.fire(AppPixelName.FORGET_ALL_EXECUTED)
-            }
-            unsentForgetAllPixelStore.resetCount()
         }
     }
 
-    override fun androidInjector(): AndroidInjector<Any> {
-        return androidInjector
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onAppForegrounded() {
-        if (launchedByFireAction) {
-            launchedByFireAction = false
-            Timber.i("Suppressing app launch pixel")
-            return
+    // vtodo - Work around for https://crbug.com/558377
+    // AndroidInjection.inject(this) creates a new instance of the DuckDuckGoApplication (because we are in a new process)
+    // This has several disadvantages:
+    //   1. our app is of massive size, because we are duplicating our DI graph
+    //   2. we are hitting this bug in https://crbug.com/558377, because some of the injected dependencies may eventually
+    //      depend in something webview-related
+    //
+    // We need to override getDir and getCacheDir so that the webview does not share the same data dir across processes
+    // This is hacky hacky but should be OK for now as we don't use the webview in the VPN, it is just an issue with
+    // injecting/creating dependencies
+    //
+    // A proper fix should be to create a VpnServiceComponent that just provide the dependencies needed by the VPN, which would
+    // also help with memory
+    override fun getDir(
+        name: String?,
+        mode: Int,
+    ): File {
+        val dir = super.getDir(name, mode)
+        if (!isMainProcess) {
+            if (name == "webview") {
+                val processName = shortProcessName
+                if (processName != "UNKNOWN") {
+                    return File("${dir.absolutePath}/$processName").apply {
+                        logcat { ":$processName process getDir = $absolutePath" }
+                        if (!exists()) {
+                            mkdirs()
+                        }
+                    }
+                }
+            }
         }
-        pixel.fire(APP_LAUNCH)
+        return dir
     }
 
-    companion object {
-        private const val APP_RESTART_CAUSED_BY_FIRE_GRACE_PERIOD: Long = 10_000L
+    override fun getCacheDir(): File {
+        val dir = super.getCacheDir()
+        if (!isMainProcess) {
+            val processName = shortProcessName
+            if (processName != "UNKNOWN") {
+                return File("${dir.absolutePath}/$processName").apply {
+                    logcat { ":$processName process getCacheDir = $absolutePath" }
+                    if (!exists()) {
+                        mkdirs()
+                    }
+                }
+            }
+        }
+        return dir
     }
 
+    /**
+     * Implementation of [HasInjector.injectorFactoryFor].
+     * Similar to what dagger-android does, The [DuckDuckGoApplication] gets the [DuckDuckGoApplication.injectorFactoryMap]
+     * from DI. This holds all the injector factories for Android types, like Activities that we create.
+     *
+     * This method will return the [AndroidInjector.Factory] for the given key passed in as parameter.
+     */
+    override fun injectorFactoryFor(key: Class<*>): AndroidInjector.Factory<*, *> {
+        return injectorFactoryMap.getFactory(key)
+            ?: throw RuntimeException(
+                """
+                Could not find the injector for ${key.simpleName}.
+                You probably forgot to annotate your class with @InjectWith(Scope::class).
+                """.trimIndent(),
+            )
+    }
 }

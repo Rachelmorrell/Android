@@ -1,0 +1,172 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.scheduling
+
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.pir.impl.models.scheduling.BrokerSchedulingConfig
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.OptOutJobRecord.OptOutJobStatus
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord
+import com.duckduckgo.pir.impl.models.scheduling.JobRecord.ScanJobRecord.ScanJobStatus
+import com.duckduckgo.pir.impl.store.PirRepository
+import com.duckduckgo.pir.impl.store.PirSchedulingRepository
+import dev.zacsweers.metro.ContributesBinding
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+
+interface EligibleScanJobProvider {
+    suspend fun getAllEligibleScanJobs(timeInMillis: Long): List<ScanJobRecord>
+}
+
+@ContributesBinding(scope = AppScope::class)
+class RealEligibleScanJobProvider @Inject constructor(
+    private val dispatcherProvider: DispatcherProvider,
+    private val pirSchedulingRepository: PirSchedulingRepository,
+    private val pirRepository: PirRepository,
+) : EligibleScanJobProvider {
+    override suspend fun getAllEligibleScanJobs(timeInMillis: Long): List<ScanJobRecord> =
+        withContext(dispatcherProvider.io()) {
+            val schedulingConfigs = pirRepository.getAllBrokerSchedulingConfigs()
+            val validScanJobsFromOptOut = getValidScanJobsFromOptOut(
+                schedulingConfigs,
+                timeInMillis,
+            )
+            val validScanJobsFromScanRecords = getValidScanJobsFromScanJobRecords(
+                schedulingConfigs,
+                timeInMillis,
+            )
+
+            return@withContext (validScanJobsFromOptOut + validScanJobsFromScanRecords)
+                .toSet()
+                .toList()
+        }
+
+    private suspend fun getValidScanJobsFromOptOut(
+        schedulingConfigs: List<BrokerSchedulingConfig>,
+        timeInMillis: Long,
+    ): List<ScanJobRecord> {
+        return pirSchedulingRepository.getAllValidOptOutJobRecords().filter { record ->
+            val schedulingConfig =
+                schedulingConfigs.find { config -> config.brokerName == record.brokerName }
+
+            schedulingConfig != null && (
+                record.isRequestedAndShouldBeConfirmedNow(schedulingConfig, timeInMillis) ||
+                    record.isRemovedAndShouldBeMaintainedNow(schedulingConfig, timeInMillis)
+                )
+        }.sortedBy {
+            it.attemptCount
+        }.mapNotNull {
+            val schedulingConfig =
+                schedulingConfigs.find { config -> config.brokerName == it.brokerName }!!
+
+            val expectedScanDate = when (it.status) {
+                OptOutJobStatus.REQUESTED -> it.getRequestConfirmationScanDate(schedulingConfig)
+                OptOutJobStatus.REMOVED -> it.getRemovedMaintenanceScanDate(schedulingConfig)
+                else -> return@mapNotNull null
+            }
+            val scanJobRecord = pirSchedulingRepository.getValidScanJobRecord(it.brokerName, it.userProfileId)
+
+            // If the last scan happened more recently that the expected scan date from opt outs, it means we have already performed the
+            // maintenance scan / confirmation scan needed for this opt-out.
+            // More info on https://app.asana.com/1/137249556945/project/488551667048375/task/1211207086563708?focus=true
+            return@mapNotNull if (scanJobRecord != null && scanJobRecord.lastScanDateInMillis <= expectedScanDate) {
+                scanJobRecord
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun OptOutJobRecord.isRequestedAndShouldBeConfirmedNow(
+        schedulingConfig: BrokerSchedulingConfig,
+        timeInMillis: Long,
+    ): Boolean {
+        return this.status == OptOutJobStatus.REQUESTED && this.getRequestConfirmationScanDate(schedulingConfig) <= timeInMillis
+    }
+
+    private fun OptOutJobRecord.getRequestConfirmationScanDate(
+        schedulingConfig: BrokerSchedulingConfig,
+    ): Long {
+        return this.optOutRequestedDateInMillis + schedulingConfig.confirmOptOutScanInMillis
+    }
+
+    private fun OptOutJobRecord.isRemovedAndShouldBeMaintainedNow(
+        schedulingConfig: BrokerSchedulingConfig,
+        timeInMillis: Long,
+    ): Boolean {
+        return this.status == OptOutJobStatus.REMOVED &&
+            // do not pick-up deprecated opt-out jobs for maintenance scans as they belong to invalid/removed profiles
+            !this.deprecated &&
+            this.getRemovedMaintenanceScanDate(schedulingConfig) <= timeInMillis
+    }
+
+    private fun OptOutJobRecord.getRemovedMaintenanceScanDate(
+        schedulingConfig: BrokerSchedulingConfig,
+    ): Long {
+        return this.optOutRemovedDateInMillis + schedulingConfig.maintenanceScanInMillis
+    }
+
+    private suspend fun getValidScanJobsFromScanJobRecords(
+        schedulingConfigs: List<BrokerSchedulingConfig>,
+        timeInMillis: Long,
+    ): List<ScanJobRecord> {
+        return pirSchedulingRepository.getAllValidScanJobRecords().filter { record ->
+            val schedulingConfig =
+                schedulingConfigs.find { config -> config.brokerName == record.brokerName }
+
+            schedulingConfig != null &&
+                // do not pick-up deprecated jobs as they belong to invalid/removed profiles
+                !record.deprecated && (
+                    record.isNotYetExecuted() ||
+                        record.isNoMatchAndShouldBeMaintained(schedulingConfig, timeInMillis) ||
+                        record.hasMatchAndShouldBeMaintained(schedulingConfig, timeInMillis) ||
+                        record.isErrorAndShouldBeRetried(schedulingConfig, timeInMillis)
+                    )
+        }.sortedBy {
+            it.lastScanDateInMillis
+        }
+    }
+
+    private fun ScanJobRecord.isNotYetExecuted(): Boolean {
+        return this.lastScanDateInMillis == 0L || this.status == ScanJobStatus.NOT_EXECUTED
+    }
+
+    private fun ScanJobRecord.isNoMatchAndShouldBeMaintained(
+        schedulingConfig: BrokerSchedulingConfig,
+        timeInMillis: Long,
+    ): Boolean {
+        return this.status == ScanJobStatus.NO_MATCH_FOUND && this.lastScanDateInMillis != 0L &&
+            (this.lastScanDateInMillis + schedulingConfig.maintenanceScanInMillis) <= timeInMillis
+    }
+
+    private fun ScanJobRecord.hasMatchAndShouldBeMaintained(
+        schedulingConfig: BrokerSchedulingConfig,
+        timeInMillis: Long,
+    ): Boolean {
+        return this.status == ScanJobStatus.MATCHES_FOUND && this.lastScanDateInMillis != 0L &&
+            (this.lastScanDateInMillis + schedulingConfig.maintenanceScanInMillis) <= timeInMillis
+    }
+
+    private fun ScanJobRecord.isErrorAndShouldBeRetried(
+        schedulingConfig: BrokerSchedulingConfig,
+        timeInMillis: Long,
+    ): Boolean {
+        return this.status == ScanJobStatus.ERROR && this.lastScanDateInMillis != 0L &&
+            (this.lastScanDateInMillis + schedulingConfig.retryErrorInMillis) <= timeInMillis
+    }
+}

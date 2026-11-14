@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="autoconsentTitle">Protección contra ventanas emergentes de cookies</string>
+    <string name="autoconsentDescription"><![CDATA[DuckDuckGo intentará seleccionar la configuración más privada disponible y ocultar estas ventanas emergentes por ti.<a href=\"\">Más información</a>]]></string>
+    <string name="autoconsentToggle">Deja que DuckDuckGo gestione las ventanas emergentes de cookies</string>
+    <string name="autoconsentAutoManageToggle">Rechazar cookies opcionales</string>
+    <string name="autoconsentAutoManageDescription">Intentaremos rechazar el mayor número de cookies posible por ti y, a continuación, cerrar las ventanas emergentes.</string>
+    <string name="autoconsentCookiePopUpPreferenceHeaderDescription"><![CDATA[DuckDuckGo puede gestionar automáticamente las ventanas emergentes de cookies para maximizar la privacidad y minimizar las cookies antes incluso de que las veas.\n<a href=\"\">Más información</a>]]></string>
+    <string name="autoconsentPopUpsWithoutOptOutsToggle">Aceptar cookies sin opción de rechazarlas</string>
+    <string name="autoconsentPopUpsWithoutOptOutsDescription">Si no hay opción de rechazarlas, te ahorraremos un clic, aceptaremos estas cookies por ti y cerraremos las ventanas emergentes.</string>
+    <string name="autoconsentPromptTitle">¿Cansado de las ventanas emergentes de cookies?</string>
+    <string name="autoconsentPromptFootnote">Siempre puedes cambiar esto más tarde en Ajustes.</string>
+    <string name="autoconsentPromptCpmOnMessage">Algunas cookies no se pueden rechazar. Podemos aceptarlas por ti.</string>
+    <string name="autoconsentPromptCpmOnPrimaryButton">Aceptar cookies por mí</string>
+    <string name="autoconsentPromptCpmOnPrimaryButtonV2">Rechazar si es posible o aceptar por mí</string>
+    <string name="autoconsentPromptCpmOnSecondaryButton">Las aceptaré por mi cuenta</string>
+    <string name="autoconsentPromptCpmOffMessage">Deja que nos ocupemos de ellas por ti. Rechazaremos las cookies cuando sea posible y aceptaremos las que no se puedan rechazar.</string>
+    <string name="autoconsentPromptCpmOffPrimaryButton">Rechazar si es posible o aceptar por mí</string>
+    <string name="autoconsentPromptCpmOffSecondaryButton">Me encargaré yo de ellas</string>
+</resources>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:app="http://schemas.android.com/apk/res-auto"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+             style="@style/Widget.DuckDuckGo.Dialog.Content">
+
+    <androidx.core.widget.NestedScrollView
+            android:id="@+id/trackingProtectionScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+            <ImageView
+                    android:id="@+id/trackingProtectionAppIcon"
+                    android:layout_width="@dimen/listItemImageContainerSize"
+                    android:layout_height="@dimen/listItemImageContainerSize"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/shield_check_recolorable_24"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/trackingProtectionRestoreDefaultsTitle"
+                    app:typography="h2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/keyline_4"
+                    android:gravity="center"
+                    android:text="@string/atp_ExcludeAppsRestoreDefaultsTitle"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/trackingProtectionAppIcon" />
+
+            <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/trackingProtectionRestoreDefaultsMessage"
+                    app:typography="body2"
+                    app:textType="secondary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/keyline_2"
+                    android:gravity="center"
+                    android:text="@string/atp_ExcludeAppsRestoreDefaultsMessage"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/trackingProtectionRestoreDefaultsTitle" />
+
+            <com.duckduckgo.common.ui.view.button.DaxButtonPrimary
+                    android:id="@+id/trackingProtectionRestoreDefaultsRestore"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/keyline_0"
+                    android:layout_marginTop="@dimen/keyline_4"
+                    android:gravity="center|center_horizontal"
+                    android:text="@string/atp_ExcludeAppsManuallyCTARestore"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_chainStyle="packed"
+                    app:layout_constraintStart_toEndOf="@id/trackingProtectionRestoreDefaultsCancel"
+                    app:layout_constraintTop_toBottomOf="@+id/trackingProtectionRestoreDefaultsMessage" />
+
+            <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+                    android:id="@+id/trackingProtectionRestoreDefaultsCancel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/keyline_4"
+                    android:layout_marginEnd="@dimen/keyline_2"
+                    android:gravity="center|center_horizontal"
+                    android:text="@string/atp_ExcludeAppsManuallyCTACancel"
+                    app:layout_constraintEnd_toStartOf="@id/trackingProtectionRestoreDefaultsRestore"
+                    app:layout_constraintHorizontal_chainStyle="packed"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/trackingProtectionRestoreDefaultsMessage" />
+
+            <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/trackingProtectionRestoreDefaultsDisclaimer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:typography="caption"
+                    app:textType="secondary"
+                    android:layout_marginTop="@dimen/keyline_4"
+                    android:gravity="center"
+                    android:text="@string/atp_ExcludeAppsRestoreDefaultsDisclaimer"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/trackingProtectionRestoreDefaultsRestore" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</FrameLayout>
+

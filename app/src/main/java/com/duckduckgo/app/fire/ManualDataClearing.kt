@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.fire
+
+import com.duckduckgo.app.global.view.ClearDataResult
+import com.duckduckgo.browsermode.api.BrowserMode
+
+/**
+ * Interface for manual data clearing operations triggered by user actions (e.g., Fire button).
+ *
+ * Every entry point takes the [BrowserMode] the operation targets. [BrowserMode.REGULAR] clears
+ * Regular-mode data (and, when Fire mode is available, its Fire-mode counterpart); [BrowserMode.FIRE]
+ * clears Fire-mode data only and leaves Regular-mode data untouched.
+ */
+interface ManualDataClearing {
+    /**
+     * Clears data when user requests data clearing using the FireDialog.
+     * @param shouldRestartIfRequired whether to restart the app process after clearing data, if required (when data or chats cleared)
+     * @param wasAppUsedSinceLastClear whether the app was used since the last data clear
+     * @param browserMode the mode the clear targets
+     */
+    suspend fun clearDataUsingManualFireOptions(
+        shouldRestartIfRequired: Boolean = false,
+        wasAppUsedSinceLastClear: Boolean = false,
+        browserMode: BrowserMode,
+    )
+
+    /** Deletes only the chats addressed by [chatUrls] in [browserMode] and closes any browser tabs pointing at them. */
+    suspend fun clearSelectedDuckAiChats(chatUrls: Set<String>, browserMode: BrowserMode)
+
+    /**
+     * Clears all data associated with tab:
+     * site browsing data (via WebStorageCompat), tab-specific history,
+     * Duck.ai chat (if applicable), and the tab itself.
+     * @param tabId the tab to burn
+     * @param replaceCurrentTab when true (default), the tab is replaced with a fresh new tab. When false,
+     *  the data is cleared but the tab record is deleted (used by the Hatch flow, where the user
+     *  is on the NTP and shouldn't be redirected back into the deleted tab's URL).
+     * @param browserMode the mode the tab and its data belong to
+     * @return [ClearDataResult] indicating whether the operation succeeded or the feature is not supported
+     */
+    suspend fun clearSingleTabData(tabId: String, replaceCurrentTab: Boolean = true, browserMode: BrowserMode): ClearDataResult
+    suspend fun clearTabContextualChat(tabId: String, browserMode: BrowserMode): ClearDataResult
+}

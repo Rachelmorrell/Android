@@ -21,38 +21,46 @@ import androidx.core.net.toUri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.duckduckgo.app.browser.WebNavigationStateChange
-import com.duckduckgo.app.global.ValidUrl
-import com.duckduckgo.app.global.baseHost
-import com.duckduckgo.app.global.getValidUrl
+import com.duckduckgo.app.fire.fireproofwebsite.ui.AutomaticFireproofSetting
 import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.common.utils.DefaultDispatcherProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.ValidUrl
+import com.duckduckgo.common.utils.baseHost
+import com.duckduckgo.common.utils.getValidUrl
 import kotlinx.coroutines.*
-import timber.log.Timber
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
 
 interface NavigationAwareLoginDetector {
     val loginEventLiveData: LiveData<LoginDetected>
     fun onEvent(navigationEvent: NavigationEvent)
 }
 
-data class LoginDetected(val authLoginDomain: String, val forwardedToDomain: String)
+data class LoginDetected(
+    val authLoginDomain: String,
+    val forwardedToDomain: String,
+)
 
 sealed class NavigationEvent {
     sealed class UserAction : NavigationEvent() {
-        object NavigateForward : UserAction()
-        object NavigateBack : UserAction()
-        object NewQuerySubmitted : UserAction()
-        object Refresh : UserAction()
+        data object NavigateForward : UserAction()
+        data object NavigateBack : UserAction()
+        data object NewQuerySubmitted : UserAction()
+        data object Refresh : UserAction()
     }
 
     data class WebNavigationEvent(val navigationStateChange: WebNavigationStateChange) : NavigationEvent()
-    object PageFinished : NavigationEvent()
-    object GpcRedirect : NavigationEvent()
+    data object PageFinished : NavigationEvent()
+    data object GpcRedirect : NavigationEvent()
     data class LoginAttempt(val url: String) : NavigationEvent()
     data class Redirect(val url: String) : NavigationEvent()
 }
 
 class NextPageLoginDetection constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val appCoroutineScope: CoroutineScope
+    private val appCoroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider = DefaultDispatcherProvider(),
 ) : NavigationAwareLoginDetector {
 
     override val loginEventLiveData = MutableLiveData<LoginDetected>()
@@ -64,12 +72,12 @@ class NextPageLoginDetection constructor(
     private var loginDetectionJob: Job? = null
 
     override fun onEvent(navigationEvent: NavigationEvent) {
-        if (!settingsDataStore.appLoginDetection) return
+        if (settingsDataStore.automaticFireproofSetting == AutomaticFireproofSetting.NEVER) return
 
-        Timber.v("LoginDetectionDelegate $navigationEvent")
+        logcat(VERBOSE) { "LoginDetectionDelegate $navigationEvent" }
         return when (navigationEvent) {
             is NavigationEvent.PageFinished -> {
-                Timber.v("LoginDetectionDelegate schedule Login detection Job for $urlToCheck")
+                logcat(VERBOSE) { "LoginDetectionDelegate schedule Login detection Job for $urlToCheck" }
                 loginDetectionJob?.cancel()
                 loginDetectionJob = scheduleLoginDetection()
             }
@@ -93,29 +101,29 @@ class NextPageLoginDetection constructor(
 
     private fun scheduleLoginDetection(): Job {
         // Ideally, we should be using a scope tied to the Activity/Fragment lifecycle instead of AppCoroutineScope.
-        // AToW, it's not possible to inject such scope as dependency due to our single Component Dagger setup.
-        return appCoroutineScope.launch(Dispatchers.Main) {
+        // AToW, it's not possible to inject such scope as dependency due to our single-component DI setup.
+        return appCoroutineScope.launch(dispatcherProvider.main()) {
             delay(NAVIGATION_EVENT_GRACE_PERIOD)
-            Timber.v("LoginDetectionDelegate execute Login detection Job for $urlToCheck")
+            logcat(VERBOSE) { "LoginDetectionDelegate execute Login detection Job for $urlToCheck" }
             val loginUrlCandidate = urlToCheck
             if (loginUrlCandidate.isNullOrBlank()) {
                 discardLoginAttempt()
             } else {
                 when (val loginResult = detectLogin(loginUrlCandidate)) {
                     is LoginResult.AuthFlow -> {
-                        Timber.v("LoginDetectionDelegate AuthFlow")
+                        logcat(VERBOSE) { "LoginDetectionDelegate AuthFlow" }
                         authDetectedHosts.add(loginResult.authLoginDomain)
                     }
                     is LoginResult.TwoFactorAuthFlow -> {
-                        Timber.v("LoginDetectionDelegate TwoFactorAuthFlow")
+                        logcat(VERBOSE) { "LoginDetectionDelegate TwoFactorAuthFlow" }
                     }
                     is LoginResult.LoginDetected -> {
-                        Timber.d("LoginDetectionDelegate LoginDetected")
+                        logcat { "LoginDetectionDelegate LoginDetected" }
                         loginEventLiveData.value = LoginDetected(loginResult.authLoginDomain, loginResult.forwardedToDomain)
                         loginAttempt = null
                     }
                     is LoginResult.Unknown -> {
-                        Timber.v("LoginDetectionDelegate Unknown")
+                        logcat(VERBOSE) { "LoginDetectionDelegate Unknown" }
                         discardLoginAttempt()
                     }
                 }
@@ -124,14 +132,14 @@ class NextPageLoginDetection constructor(
     }
 
     private fun saveLoginAttempt(navigationEvent: NavigationEvent.LoginAttempt) {
-        Timber.v("LoginDetectionDelegate saveLoginAttempt $navigationEvent")
+        logcat(VERBOSE) { "LoginDetectionDelegate saveLoginAttempt $navigationEvent" }
         loginAttempt = Uri.parse(navigationEvent.url).getValidUrl() ?: return
     }
 
     private fun discardLoginAttempt() {
         if (!gpcRefreshed) {
             gpcRefreshed = false
-            Timber.v("LoginDetectionDelegate discardLoginAttempt")
+            logcat(VERBOSE) { "LoginDetectionDelegate discardLoginAttempt" }
             urlToCheck = null
             loginAttempt = null
         }
@@ -161,6 +169,9 @@ class NextPageLoginDetection constructor(
                 }
                 return
             }
+            is WebNavigationStateChange.TitleUpdated -> {
+                // Title updates are not relevant for login detection, so we ignore them.
+            }
             is WebNavigationStateChange.PageNavigationCleared -> discardLoginAttempt()
             is WebNavigationStateChange.Unchanged -> {
             }
@@ -175,7 +186,7 @@ class NextPageLoginDetection constructor(
         val validUrl = Uri.parse(navigationEvent.url).getValidUrl() ?: return
         if (validUrl.isOAuthUrl() || validUrl.isSSOUrl() || authDetectedHosts.any { validUrl.baseHost.contains(it) }) {
             authDetectedHosts.add(validUrl.baseHost)
-            Timber.d("LoginDetectionDelegate Auth domain added $authDetectedHosts")
+            logcat { "LoginDetectionDelegate Auth domain added $authDetectedHosts" }
         }
 
         if (loginAttempt != null) {
@@ -195,7 +206,7 @@ class NextPageLoginDetection constructor(
 
         if (forwardedToUri.is2FAUrl()) return LoginResult.TwoFactorAuthFlow(forwardedToUri.host)
 
-        Timber.d("LoginDetectionDelegate $validLoginAttempt vs $forwardedToUrl // $authDetectedHosts")
+        logcat { "LoginDetectionDelegate $validLoginAttempt vs $forwardedToUrl // $authDetectedHosts" }
         if (validLoginAttempt.host != forwardedToUri.host || validLoginAttempt.path != forwardedToUri.path) {
             return LoginResult.LoginDetected(validLoginAttempt.host, forwardedToUri.host)
         }
@@ -206,8 +217,12 @@ class NextPageLoginDetection constructor(
     private sealed class LoginResult {
         data class AuthFlow(val authLoginDomain: String) : LoginResult()
         data class TwoFactorAuthFlow(val loginDomain: String) : LoginResult()
-        data class LoginDetected(val authLoginDomain: String, val forwardedToDomain: String) : LoginResult()
-        object Unknown : LoginResult()
+        data class LoginDetected(
+            val authLoginDomain: String,
+            val forwardedToDomain: String,
+        ) : LoginResult()
+
+        data object Unknown : LoginResult()
     }
 
     companion object {

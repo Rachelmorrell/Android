@@ -1,0 +1,323 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.internal.settings
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Process
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.core.view.isVisible
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.codegen.annotations.ContributeToActivityStarter
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import com.duckduckgo.navigation.api.GlobalActivityStarter.ActivityParams
+import com.duckduckgo.pir.impl.PirFeatureDataCleaner
+import com.duckduckgo.pir.impl.models.Address
+import com.duckduckgo.pir.impl.models.ExtractedProfile
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.notifications.PirNotificationManager
+import com.duckduckgo.pir.impl.scan.PirForegroundScanService
+import com.duckduckgo.pir.impl.scan.PirRemoteWorkerService
+import com.duckduckgo.pir.impl.scan.PirScanScheduler
+import com.duckduckgo.pir.impl.scheduling.PirExecutionType
+import com.duckduckgo.pir.impl.store.PirEventsRepository
+import com.duckduckgo.pir.impl.store.PirRepository
+import com.duckduckgo.pir.impl.store.PirSchedulingRepository
+import com.duckduckgo.pir.internal.R
+import com.duckduckgo.pir.internal.databinding.ActivityPirInternalScanBinding
+import com.duckduckgo.pir.internal.settings.store.secure.PirDatabaseExporter
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import logcat.logcat
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+
+@InjectWith(ActivityScope::class)
+@ContributeToActivityStarter(PirDevScanScreenNoParams::class)
+class PirDevScanActivity : DuckDuckGoActivity() {
+    @Inject
+    lateinit var repository: PirRepository
+
+    @Inject
+    lateinit var eventsRepository: PirEventsRepository
+
+    @Inject
+    lateinit var pirSchedulingRepository: PirSchedulingRepository
+
+    @Inject
+    lateinit var pirFeatureDataCleaner: PirFeatureDataCleaner
+
+    @Inject
+    lateinit var dispatcherProvider: DispatcherProvider
+
+    @Inject
+    lateinit var pirNotificationManager: PirNotificationManager
+
+    @Inject
+    lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject
+    lateinit var pirScanScheduler: PirScanScheduler
+
+    @Inject
+    lateinit var currentTimeProvider: CurrentTimeProvider
+
+    @Inject
+    lateinit var pirDatabaseExporter: PirDatabaseExporter
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
+    private val binding: ActivityPirInternalScanBinding by viewBinding()
+    private val recordStringBuilder = StringBuilder()
+    private lateinit var dropDownAdapter: ArrayAdapter<String>
+    private val brokerOptions = mutableListOf<String>()
+    private var selectedBroker: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableTransparentEdgeToEdge()
+        setContentView(binding.root)
+        configureEdgeToEdgeInsets()
+        setupToolbar(binding.toolbar)
+        setupViews()
+        bindViews()
+    }
+
+    private fun configureEdgeToEdgeInsets() {
+        edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.root)
+        edgeToEdgeHandler.applyStatusBarInsets(binding.appBar)
+        edgeToEdgeHandler.applyScrollableNavigationBarInsets(binding.contentScrollView)
+    }
+
+    private fun bindViews() {
+        lifecycleScope.launch {
+            binding.manualConfigWarning.isVisible = repository.hasBrokerConfigBeenManuallyUpdated()
+
+            repository.getAllActiveBrokers().also {
+                brokerOptions.addAll(it)
+                dropDownAdapter.clear()
+                dropDownAdapter.addAll(brokerOptions)
+            }
+        }
+
+        repository.getAllExtractedProfilesFlow()
+            .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            .onEach {
+                render(it)
+            }
+            .launchIn(lifecycleScope)
+
+        eventsRepository.getTotalScannedBrokersFlow()
+            .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+            .onEach {
+                binding.statusSitesScanned.text = getString(R.string.pirStatsStatusScanned, it)
+            }
+            .launchIn(lifecycleScope)
+    }
+
+    private fun render(extractedProfiles: List<ExtractedProfile>) {
+        val totalBrokersWithProfile = extractedProfiles.map { it.brokerName }.distinct()
+
+        with(binding) {
+            this.statusTotalRecords.text =
+                getString(R.string.pirStatsStatusRecords, extractedProfiles.size)
+            this.statusTotalBrokersFound.text =
+                getString(R.string.pirStatsStatusBrokerFound, totalBrokersWithProfile.size)
+            recordStringBuilder.clear()
+
+            recordStringBuilder.append("\nRecords found:\n")
+            extractedProfiles.groupingBy { it.brokerName }.eachCount().forEach {
+                recordStringBuilder.append("${it.key} - records: ${it.value}\n")
+            }
+            this.records.text = recordStringBuilder.toString()
+        }
+    }
+
+    private fun setupViews() {
+        dropDownAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item)
+
+        binding.debugRunScan.setOnClickListener {
+            pirNotificationManager.cancelNotifications()
+            logcat { "PIR-SCAN: Attempting to start PirForegroundScanService from ${Process.myPid()}" }
+            lifecycleScope.launch {
+                if (useUserInput()) {
+                    saveUserInputToDatabase()
+                }
+            }
+            startForegroundService(PirForegroundScanService.intentFor(this, PirExecutionType.MANUAL_EDIT_PROFILE))
+            globalActivityStarter.start(this, PirResultsScreenParams.PirScanResultsScreen)
+        }
+
+        binding.scanBrokers.adapter = dropDownAdapter
+        dropDownAdapter.addAll(brokerOptions)
+
+        binding.scanBrokers.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long,
+            ) {
+                selectedBroker = brokerOptions[position]
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        binding.debugScan.setOnClickListener {
+            pirNotificationManager.cancelNotifications()
+            if (selectedBroker != null) {
+                lifecycleScope.launch {
+                    if (useUserInput()) {
+                        saveUserInputToDatabase()
+                    }
+
+                    globalActivityStarter.start(
+                        this@PirDevScanActivity,
+                        PirDevWebViewScreenParams.PirDevScanWebViewScreenParams(
+                            brokers = listOf(selectedBroker!!),
+                        ),
+                    )
+                }
+            }
+        }
+
+        binding.debugForceKill.setOnClickListener {
+            killRunningWork()
+        }
+
+        binding.debugResetAll.setOnClickListener {
+            killRunningWork()
+            lifecycleScope.launch(dispatcherProvider.io()) {
+                pirFeatureDataCleaner.removeUserData()
+            }
+        }
+
+        binding.debugResetOptOut.setOnClickListener {
+            killRunningWork()
+            lifecycleScope.launch(dispatcherProvider.io()) {
+                pirSchedulingRepository.deleteAllOptOutJobRecords()
+                eventsRepository.deleteAllOptOutData()
+                eventsRepository.deleteAllEmailConfirmationsLogs()
+            }
+        }
+
+        binding.viewResults.setOnClickListener {
+            globalActivityStarter.start(this, PirResultsScreenParams.PirScanResultsScreen)
+        }
+
+        binding.viewExtractedProfiles.setOnClickListener {
+            globalActivityStarter.start(this, PirResultsScreenParams.PirExtractedProfilesResultsScreen)
+        }
+
+        binding.debugMakeScansDue.setOnClickListener {
+            lifecycleScope.launch(dispatcherProvider.io()) {
+                val aged = pirSchedulingRepository.getAllValidScanJobRecords()
+                    .filter { it.lastScanDateInMillis != 0L }
+                    .map { it.copy(lastScanDateInMillis = it.lastScanDateInMillis - SCAN_JOB_AGE_OFFSET_MS) }
+                pirSchedulingRepository.saveScanJobRecords(aged)
+                withContext(dispatcherProvider.main()) {
+                    Toast.makeText(
+                        this@PirDevScanActivity,
+                        getString(R.string.pirMessageScansDue, aged.size),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+        }
+
+        binding.scheduleScan.setOnClickListener {
+            pirScanScheduler.cancelScheduledScans(this)
+            pirScanScheduler.scheduleScans()
+            Toast.makeText(this, getString(R.string.pirMessageSchedule), Toast.LENGTH_SHORT).show()
+        }
+
+        binding.debugExportDb.setOnClickListener {
+            lifecycleScope.launch(dispatcherProvider.io()) {
+                pirDatabaseExporter.exportToPlaintext()
+            }
+        }
+    }
+
+    private fun killRunningWork() {
+        stopService(Intent(this, PirForegroundScanService::class.java))
+        pirNotificationManager.cancelNotifications()
+        stopService(Intent(this, PirRemoteWorkerService::class.java))
+        pirScanScheduler.cancelScheduledScans(this)
+    }
+
+    private fun useUserInput(): Boolean {
+        return binding.profileFirstName.text.isNotBlank() &&
+            binding.profileLastName.text.isNotBlank() &&
+            binding.profileCity.text.isNotBlank() &&
+            binding.profileState.text.isNotBlank() &&
+            binding.profileBirthYear.text.isNotBlank()
+    }
+
+    private suspend fun saveUserInputToDatabase() {
+        val firstName = binding.profileFirstName.text.trim()
+        val lastName = binding.profileLastName.text.trim()
+        val middleName = binding.profileMiddleName.text.trim().ifBlank { null }
+        val birthYear = binding.profileBirthYear.text.trim().toIntOrNull() ?: 0
+        val city = binding.profileCity.text.trim()
+        val state = binding.profileState.text.trim()
+
+        repository.replaceUserProfile(
+            ProfileQuery(
+                id = 0, // ID will be auto-generated by the database
+                firstName = firstName,
+                lastName = lastName,
+                middleName = middleName,
+                city = city,
+                state = state,
+                addresses = listOf(
+                    Address(
+                        city = city,
+                        state = state,
+                    ),
+                ),
+                birthYear = birthYear,
+                fullName = middleName?.let { middle ->
+                    "$firstName $middle $lastName"
+                } ?: "$firstName $lastName",
+                age = currentTimeProvider.localDateTimeNow().year - birthYear,
+                deprecated = false,
+            ),
+        )
+    }
+
+    private companion object {
+        val SCAN_JOB_AGE_OFFSET_MS = TimeUnit.DAYS.toMillis(11)
+    }
+}
+
+object PirDevScanScreenNoParams : ActivityParams

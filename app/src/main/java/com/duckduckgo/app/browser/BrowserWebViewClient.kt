@@ -16,286 +16,1264 @@
 
 package com.duckduckgo.app.browser
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
-import android.net.http.SslError.*
-import android.os.Build
-import android.webkit.*
-import androidx.annotation.RequiresApi
+import android.net.http.SslError.SSL_DATE_INVALID
+import android.net.http.SslError.SSL_EXPIRED
+import android.net.http.SslError.SSL_IDMISMATCH
+import android.net.http.SslError.SSL_UNTRUSTED
+import android.webkit.HttpAuthHandler
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.SslErrorHandler
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.annotation.StringRes
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.core.net.toUri
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer.DuckPlayerOrigin.SERP_AUTO
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer.DuckPlayerState.ENABLED
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer.OpenDuckPlayerInNewTab.On
+import com.duckduckgo.adblocking.impl.duckplayer.DUCK_PLAYER_OPEN_IN_YOUTUBE_PATH
+import com.duckduckgo.adclick.api.AdClickManager
+import com.duckduckgo.anrs.api.CrashLogger
+import com.duckduckgo.app.browser.SSLErrorType.EXPIRED
+import com.duckduckgo.app.browser.SSLErrorType.GENERIC
+import com.duckduckgo.app.browser.SSLErrorType.UNTRUSTED_HOST
+import com.duckduckgo.app.browser.SSLErrorType.WRONG_HOST
+import com.duckduckgo.app.browser.WebViewErrorResponse.BAD_URL
+import com.duckduckgo.app.browser.WebViewErrorResponse.CONNECTION
+import com.duckduckgo.app.browser.WebViewErrorResponse.OMITTED
+import com.duckduckgo.app.browser.WebViewPixelName.WEB_RENDERER_GONE_CRASH
+import com.duckduckgo.app.browser.WebViewPixelName.WEB_RENDERER_GONE_KILLED
+import com.duckduckgo.app.browser.applinks.AppLinkFeature
+import com.duckduckgo.app.browser.applinks.AppSchemeInterceptionFeature
 import com.duckduckgo.app.browser.certificates.rootstore.CertificateValidationState
 import com.duckduckgo.app.browser.certificates.rootstore.TrustedCertificateStore
 import com.duckduckgo.app.browser.cookies.ThirdPartyCookieManager
 import com.duckduckgo.app.browser.httpauth.WebViewHttpAuthStore
 import com.duckduckgo.app.browser.logindetection.DOMLoginDetector
 import com.duckduckgo.app.browser.logindetection.WebNavigationEvent
+import com.duckduckgo.app.browser.mediaplayback.MediaPlayback
 import com.duckduckgo.app.browser.model.BasicAuthenticationRequest
 import com.duckduckgo.app.browser.navigation.safeCopyBackForwardList
-import com.duckduckgo.app.email.EmailInjector
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.exception.UncaughtExceptionRepository
-import com.duckduckgo.app.global.exception.UncaughtExceptionSource.*
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControl
-import com.duckduckgo.app.statistics.store.OfflinePixelCountDataStore
+import com.duckduckgo.app.browser.pageload.PageLoadFeature
+import com.duckduckgo.app.browser.pageload.PageLoadTimeoutPixels
+import com.duckduckgo.app.browser.pageload.PageLoadTimeoutWatchdog.Event
+import com.duckduckgo.app.browser.pageload.PageLoadTraceMarker
+import com.duckduckgo.app.browser.pageload.PageLoadTracer
+import com.duckduckgo.app.browser.pageload.PageLoadWideEvent
+import com.duckduckgo.app.browser.pageload.RealPageLoadTimeoutWatchdog
+import com.duckduckgo.app.browser.pageloadpixel.PageLoadedHandler
+import com.duckduckgo.app.browser.pageloadpixel.firstpaint.PagePaintedHandler
+import com.duckduckgo.app.browser.print.PrintInjector
+import com.duckduckgo.app.browser.trafficquality.AndroidFeaturesHeaderPlugin
+import com.duckduckgo.app.browser.uriloaded.UriLoadedManager
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.autoconsent.api.Autoconsent
+import com.duckduckgo.autofill.api.BrowserAutofill
+import com.duckduckgo.autofill.api.InternalTestUserChecker
+import com.duckduckgo.browser.api.JsInjectorPlugin
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.utils.AppUrl.ParamKey.QUERY
+import com.duckduckgo.common.utils.AppUrl.Url.HOST
+import com.duckduckgo.common.utils.ConflatedJob
+import com.duckduckgo.common.utils.CurrentTimeProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.contentscopescripts.api.contentscopeExperiments.ContentScopeExperiments
+import com.duckduckgo.cookies.api.CookieManagerProvider
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import com.duckduckgo.malicioussiteprotection.api.MaliciousSiteProtection.Feed
+import com.duckduckgo.privacy.config.api.AmpLinks
+import com.duckduckgo.subscriptions.api.Subscriptions
+import com.duckduckgo.user.agent.api.ClientBrandHintProvider
 import kotlinx.coroutines.*
-import timber.log.Timber
+import kotlinx.coroutines.flow.distinctUntilChanged
+import logcat.LogPriority.INFO
+import logcat.LogPriority.VERBOSE
+import logcat.LogPriority.WARN
+import logcat.logcat
 import java.net.URI
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import javax.inject.Inject
 
-class BrowserWebViewClient(
+private const val ABOUT_BLANK = "about:blank"
+private val STANDARD_WEB_SCHEMES = setOf("http", "https", "about", "data", "javascript", "file", "blob")
+
+class BrowserWebViewClient @Inject constructor(
     private val webViewHttpAuthStore: WebViewHttpAuthStore,
     private val trustedCertificateStore: TrustedCertificateStore,
     private val requestRewriter: RequestRewriter,
     private val specialUrlDetector: SpecialUrlDetector,
     private val requestInterceptor: RequestInterceptor,
-    private val offlinePixelCountDataStore: OfflinePixelCountDataStore,
-    private val uncaughtExceptionRepository: UncaughtExceptionRepository,
-    private val cookieManager: CookieManager,
+    private val cookieManagerProvider: CookieManagerProvider,
     private val loginDetector: DOMLoginDetector,
     private val dosDetector: DosDetector,
-    private val globalPrivacyControl: GlobalPrivacyControl,
     private val thirdPartyCookieManager: ThirdPartyCookieManager,
-    private val appCoroutineScope: CoroutineScope,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
     private val dispatcherProvider: DispatcherProvider,
-    private val emailInjector: EmailInjector
+    private val browserAutofillConfigurator: BrowserAutofill.Configurator,
+    private val ampLinks: AmpLinks,
+    private val printInjector: PrintInjector,
+    private val internalTestUserChecker: InternalTestUserChecker,
+    private val adClickManager: AdClickManager,
+    private val autoconsent: Autoconsent,
+    private val pixel: Pixel,
+    private val crashLogger: CrashLogger,
+    private val jsPlugins: PluginPoint<JsInjectorPlugin>,
+    private val currentTimeProvider: CurrentTimeProvider,
+    private val pageLoadedHandler: PageLoadedHandler,
+    private val pageLoadWideEvent: PageLoadWideEvent,
+    private val shouldSendPagePaintedPixel: PagePaintedHandler,
+    private val mediaPlayback: MediaPlayback,
+    private val subscriptions: Subscriptions,
+    private val duckPlayer: DuckPlayer,
+    private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector,
+    private val uriLoadedManager: UriLoadedManager,
+    private val androidFeaturesHeaderPlugin: AndroidFeaturesHeaderPlugin,
+    private val duckChat: DuckChat,
+    private val contentScopeExperiments: ContentScopeExperiments,
+    private val appSchemeInterceptionFeature: AppSchemeInterceptionFeature,
+    private val forceWebViewRecompositeFeature: ForceWebViewRecompositeFeature,
+    private val pageLoadTracer: PageLoadTracer,
+    private val browserMode: BrowserMode,
+    pageLoadTimeoutWatchdogFactory: RealPageLoadTimeoutWatchdog.Factory,
+    private val pageLoadTimeoutPixels: PageLoadTimeoutPixels,
+    private val pageLoadFeature: PageLoadFeature,
+    private val appLinkFeature: AppLinkFeature,
 ) : WebViewClient() {
-
     var webViewClientListener: WebViewClientListener? = null
+    var clientProvider: ClientBrandHintProvider? = null
     private var lastPageStarted: String? = null
 
-    /**
-     * This is the new method of url overriding available from API 24 onwards
-     */
-    @RequiresApi(Build.VERSION_CODES.N)
-    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-        val url = request.url
-        return shouldOverride(view, url, request.isForMainFrame, request.isRedirect)
+    // WebView clears hasGesture() on redirect hops, but the App Link rules assume Chromium's per-navigation gesture flag.
+    private var mainFrameGestureOriginUrl: String? = null
+    private var gesturedPost: GesturedPost? = null
+    private var duckChatEntryReportedForCurrentNavigation = false
+    private var start: Long? = null
+
+    // Needed for PageLoadWideEvent: it identifies the page load the wide event is currently measuring,
+    // so every callback reports against the flow that load opened and no later one can claim them.
+    private var navigationId: Long? = null
+
+    // Needed for PageLoadWideEvent: it identifies the url the measured load started with, so a main frame error
+    // can be told apart from one reported against some other url.
+    private var navigationUrl: String? = null
+    private var lastInterceptedAppSchemeUrl: String? = null
+    private var pageCommitVisibleFired: Boolean = false
+    private var recompositeScheduled: Boolean = false
+
+    private val pageLoadTraceMarker = PageLoadTraceMarker(pageLoadTracer)
+
+    private val pageLoadTimeoutWatchdog = pageLoadTimeoutWatchdogFactory.create(appCoroutineScope)
+    private val pageLoadTimeoutsJob = ConflatedJob()
+
+    private val isAppSchemeInterceptionEnabled = AtomicBoolean(true)
+    private val isForceRecompositeEnabled = AtomicBoolean(true)
+    private val isGesturedPostNavigationEnabled = AtomicBoolean(false)
+
+    init {
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            appLinkFeature.gesturedPostNavigation().enabled()
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    isGesturedPostNavigationEnabled.set(enabled)
+                }
+        }
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            appSchemeInterceptionFeature.self().enabled()
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    isAppSchemeInterceptionEnabled.set(enabled)
+                }
+        }
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            forceWebViewRecompositeFeature.self().enabled()
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    isForceRecompositeEnabled.set(enabled)
+                }
+        }
+    }
+
+    init {
+        pageLoadTimeoutsJob += appCoroutineScope.launch(dispatcherProvider.main()) {
+            pageLoadTimeoutWatchdog.events.collect { event ->
+                when (event) {
+                    is Event.TimedOut -> {
+                        pageLoadTimeoutPixels.fireTimeoutShown(event.phase)
+                        if (pageLoadFeature.pageLoadTimeoutError().isEnabled()) {
+                            webViewClientListener?.onPageLoadTimeout()
+                        }
+                    }
+                    is Event.Recovered -> pageLoadTimeoutPixels.fireTimeoutRecovered(event.elapsedSinceTimeoutMs)
+                }
+            }
+        }
+    }
+
+    private var shouldOpenDuckPlayerInNewTab: Boolean = true
+
+    private var currentLoadOperationId: String? = null
+    private var parallelRequestsOnStart = 0
+    private var parallelRequestsOnMeasuredLoadStart = 0
+
+    init {
+        appCoroutineScope.launch {
+            duckPlayer.observeShouldOpenInNewTab().collect {
+                shouldOpenDuckPlayerInNewTab = it is On
+            }
+        }
+    }
+
+    private fun incrementAndTrackLoad() {
+        // a new load operation is starting for this WebView instance.
+        val loadId = UUID.randomUUID().toString()
+        this.currentLoadOperationId = loadId
+
+        parallelRequestsOnStart = parallelRequestCounter.incrementAndGet() - 1
+
+        val job = timeoutScope.launch {
+            delay(REQUEST_TIMEOUT_MS)
+            // attempt to remove the job - if successful, it means it hasn't been finished/errored/cancelled yet
+            if (activeRequestTimeoutJobs.remove(loadId) != null) {
+                parallelRequestCounter.decrementAndGet()
+            }
+        }
+        activeRequestTimeoutJobs[loadId] = job
+    }
+
+    private fun decrementLoadCountAndGet(): Int {
+        this.currentLoadOperationId?.let { loadId ->
+            val job = activeRequestTimeoutJobs.remove(loadId)
+
+            // if we successfully removed the job (it means it hadn't timed out yet)
+            if (job != null) {
+                job.cancel()
+                parallelRequestCounter.decrementAndGet()
+            }
+        }
+        this.currentLoadOperationId = null
+        return parallelRequestCounter.get()
     }
 
     /**
-     * * This is the old, deprecated method of url overriding available until API 23
+     * This is the method of url overriding available from API 24 onwards
      */
-    @Suppress("OverridingDeprecatedMember")
-    override fun shouldOverrideUrlLoading(view: WebView, urlString: String): Boolean {
-        val url = Uri.parse(urlString)
-        return shouldOverride(view, url, isForMainFrame = true, isRedirect = false)
+    @UiThread
+    override fun shouldOverrideUrlLoading(
+        view: WebView,
+        request: WebResourceRequest,
+    ): Boolean {
+        val url = request.url
+        val isMainFrameRedirect = request.isForMainFrame && request.isRedirect
+        // Reported before the override logic so a reload issued from inside it is not undone by the cancellation below.
+        if (isMainFrameRedirect) {
+            pageLoadTimeoutWatchdog.onRedirect(url.toString())
+        }
+        val overridden = shouldOverride(view, url, request.isForMainFrame, request.isRedirect, request.hasGesture())
+        if (request.isForMainFrame) {
+            webViewClientListener?.onMainFrameNavigationDecided(loadsInThisTab = !overridden)
+        }
+        if (isMainFrameRedirect && overridden) {
+            pageLoadTimeoutWatchdog.onNavigationCancelled(url.toString())
+        }
+        return overridden
+    }
+
+    fun onUserInitiatedLoad() = pageLoadTimeoutWatchdog.onUserInitiatedLoad()
+
+    fun onTabBackgrounded() = pageLoadTimeoutWatchdog.onBackgrounded()
+
+    fun onTabForegrounded() = pageLoadTimeoutWatchdog.onForegrounded()
+
+    fun onDownloadStarted() = pageLoadTimeoutWatchdog.onDownloadStarted()
+
+    fun destroy() {
+        pageLoadTimeoutWatchdog.onNavigatedAway()
+        pageLoadTimeoutsJob.cancel()
     }
 
     /**
      * API-agnostic implementation of deciding whether to override url or not
      */
-    private fun shouldOverride(webView: WebView, url: Uri, isForMainFrame: Boolean, isRedirect: Boolean): Boolean {
-
-        Timber.v("shouldOverride $url")
+    private fun shouldOverride(
+        webView: WebView,
+        url: Uri,
+        isForMainFrame: Boolean,
+        isRedirect: Boolean,
+        hasGesture: Boolean,
+    ): Boolean {
         try {
+            logcat(VERBOSE) { "shouldOverride webViewUrl: ${webView.url} URL: $url" }
+            if (isForMainFrame && !isRedirect) {
+                // Anchored to originalUrl, not the request's own URL, so both comparison sides share one source,
+                // stable across a chain's redirects, changes once an unrelated navigation commits.
+                mainFrameGestureOriginUrl = webView.originalUrl.takeIf { hasGesture }
+                duckChatEntryReportedForCurrentNavigation = false
+            }
+            val carriedPost = gesturedPost.takeIf { isForMainFrame }
+            val carryAppliesToRedirect = carriedPost != null && !carriedPost.responseStarted
+            val postResponseCommitted = carriedPost != null && webView.url?.withoutFragment() == carriedPost.url.withoutFragment()
+            val postedToOtherPage = carriedPost != null && carriedPost.url.withoutFragment() != carriedPost.formPageUrl
+            val carryAppliesToNonRedirect = carriedPost != null &&
+                (carriedPost.responseStarted || carriedPost.afterRedirectHop || (postResponseCommitted && postedToOtherPage))
+            val hasGesturedPostCarry = if (isRedirect) carryAppliesToRedirect else carryAppliesToNonRedirect
+            val redirectStaysInGesturedChain =
+                isForMainFrame && isRedirect && mainFrameGestureOriginUrl != null && mainFrameGestureOriginUrl == webView.originalUrl
+            val hasGestureInNavigation = hasGesture || hasGesturedPostCarry || redirectStaysInGesturedChain
+            if (carriedPost != null) {
+                gesturedPost = if (isRedirect) carriedPost.copy(url = url.toString(), afterRedirectHop = true) else null
+            }
+            webViewClientListener?.onShouldOverride()
+            if (requestInterceptor.shouldOverrideUrlLoading(webViewClientListener, url, webView.url?.toUri(), isForMainFrame)) {
+                return true
+            }
+
             if (isForMainFrame && dosDetector.isUrlGeneratingDos(url)) {
-                webView.loadUrl("about:blank")
+                webView.loadUrl(ABOUT_BLANK)
                 webViewClientListener?.dosAttackDetected()
                 return false
             }
 
-            return when (val urlType = specialUrlDetector.determineType(url)) {
+            // Redirect duck.ai links out of a custom tab into the Duck Chat experience instead of loading them in the custom tab.
+            if (isForMainFrame && duckChat.isDuckChatUrl(url) && webViewClientListener?.handleDuckChatUrlInCustomTab(url) == true) {
+                return true
+            }
+
+            return when (val urlType = specialUrlDetector.determineType(initiatingUrl = webView.originalUrl, uri = url)) {
+                is SpecialUrlDetector.UrlType.ShouldLaunchSubscriptionLink -> {
+                    subscriptions.launchSubscription(webView.context, url)
+                    webViewClientListener?.closeAndReturnToSourceIfBlankTab()
+                    true
+                }
+
                 is SpecialUrlDetector.UrlType.Email -> {
                     webViewClientListener?.sendEmailRequested(urlType.emailAddress)
                     true
                 }
+
                 is SpecialUrlDetector.UrlType.Telephone -> {
                     webViewClientListener?.dialTelephoneNumberRequested(urlType.telephoneNumber)
                     true
                 }
+
                 is SpecialUrlDetector.UrlType.Sms -> {
                     webViewClientListener?.sendSmsRequested(urlType.telephoneNumber)
                     true
                 }
+
                 is SpecialUrlDetector.UrlType.AppLink -> {
-                    Timber.i("Found app link for ${urlType.uriString}")
+                    logcat(INFO) { "Found app link for ${urlType.uriString}" }
+                    if (hasGestureInNavigation) {
+                        // Re-anchor here so a further redirect (e.g. app-not-installed fallback) still carries the gesture, not the stale first hop.
+                        mainFrameGestureOriginUrl = webView.originalUrl
+                        gesturedPost = null
+                    }
                     webViewClientListener?.let { listener ->
-                        return listener.handleAppLink(urlType, isRedirect, isForMainFrame)
+                        return listener.handleAppLink(urlType, isForMainFrame, hasGestureInNavigation)
                     }
                     false
                 }
+
+                is SpecialUrlDetector.UrlType.ShouldLaunchDuckChatLink -> {
+                    runCatching {
+                        val entryPoint = duckChatEntryPointFor(webView.originalUrl)
+                        val query = url.getQueryParameter(QUERY)
+                        if (query != null) {
+                            duckChat.openDuckChatWithPrefill(query, entryPoint)
+                        } else {
+                            duckChat.openDuckChat(entryPoint)
+                        }
+                    }.isSuccess
+                }
+
+                is SpecialUrlDetector.UrlType.ShouldLaunchDuckPlayerLink -> {
+                    if (isRedirect && isForMainFrame) {
+                        /*
+                        This forces shouldInterceptRequest to be called with the YouTube URL, otherwise that method is never executed and
+                        therefore the Duck Player page is never launched if YouTube comes from a redirect.
+                         */
+                        webViewClientListener?.let {
+                            loadUrl(it, webView, url.toString())
+                        }
+                        return true
+                    } else {
+                        shouldOverrideWebRequest(
+                            url,
+                            webView,
+                            isForMainFrame,
+                            openInNewTab = shouldOpenDuckPlayerInNewTab && isForMainFrame && webView.url != url.toString(),
+                            willOpenDuckPlayer = isForMainFrame,
+                        )
+                    }
+                }
+
                 is SpecialUrlDetector.UrlType.NonHttpAppLink -> {
-                    Timber.i("Found non-http app link for ${urlType.uriString}")
-                    webViewClientListener?.let { listener ->
-                        return listener.handleNonHttpAppLink(urlType, isRedirect)
+                    logcat(INFO) { "Found non-http app link for ${urlType.uriString}" }
+                    if (isForMainFrame) {
+                        if (hasGestureInNavigation) gesturedPost = null
+                        webViewClientListener?.let { listener ->
+                            return listener.handleNonHttpAppLink(urlType)
+                        }
                     }
                     true
                 }
+
                 is SpecialUrlDetector.UrlType.Unknown -> {
-                    Timber.w("Unable to process link type for ${urlType.uriString}")
+                    logcat(WARN) { "Unable to process link type for ${urlType.uriString}" }
                     webView.originalUrl?.let {
                         webView.loadUrl(it)
                     }
                     false
                 }
+
                 is SpecialUrlDetector.UrlType.SearchQuery -> false
                 is SpecialUrlDetector.UrlType.Web -> {
-                    if (requestRewriter.shouldRewriteRequest(url)) {
-                        val newUri = requestRewriter.rewriteRequestWithCustomQueryParams(url)
-                        webView.loadUrl(newUri.toString())
-                        return true
+                    if (
+                        isForMainFrame &&
+                        hasGestureInNavigation &&
+                        !duckChatEntryReportedForCurrentNavigation &&
+                        duckChat.isDuckChatUrl(url) &&
+                        webView.originalUrl?.toUri()?.let(duckChat::isDuckChatUrl) != true
+                    ) {
+                        duckChat.reportDuckChatEntry(
+                            entryPoint = duckChatEntryPointFor(webView.originalUrl),
+                            opensNewTab = false,
+                            hasPrompt = url.getQueryParameter("prompt") == "1" && !url.getQueryParameter(QUERY).isNullOrBlank(),
+                        )
+                        duckChatEntryReportedForCurrentNavigation = true
                     }
+                    shouldOverrideWebRequest(url, webView, isForMainFrame)
+                }
+
+                is SpecialUrlDetector.UrlType.ExtractedAmpLink -> {
                     if (isForMainFrame) {
-                        webViewClientListener?.willOverrideUrl(url.toString())
+                        webViewClientListener?.let { listener ->
+                            listener.startProcessingTrackingLink()
+                            logcat { "AMP link detection: Loading extracted URL: ${urlType.extractedUrl}" }
+                            loadUrl(listener, webView, urlType.extractedUrl)
+                            return true
+                        }
                     }
                     false
                 }
+
+                is SpecialUrlDetector.UrlType.CloakedAmpLink -> {
+                    val lastAmpLinkInfo = ampLinks.lastAmpLinkInfo
+                    if (isForMainFrame && (lastAmpLinkInfo == null || lastPageStarted != lastAmpLinkInfo.destinationUrl)) {
+                        webViewClientListener?.let { listener ->
+                            listener.handleCloakedAmpLink(urlType.ampUrl)
+                            return true
+                        }
+                    }
+                    false
+                }
+
+                is SpecialUrlDetector.UrlType.TrackingParameterLink -> {
+                    if (isForMainFrame) {
+                        webViewClientListener?.let { listener ->
+                            listener.startProcessingTrackingLink()
+                            logcat { "Loading parameter cleaned URL: ${urlType.cleanedUrl}" }
+
+                            return when (
+                                val parameterStrippedType =
+                                    specialUrlDetector.processUrl(initiatingUrl = webView.originalUrl, uriString = urlType.cleanedUrl)
+                            ) {
+                                is SpecialUrlDetector.UrlType.AppLink -> {
+                                    loadUrl(listener, webView, urlType.cleanedUrl)
+                                    listener.handleAppLink(parameterStrippedType, isForMainFrame, hasGestureInNavigation)
+                                }
+
+                                is SpecialUrlDetector.UrlType.ExtractedAmpLink -> {
+                                    logcat { "AMP link detection: Loading extracted URL: ${parameterStrippedType.extractedUrl}" }
+                                    loadUrl(listener, webView, parameterStrippedType.extractedUrl)
+                                    true
+                                }
+
+                                else -> {
+                                    loadUrl(listener, webView, urlType.cleanedUrl)
+                                    true
+                                }
+                            }
+                        }
+                    }
+                    false
+                }
+
+                is SpecialUrlDetector.UrlType.DuckScheme -> {
+                    webViewClientListener?.let { listener ->
+                        if (
+                            url.pathSegments?.firstOrNull()?.equals(DUCK_PLAYER_OPEN_IN_YOUTUBE_PATH, ignoreCase = true) == true ||
+                            !shouldOpenDuckPlayerInNewTab
+                        ) {
+                            loadUrl(listener, webView, url.toString())
+                        } else {
+                            listener.openLinkInNewTab(url)
+                        }
+                        true
+                    } ?: false
+                }
             }
         } catch (e: Throwable) {
-            appCoroutineScope.launch {
-                uncaughtExceptionRepository.recordUncaughtException(e, SHOULD_OVERRIDE_REQUEST)
-                throw e
+            appCoroutineScope.launch(dispatcherProvider.io()) {
+                crashLogger.logCrash(CrashLogger.Crash(shortName = "m_webview_should_override", t = e))
             }
             return false
         }
     }
 
+    private fun duckChatEntryPointFor(initiatingUrl: String?): DuckChatEntryPoint {
+        val isSerp = initiatingUrl?.let(duckDuckGoUrlDetector::isDuckDuckGoQueryUrl) == true
+        val initiatingUri = initiatingUrl?.toUri()
+        val isDdgRoot = initiatingUri?.run { host == HOST && (path.isNullOrEmpty() || path == "/") } == true
+        val isDuckAiPage = isDdgRoot && initiatingUri?.let(duckChat::isDuckChatUrl) == true
+        val isDdgHomepage = isDdgRoot && !isDuckAiPage
+        val entryPoint = when {
+            isSerp -> DuckChatEntryPoint.SERP
+            isDdgHomepage -> DuckChatEntryPoint.DDG_HOMEPAGE
+            else -> DuckChatEntryPoint.DIRECT_URL
+        }
+        return entryPoint
+    }
+
+    private fun shouldOverrideWebRequest(
+        url: Uri,
+        webView: WebView,
+        isForMainFrame: Boolean,
+        openInNewTab: Boolean = false,
+        willOpenDuckPlayer: Boolean = false,
+    ): Boolean {
+        if (requestRewriter.shouldRewriteRequest(url)) {
+            webViewClientListener?.let { listener ->
+                val newUri = requestRewriter.rewriteRequestWithCustomQueryParams(url)
+                loadUrl(listener, webView, newUri.toString())
+                return true
+            }
+        }
+        if (isForMainFrame) {
+            webViewClientListener?.let { listener ->
+                listener.willOverrideUrl(url.toString())
+                clientProvider?.let { provider ->
+                    if (provider.shouldChangeBranding(url.toString())) {
+                        provider.setOn(webView.settings, url.toString())
+                        if (openInNewTab) {
+                            listener.openLinkInNewTab(url)
+                        } else {
+                            loadUrl(listener, webView, url.toString())
+                        }
+                        return true
+                    } else if (willOpenDuckPlayer && webView.url?.let { duckDuckGoUrlDetector.isDuckDuckGoUrl(it) } == true) {
+                        duckPlayer.setDuckPlayerOrigin(SERP_AUTO)
+                        if (openInNewTab) {
+                            listener.openLinkInNewTab(url)
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else if (openInNewTab) {
+                        listener.openLinkInNewTab(url)
+                        return true
+                    } else {
+                        // See: https://app.asana.com/1/137249556945/project/1200905986587319/task/1212075841576596?focus=true
+                        // val headers = androidFeaturesHeaderPlugin.getHeaders(url.toString())
+                        // if (headers.isNotEmpty()) {
+                        //     loadUrl(webView, url.toString(), headers)
+                        //     return true
+                        // }
+                        return false
+                    }
+                }
+                return false
+            }
+        } else if (openInNewTab) {
+            webViewClientListener?.openLinkInNewTab(url)
+            return true
+        }
+        return false
+    }
+
     @UiThread
-    override fun onPageStarted(webView: WebView, url: String?, favicon: Bitmap?) {
-        try {
-            Timber.v("onPageStarted webViewUrl: ${webView.url} URL: $url")
-            url?.let {
-                appCoroutineScope.launch(dispatcherProvider.default()) {
-                    thirdPartyCookieManager.processUriForThirdPartyCookies(webView, url.toUri())
+    override fun onPageCommitVisible(
+        webView: WebView,
+        url: String,
+    ) {
+        logcat(VERBOSE) { "onPageCommitVisible webViewUrl: ${webView.url} URL: $url progress: ${webView.progress}" }
+        pageLoadTimeoutWatchdog.onFirstContentVisible(url)
+        pageCommitVisibleFired = true
+        // Show only when the commit matches the tab state
+        if (webView.url == url) {
+            val navigationList = webView.safeCopyBackForwardList() ?: return
+            webViewClientListener?.onPageCommitVisible(WebViewNavigationState(navigationList), url)
+            navigationId?.let { loadNavigationId ->
+                webViewClientListener?.getCurrentTabId()?.let { tabId ->
+                    pageLoadWideEvent.onPageVisible(tabId, loadNavigationId, webView.progress)
                 }
             }
-            val navigationList = webView.safeCopyBackForwardList() ?: return
-            webViewClientListener?.navigationStateChanged(WebViewNavigationState(navigationList))
-            if (url != null && url == lastPageStarted) {
-                webViewClientListener?.pageRefreshed(url)
-            }
-            lastPageStarted = url
-            emailInjector.injectEmailAutofillJs(webView, url) // Needs to be injected onPageStarted
-            globalPrivacyControl.injectDoNotSellToDom(webView)
-            loginDetector.onEvent(WebNavigationEvent.OnPageStarted(webView))
-            webViewClientListener?.resetAppLinkState()
-        } catch (e: Throwable) {
-            appCoroutineScope.launch {
-                uncaughtExceptionRepository.recordUncaughtException(e, ON_PAGE_STARTED)
-                throw e
-            }
         }
+    }
+
+    private fun loadUrl(
+        listener: WebViewClientListener,
+        webView: WebView,
+        url: String,
+    ) {
+        if (listener.linkOpenedInNewTab()) {
+            webView.post {
+                webView.loadUrl(url)
+            }
+        } else {
+            webView.loadUrl(url)
+        }
+    }
+
+    private fun loadUrl(
+        webView: WebView,
+        url: String,
+        headers: Map<String, String>,
+    ) {
+        webView.loadUrl(url, headers)
     }
 
     @UiThread
-    override fun onPageFinished(webView: WebView, url: String?) {
-        try {
-            Timber.v("onPageFinished webViewUrl: ${webView.url} URL: $url")
-            val navigationList = webView.safeCopyBackForwardList() ?: return
-            webViewClientListener?.run {
-                navigationStateChanged(WebViewNavigationState(navigationList))
-                url?.let { prefetchFavicon(url) }
+    override fun onPageStarted(
+        webView: WebView,
+        url: String?,
+        favicon: Bitmap?,
+    ) {
+        logcat { "onPageStarted webViewUrl: ${webView.url} URL: $url lastPageStarted $lastPageStarted" }
+
+        gesturedPost = gesturedPost?.takeIf { url != null && it.url.withoutFragment() == url.withoutFragment() }?.copy(responseStarted = true)
+
+        pageCommitVisibleFired = false
+        recompositeScheduled = false
+
+        // Handle app-scheme URLs that bypass shouldOverrideUrlLoading (e.g., window.open with intent:// URLs)
+        if (url != null && interceptAppSchemeUrl(webView, url)) {
+            logcat { "interceptAppSchemeUrl: intercepted $url in onPageStarted, returning early" }
+            return
+        }
+
+        lastInterceptedAppSchemeUrl = null
+        webViewClientListener?.onMainFrameNavigationCommitted()
+        if (url != null && pageLoadFeature.pageLoadTimeoutWatchdog().isEnabled()) pageLoadTimeoutWatchdog.onCommitted(url)
+
+        var wideEventNavigation: Pair<String, Long>? = null
+        url?.let {
+            pageLoadTraceMarker.onPageStarted(it)
+            if (it != ABOUT_BLANK) {
+                if (start == null) {
+                    start = currentTimeProvider.elapsedRealtime()
+                    incrementAndTrackLoad() // increment the request counter
+                    requestInterceptor.onPageStarted(url)
+                }
+                // A page start arriving while another load is in flight opens its own measured load, so a redirect
+                // chain is measured from its last hop.
+                wideEventNavigation = startWideEventPageLoad(it)
             }
-            flushCookies()
-        } catch (e: Throwable) {
-            appCoroutineScope.launch {
-                uncaughtExceptionRepository.recordUncaughtException(e, ON_PAGE_FINISHED)
-                throw e
+
+            handleMediaPlayback(webView, it)
+            autoconsent.injectAutoconsent(webView, url)
+            adClickManager.detectAdDomain(url)
+
+            val scope = webView.findViewTreeLifecycleOwner()?.lifecycleScope ?: return@let
+            scope.launch(dispatcherProvider.io()) {
+                thirdPartyCookieManager.processUriForThirdPartyCookies(webView, url.toUri(), browserMode)
+            }
+        }
+        val navigationList = webView.safeCopyBackForwardList() ?: return
+
+        appCoroutineScope.launch(dispatcherProvider.main()) {
+            val activeExperiments = contentScopeExperiments.getActiveExperiments()
+            wideEventNavigation?.let { (tabId, navigationId) ->
+                pageLoadWideEvent.onContentScopeExperimentsResolved(tabId, navigationId)
+            }
+            webViewClientListener?.pageStarted(WebViewNavigationState(navigationList), activeExperiments)
+            jsPlugins.getPlugins().forEach {
+                it.onPageStarted(webView, url, webViewClientListener?.getSite()?.isDesktopMode, activeExperiments)
+            }
+            wideEventNavigation?.let { (tabId, navigationId) ->
+                pageLoadWideEvent.onJsInjectionComplete(tabId, navigationId)
+            }
+        }
+        if (url != null && url == lastPageStarted) {
+            webViewClientListener?.pageRefreshed(url)
+        }
+        lastPageStarted = url
+        browserAutofillConfigurator.configureAutofillForCurrentPage(webView, url, browserMode)
+        loginDetector.onEvent(WebNavigationEvent.OnPageStarted(webView))
+    }
+
+    private fun startWideEventPageLoad(url: String): Pair<String, Long>? {
+        val loadNavigationId = wideEventNavigationIdCounter.incrementAndGet()
+        val replacedNavigationId = navigationId
+        navigationId = loadNavigationId
+        navigationUrl = url
+        parallelRequestsOnMeasuredLoadStart = otherPageLoadsInFlight()
+        logcat { "Page load measured as navigationId=$loadNavigationId: url=$url, replacing=$replacedNavigationId" }
+        webViewClientListener?.onMainFrameLoadStarted(loadNavigationId)
+        val tabId = webViewClientListener?.getCurrentTabId() ?: return null
+        pageLoadWideEvent.onPageStarted(tabId, url, loadNavigationId)
+        return tabId to loadNavigationId
+    }
+
+    private fun endMeasuredPageLoad() {
+        navigationId = null
+        navigationUrl = null
+    }
+
+    private fun reportMeasuredLoadFailed(url: String?, errorDescription: String) {
+        failedNavigationIdFor(url)?.let { reportMeasuredLoadEnded(it, errorDescription) }
+    }
+
+    private fun reportMeasuredLoadFinished() {
+        navigationId?.let { reportMeasuredLoadEnded(it, errorDescription = null) }
+    }
+
+    private fun reportMeasuredLoadEnded(loadNavigationId: Long, errorDescription: String?) {
+        endMeasuredPageLoad()
+        val tabId = webViewClientListener?.getCurrentTabId() ?: return
+        pageLoadWideEvent.onPageLoadFinished(
+            tabId = tabId,
+            navigationId = loadNavigationId,
+            errorDescription = errorDescription,
+            isTabInForegroundOnFinish = webViewClientListener?.isTabInForeground() ?: true,
+            activeRequestsOnLoadStart = parallelRequestsOnMeasuredLoadStart,
+            concurrentRequestsOnFinish = otherPageLoadsInFlight(),
+        )
+    }
+
+    private fun otherPageLoadsInFlight(): Int = (parallelRequestCounter.get() - 1).coerceAtLeast(0)
+
+    private fun failedNavigationIdFor(url: String?): Long? {
+        val currentNavigationId = navigationId ?: return null
+        if (url == null || url != navigationUrl) {
+            logcat { "Ignoring load failure for $url: navigationId=$currentNavigationId is measuring $navigationUrl" }
+            return null
+        }
+        return currentNavigationId
+    }
+
+    override fun doUpdateVisitedHistory(
+        view: WebView?,
+        url: String?,
+        isReload: Boolean,
+    ) {
+        super.doUpdateVisitedHistory(view, url, isReload)
+        url?.let {
+            if (duckChat.isDuckChatUrl(it.toUri())) {
+                logcat { "doUpdateVisitedHistory url=$it" }
+                if (it != view?.originalUrl) webViewClientListener?.onHistoryUrlChanged(it)
             }
         }
     }
 
-    private fun flushCookies() {
-        appCoroutineScope.launch(dispatcherProvider.io()) {
-            cookieManager.flush()
+    /**
+     * Intercepts app-scheme URLs (e.g., intent://, tel://, mailto://) that bypass shouldOverrideUrlLoading().
+     * This can happen when window.open() is used with special URLs, as the WebViewTransport mechanism
+     * loads URLs directly without triggering shouldOverrideUrlLoading().
+     *
+     * Delegates to [shouldOverride] so URL-type dispatch logic is not duplicated.
+     *
+     * @return true if the URL was handled and loading should stop, false otherwise
+     */
+    private fun interceptAppSchemeUrl(webView: WebView, url: String): Boolean {
+        if (!isAppSchemeInterceptionEnabled.get()) {
+            return false
+        }
+        val uri = url.toUri()
+        val scheme = uri.scheme ?: return false
+
+        if (scheme in STANDARD_WEB_SCHEMES) {
+            return false
+        }
+
+        if (url == lastInterceptedAppSchemeUrl) {
+            return true
+        }
+        lastInterceptedAppSchemeUrl = url
+
+        logcat { "interceptAppSchemeUrl: detected app scheme '$scheme' for $url" }
+
+        webView.stopLoading()
+        shouldOverride(webView, uri, isForMainFrame = true, isRedirect = false, hasGesture = false)
+        return true
+    }
+
+    private fun handleMediaPlayback(
+        webView: WebView,
+        url: String,
+    ) {
+        // The default value for this flag is `true`.
+        webView.settings.mediaPlaybackRequiresUserGesture = mediaPlayback.doesMediaPlaybackRequireUserGestureForUrl(url)
+    }
+
+    @UiThread
+    override fun onPageFinished(
+        webView: WebView,
+        url: String?,
+    ) {
+        logcat(VERBOSE) { "onPageFinished webViewUrl: ${webView.url} URL: $url progress: ${webView.progress}" }
+        url?.let { pageLoadTimeoutWatchdog.onFinished(it) }
+        if (gesturedPost?.responseStarted == true) gesturedPost = null
+
+        // WebView reports the outgoing page's progress for a never-committing (204) navigation, so this can't wait for the progress check below.
+        if (url != null && url != ABOUT_BLANK && url != webView.url) webViewClientListener?.onNavigationFinishedWithoutCommit()
+
+        // See https://app.asana.com/0/0/1206159443951489/f (WebView limitations)
+        if (webView.progress == 100) {
+            pageLoadTraceMarker.onPageFinished(url, webView.progress)
+            // Without onPageCommitVisible a recycled WebView keeps drawing the previous
+            // navigation's frame until a re-composite. Only worth doing for a foreground tab.
+            // onPageFinished can fire more than once per load (redirects, subframes), so latch
+            // to force at most one re-composite per navigation (reset in onPageStarted).
+            if (url != null && url != ABOUT_BLANK && !pageCommitVisibleFired && !recompositeScheduled) {
+                if (isForceRecompositeEnabled.get() && webViewClientListener?.isTabInForeground() == true) {
+                    logcat(VERBOSE) { "onPageCommitVisible never fired for $url; forcing present" }
+                    recompositeScheduled = true
+                    forceWebViewPresent(webView)
+                }
+            }
+
+            jsPlugins.getPlugins().forEach {
+                it.onPageFinished(
+                    webView,
+                    url,
+                    webViewClientListener?.getSite(),
+                )
+            }
+
+            url?.let {
+                // We call this for any url but it will only be processed for an internal tester verification url
+                internalTestUserChecker.verifyVerificationCompleted(it)
+            }
+
+            val navigationList = webView.safeCopyBackForwardList() ?: return
+            webViewClientListener?.run {
+                pageFinished(webView, WebViewNavigationState(navigationList), url)
+            }
+            flushCookies(webView)
+            printInjector.injectPrint(webView)
+
+            if (url != null && url != ABOUT_BLANK) {
+                reportMeasuredLoadFinished()
+                start?.let { safeStart ->
+                    val concurrentRequestsOnFinish = decrementLoadCountAndGet()
+
+                    // TODO (cbarreiro - 22/05/2024): Extract to plugins
+                    pageLoadedHandler.onPageLoaded(
+                        url = url,
+                        title = navigationList.currentItem?.title,
+                        start = safeStart,
+                        end = currentTimeProvider.elapsedRealtime(),
+                        isTabInForegroundOnFinish = webViewClientListener?.isTabInForeground() ?: true,
+                        activeRequestsOnLoadStart = parallelRequestsOnStart,
+                        concurrentRequestsOnFinish = concurrentRequestsOnFinish,
+                    )
+                    shouldSendPagePaintedPixel(webView = webView, url = url)
+                    appCoroutineScope.launch(dispatcherProvider.io()) {
+                        if (duckPlayer.getDuckPlayerState() == ENABLED && duckPlayer.isYoutubeWatchUrl(url.toUri())) {
+                            duckPlayer.duckPlayerNavigatedToYoutube()
+                        }
+                    }
+                    uriLoadedManager.sendUriLoadedPixels()
+                    // Duck.ai loads in this WebView too, and its own surface pixel already counts it.
+                    if (!duckChat.isDuckChatUrl(url.toUri())) {
+                        uriLoadedManager.sendSurfaceUsagePixels(duckDuckGoUrlDetector.isDuckDuckGoQueryUrl(url))
+                    }
+
+                    webViewClientListener?.onSiteVisited(url, navigationList.currentItem?.title)
+
+                    start = null
+                }
+            }
+        }
+    }
+
+    /**
+     * Flush cookies on the WebView's view-tree lifecycleScope (the fragment's
+     * viewLifecycleOwner) instead of appCoroutineScope. When the fragment's view is
+     * destroyed, the scope auto-cancels — preventing a post-destroy flush from SEGV'ing
+     * on the freed native cookie store of this WebView's profile.
+     */
+    private fun flushCookies(webView: WebView) {
+        val scope = webView.findViewTreeLifecycleOwner()?.lifecycleScope ?: return
+        val cookieManager = cookieManagerProvider.forMode(browserMode)
+        scope.launch(dispatcherProvider.io()) {
+            cookieManager?.flush()
+        }
+    }
+
+    private fun forceWebViewPresent(webView: WebView) {
+        webView.post {
+            // The foreground state checked when this was scheduled can go stale before the
+            // posted runnable runs: the user may switch tabs or move to a PDF / new-tab view,
+            // all of which pause (and hide) the WebView via the fragment lifecycle. Re-check
+            // here so we never resume a WebView the fragment intended to keep paused, which
+            // would leave it running JS/timers/media while hidden.
+            if (webView.isShown && webViewClientListener?.isTabInForeground() == true) {
+                pixel.fire(WebViewPixelName.WEB_VIEW_FORCED_RECOMPOSITE, type = Pixel.PixelType.Daily())
+                webView.onPause()
+                webView.onResume()
+            }
         }
     }
 
     @WorkerThread
-    override fun shouldInterceptRequest(webView: WebView, request: WebResourceRequest): WebResourceResponse? {
-        return runBlocking {
-            try {
-                val documentUrl = withContext(Dispatchers.Main) { webView.url }
-                withContext(Dispatchers.Main) {
+    override fun shouldInterceptRequest(
+        webView: WebView,
+        request: WebResourceRequest,
+    ): WebResourceResponse? =
+        runBlocking {
+            val documentUrl = withContext(dispatcherProvider.main()) {
+                if (request.method == "POST") {
                     loginDetector.onEvent(WebNavigationEvent.ShouldInterceptRequest(webView, request))
                 }
-                Timber.v("Intercepting resource ${request.url} type:${request.method} on page $documentUrl")
-                requestInterceptor.shouldIntercept(request, webView, documentUrl, webViewClientListener)
-            } catch (e: Throwable) {
-                uncaughtExceptionRepository.recordUncaughtException(e, SHOULD_INTERCEPT_REQUEST)
-                throw e
+                // The request waits here, so this always runs before the load can commit.
+                if (request.isForMainFrame && !request.isSpeculativeLoad() && pageLoadFeature.pageLoadTimeoutWatchdog().isEnabled()) {
+                    if (request.hasGesture()) pageLoadTimeoutWatchdog.onUserInitiatedLoad()
+                    pageLoadTimeoutWatchdog.onMainFrameRequest(request.url.toString())
+                }
+                if (request.isForMainFrame && !request.isSpeculativeLoad()) updateGesturedPost(request, webView.url)
+                webView.url
+            }
+            logcat(VERBOSE) { "Intercepting resource ${request.url} type:${request.method} on page $documentUrl" }
+            requestInterceptor.shouldIntercept(
+                request,
+                webView,
+                documentUrl?.toUri(),
+                webViewClientListener,
+            )
+        }
+
+    // WebView doesn't call shouldOverrideUrlLoading for POST navigations, so the tap is only visible here.
+    private fun updateGesturedPost(request: WebResourceRequest, formPageUrl: String?) {
+        val url = request.url.toString()
+        if (request.method == "POST") {
+            val isGestured = isGesturedPostNavigationEnabled.get() && request.hasGesture()
+            gesturedPost = if (isGestured) GesturedPost(url, responseStarted = false, formPageUrl = formPageUrl?.withoutFragment()) else null
+        } else if (gesturedPost?.url?.withoutFragment() != url.withoutFragment()) {
+            gesturedPost = null
+        }
+    }
+
+    private fun String.withoutFragment() = substringBefore('#')
+
+    // Speculative loads (prefetch/prerender) never commit, so they must not arm the page-load watchdog.
+    private fun WebResourceRequest.isSpeculativeLoad(): Boolean {
+        val headers = requestHeaders ?: return false
+        return headers.any { (name, value) ->
+            val purpose = value.trim()
+            when {
+                name.equals("Sec-Purpose", ignoreCase = true) ->
+                    purpose.startsWith("prefetch", ignoreCase = true) || purpose.startsWith("prerender", ignoreCase = true)
+                name.equals("Purpose", ignoreCase = true) -> purpose.equals("prefetch", ignoreCase = true)
+                else -> false
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
-        Timber.w("onRenderProcessGone. Did it crash? ${detail?.didCrash()}")
-        if (detail?.didCrash() == true) {
-            offlinePixelCountDataStore.webRendererGoneCrashCount += 1
+    override fun onRenderProcessGone(
+        view: WebView?,
+        detail: RenderProcessGoneDetail?,
+    ): Boolean {
+        logcat(WARN) { "onRenderProcessGone. Did it crash? ${detail?.didCrash()}" }
+        val didCrash = detail?.didCrash() == true
+        if (didCrash) {
+            pixel.fire(WEB_RENDERER_GONE_CRASH)
         } else {
-            offlinePixelCountDataStore.webRendererGoneKilledCount += 1
+            pixel.fire(WEB_RENDERER_GONE_KILLED)
         }
 
+        // Not url-scoped, and not gated on the cycle: a dead renderer ends whatever load it was running.
+        navigationId?.let { loadNavigationId ->
+            reportMeasuredLoadEnded(
+                loadNavigationId = loadNavigationId,
+                errorDescription = if (didCrash) "ERROR_RENDERER_CRASHED" else "ERROR_RENDERER_KILLED",
+            )
+        }
+        if (this.start != null) {
+            decrementLoadCountAndGet()
+            this.start = null
+        }
+
+        pageLoadTimeoutWatchdog.onEngineError()
         webViewClientListener?.recoverFromRenderProcessGone()
         return true
     }
 
     @UiThread
-    override fun onReceivedHttpAuthRequest(view: WebView?, handler: HttpAuthHandler?, host: String?, realm: String?) {
-        try {
-            Timber.v("onReceivedHttpAuthRequest ${view?.url} $realm, $host")
-            if (handler != null) {
-                Timber.v("onReceivedHttpAuthRequest - useHttpAuthUsernamePassword [${handler.useHttpAuthUsernamePassword()}]")
-                if (handler.useHttpAuthUsernamePassword()) {
-                    val credentials = view?.let {
+    override fun onReceivedHttpAuthRequest(
+        view: WebView?,
+        handler: HttpAuthHandler?,
+        host: String?,
+        realm: String?,
+    ) {
+        logcat(VERBOSE) { "onReceivedHttpAuthRequest ${view?.url} $realm, $host" }
+        if (handler != null) {
+            logcat(VERBOSE) { "onReceivedHttpAuthRequest - useHttpAuthUsernamePassword [${handler.useHttpAuthUsernamePassword()}]" }
+            if (handler.useHttpAuthUsernamePassword()) {
+                val credentials =
+                    view?.let {
                         webViewHttpAuthStore.getHttpAuthUsernamePassword(it, host.orEmpty(), realm.orEmpty())
                     }
 
-                    if (credentials != null) {
-                        handler.proceed(credentials.username, credentials.password)
-                    } else {
-                        requestAuthentication(view, handler, host, realm)
-                    }
+                if (credentials != null) {
+                    handler.proceed(credentials.username, credentials.password)
                 } else {
                     requestAuthentication(view, handler, host, realm)
                 }
             } else {
-                super.onReceivedHttpAuthRequest(view, handler, host, realm)
+                requestAuthentication(view, handler, host, realm)
             }
-        } catch (e: Throwable) {
-            appCoroutineScope.launch {
-                uncaughtExceptionRepository.recordUncaughtException(e, ON_HTTP_AUTH_REQUEST)
-                throw e
-            }
+        } else {
+            super.onReceivedHttpAuthRequest(view, handler, host, realm)
         }
     }
 
-    override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler, error: SslError) {
+    override fun onReceivedSslError(
+        view: WebView?,
+        handler: SslErrorHandler,
+        error: SslError,
+    ) {
         var trusted: CertificateValidationState = CertificateValidationState.UntrustedChain
+
         when (error.primaryError) {
             SSL_UNTRUSTED -> {
-                Timber.d("The certificate authority ${error.certificate.issuedBy.dName} is not trusted")
+                logcat { "The certificate authority ${error.certificate.issuedBy.dName} is not trusted" }
                 trusted = trustedCertificateStore.validateSslCertificateChain(error.certificate)
             }
-            else -> Timber.d("SSL error ${error.primaryError}")
+
+            else -> logcat { "SSL error ${error.primaryError}" }
         }
 
-        Timber.d("The certificate authority validation result is $trusted")
-        if (trusted is CertificateValidationState.TrustedChain) handler.proceed() else super.onReceivedSslError(view, handler, error)
+        logcat { "The certificate authority validation result is $trusted" }
+        if (trusted is CertificateValidationState.TrustedChain) {
+            handler.proceed()
+        } else {
+            pageLoadTimeoutWatchdog.onEngineError()
+            webViewClientListener?.onReceivedSslError(handler, parseSSlErrorResponse(error))
+        }
+    }
+
+    private fun parseSSlErrorResponse(sslError: SslError): SslErrorResponse {
+        logcat { "SSL Certificate: parseSSlErrorResponse ${sslError.primaryError}" }
+        val sslErrorType =
+            when (sslError.primaryError) {
+                SSL_UNTRUSTED -> UNTRUSTED_HOST
+                SSL_EXPIRED -> EXPIRED
+                SSL_DATE_INVALID -> EXPIRED
+                SSL_IDMISMATCH -> WRONG_HOST
+                else -> GENERIC
+            }
+        return SslErrorResponse(sslError, sslErrorType, sslError.url)
     }
 
     private fun requestAuthentication(
         view: WebView?,
         handler: HttpAuthHandler,
         host: String?,
-        realm: String?
+        realm: String?,
     ) {
         webViewClientListener?.let {
-            Timber.v("showAuthenticationDialog - $host, $realm")
+            logcat(VERBOSE) { "showAuthenticationDialog - $host, $realm" }
 
             val siteURL = if (view?.url != null) "${URI(view.url).scheme}://$host" else host.orEmpty()
 
-            val request = BasicAuthenticationRequest(
-                handler = handler,
-                host = host.orEmpty(),
-                realm = realm.orEmpty(),
-                site = siteURL
-            )
+            val request =
+                BasicAuthenticationRequest(
+                    handler = handler,
+                    host = host.orEmpty(),
+                    realm = realm.orEmpty(),
+                    site = siteURL,
+                )
 
             it.requiresAuthentication(request)
         }
     }
+
+    override fun onReceivedError(
+        view: WebView?,
+        request: WebResourceRequest?,
+        error: WebResourceError?,
+    ) {
+        error?.let { webResourceError ->
+            // Handle unsupported scheme errors for app-scheme URLs (e.g., intent://, tel://, mailto://)
+            // This catches cases where shouldOverrideUrlLoading is bypassed (like window.open)
+            if (webResourceError.errorCode == ERROR_UNSUPPORTED_SCHEME &&
+                request?.isForMainFrame == true &&
+                request.url != null &&
+                view != null
+            ) {
+                logcat { "interceptAppSchemeUrl: ERROR_UNSUPPORTED_SCHEME for main frame in onReceivedError" }
+                if (interceptAppSchemeUrl(view, request.url.toString())) {
+                    return
+                }
+            }
+
+            val parsedError = parseErrorResponse(webResourceError)
+            if (request?.isForMainFrame == true) {
+                // Reported for every main-frame error, not just ones shown to the user. Otherwise, other failures
+                // never close properly and later get marked Unknown, making failed loads look like abandoned ones.
+                reportMeasuredLoadFailed(
+                    url = request.url?.toString(),
+                    errorDescription = webResourceError.errorCode.asStringErrorCode(),
+                )
+                if (parsedError != OMITTED) {
+                    if (this.start != null) {
+                        decrementLoadCountAndGet()
+                        this.start = null
+                    }
+                }
+                pageLoadTimeoutWatchdog.onEngineError()
+                webViewClientListener?.onReceivedError(parsedError, request.url.toString(), webResourceError.errorCode.asStringErrorCode())
+                logcat { "recordErrorCode for ${request.url}" }
+                webViewClientListener?.recordErrorCode(
+                    "${webResourceError.errorCode.asStringErrorCode()} - ${webResourceError.description}",
+                    request.url.toString(),
+                )
+            }
+        }
+        super.onReceivedError(view, request, error)
+    }
+
+    private fun parseErrorResponse(error: WebResourceError): WebViewErrorResponse =
+        if (error.errorCode == ERROR_HOST_LOOKUP) {
+            when (error.description) {
+                "net::ERR_NAME_NOT_RESOLVED" -> BAD_URL
+                "net::ERR_INTERNET_DISCONNECTED" -> CONNECTION
+                else -> OMITTED
+            }
+        } else if (error.errorCode == ERROR_FAILED_SSL_HANDSHAKE && error.description == "net::ERR_SSL_PROTOCOL_ERROR") {
+            WebViewErrorResponse.SSL_PROTOCOL_ERROR
+        } else {
+            OMITTED
+        }
+
+    override fun onReceivedHttpError(
+        view: WebView?,
+        request: WebResourceRequest?,
+        errorResponse: WebResourceResponse?,
+    ) {
+        super.onReceivedHttpError(view, request, errorResponse)
+        view?.url?.let {
+            // We call this for any url but it will only be processed for an internal tester verification url
+            internalTestUserChecker.verifyVerificationErrorReceived(it)
+        }
+        if (request?.isForMainFrame == true) {
+            errorResponse?.let {
+                pageLoadTimeoutWatchdog.onEngineError()
+                logcat { "recordHttpErrorCode for ${request.url}" }
+                webViewClientListener?.recordHttpErrorCode(it.statusCode, request.url.toString())
+            }
+        }
+    }
+
+    private fun Int.asStringErrorCode(): String =
+        when (this) {
+            ERROR_AUTHENTICATION -> "ERROR_AUTHENTICATION"
+            ERROR_BAD_URL -> "ERROR_BAD_URL"
+            ERROR_CONNECT -> "ERROR_CONNECT"
+            ERROR_FAILED_SSL_HANDSHAKE -> "ERROR_FAILED_SSL_HANDSHAKE"
+            ERROR_FILE -> "ERROR_FILE"
+            ERROR_FILE_NOT_FOUND -> "ERROR_FILE_NOT_FOUND"
+            ERROR_HOST_LOOKUP -> "ERROR_HOST_LOOKUP"
+            ERROR_IO -> "ERROR_IO"
+            ERROR_PROXY_AUTHENTICATION -> "ERROR_PROXY_AUTHENTICATION"
+            ERROR_REDIRECT_LOOP -> "ERROR_REDIRECT_LOOP"
+            ERROR_TIMEOUT -> "ERROR_TIMEOUT"
+            ERROR_TOO_MANY_REQUESTS -> "ERROR_TOO_MANY_REQUESTS"
+            ERROR_UNKNOWN -> "ERROR_UNKNOWN"
+            ERROR_UNSAFE_RESOURCE -> "ERROR_UNSAFE_RESOURCE"
+            ERROR_UNSUPPORTED_AUTH_SCHEME -> "ERROR_UNSUPPORTED_AUTH_SCHEME"
+            ERROR_UNSUPPORTED_SCHEME -> "ERROR_UNSUPPORTED_SCHEME"
+            SAFE_BROWSING_THREAT_BILLING -> "SAFE_BROWSING_THREAT_BILLING"
+            SAFE_BROWSING_THREAT_MALWARE -> "SAFE_BROWSING_THREAT_MALWARE"
+            SAFE_BROWSING_THREAT_PHISHING -> "SAFE_BROWSING_THREAT_PHISHING"
+            SAFE_BROWSING_THREAT_UNKNOWN -> "SAFE_BROWSING_THREAT_UNKNOWN"
+            SAFE_BROWSING_THREAT_UNWANTED_SOFTWARE -> "SAFE_BROWSING_THREAT_UNWANTED_SOFTWARE"
+            else -> "ERROR_OTHER"
+        }
+
+    fun addExemptedMaliciousSite(
+        url: Uri,
+        feed: Feed,
+    ) {
+        requestInterceptor.addExemptedMaliciousSite(url, feed)
+    }
+
+    private data class GesturedPost(
+        val url: String,
+        val responseStarted: Boolean,
+        val afterRedirectHop: Boolean = false,
+        val formPageUrl: String? = null,
+    )
+
+    companion object {
+        val parallelRequestCounter = AtomicInteger(0)
+
+        // Identifies each navigation that starts a page load wide event flow, so a measurement reported once that
+        // navigation may already be over cannot be attributed to a later one. Static, because a tab's client is
+        // recreated with the tab's fragment while the flows and the coroutines reporting into them outlive it.
+        private val wideEventNavigationIdCounter = AtomicLong(0)
+
+        private val activeRequestTimeoutJobs = ConcurrentHashMap<String, Job>()
+        private const val REQUEST_TIMEOUT_MS = 30000L // 30 seconds
+
+        // dedicated scope for request count timeout jobs (static, to be shared across all instances)
+        @SuppressLint("NoHardcodedCoroutineDispatcher")
+        private val timeoutScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    }
+}
+
+enum class WebViewPixelName(override val pixelName: String) : Pixel.PixelName {
+    WEB_RENDERER_GONE_CRASH("m_web_view_renderer_gone_crash"),
+    WEB_RENDERER_GONE_KILLED("m_web_view_renderer_gone_killed"),
+    WEB_PAGE_LOADED("m_web_view_page_loaded"),
+    WEB_PAGE_PAINTED("m_web_view_page_painted"),
+    WEB_VIEW_FORCED_RECOMPOSITE("m_web_view_forced_recomposite"),
+    WEB_PAGE_LOAD_TIMEOUT_SHOWN("m_page_load_timeout_shown"),
+    WEB_PAGE_LOAD_TIMEOUT_RECOVERED("m_page_load_timeout_recovered"),
+}
+
+enum class WebViewErrorResponse(
+    @StringRes val errorId: Int,
+) {
+    BAD_URL(R.string.webViewErrorBadUrl),
+    CONNECTION(R.string.webViewErrorNoConnection),
+    OMITTED(R.string.webViewErrorNoConnection),
+    LOADING(R.string.webViewErrorNoConnection),
+    SSL_PROTOCOL_ERROR(R.string.webViewErrorSslProtocol),
+    TIMEOUT(R.string.webViewErrorTimeout),
+}
+
+data class SslErrorResponse(
+    val error: SslError,
+    val errorType: SSLErrorType,
+    val url: String,
+)
+
+enum class SSLErrorType(
+    @StringRes val errorId: Int,
+) {
+    EXPIRED(R.string.sslErrorExpiredMessage),
+    WRONG_HOST(R.string.sslErrorWrongHostMessage),
+    UNTRUSTED_HOST(R.string.sslErrorUntrustedMessage),
+    GENERIC(R.string.sslErrorUntrustedMessage),
+    NONE(R.string.sslErrorUntrustedMessage),
 }

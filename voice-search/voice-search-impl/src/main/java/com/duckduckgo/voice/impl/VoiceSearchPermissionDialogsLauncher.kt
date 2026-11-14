@@ -1,0 +1,150 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.voice.impl
+
+import android.app.Activity
+import android.content.Context
+import android.content.res.Configuration
+import android.view.ViewGroup
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.ui.view.button.ButtonType.PRIMARY
+import com.duckduckgo.common.ui.view.button.ButtonType.SECONDARY
+import com.duckduckgo.common.ui.view.dialog.StackedAlertDialogBuilder
+import com.duckduckgo.common.ui.view.dialog.StackedButton
+import com.duckduckgo.common.ui.view.toPx
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.voice.api.VoiceSearchLauncher.VoiceSearchMode
+import com.google.android.material.snackbar.Snackbar
+import dev.zacsweers.metro.ContributesBinding
+import javax.inject.Inject
+import com.duckduckgo.mobile.android.R as CommonR
+
+interface VoiceSearchPermissionDialogsLauncher {
+    fun showMicAccessDeniedDialog(
+        context: Context,
+        mode: VoiceSearchMode,
+        onChangePermissionsSelected: () -> Unit = {},
+        onHideVoiceSearchSelected: () -> Unit = {},
+        onCancelled: () -> Unit = {},
+    )
+
+    fun showMicPermissionDeniedSnackbar(
+        activity: Activity,
+        onAllowSelected: () -> Unit = {},
+    )
+}
+
+@ContributesBinding(ActivityScope::class)
+class RealVoiceSearchPermissionDialogsLauncher @Inject constructor(
+    private val pixel: Pixel,
+) : VoiceSearchPermissionDialogsLauncher {
+
+    companion object {
+        private const val CHANGE_PERMISSIONS_BUTTON = 0
+        private const val HIDE_VOICE_SEARCH_BUTTON = 1
+
+        private const val KEY_PARAM_ACTION = "action"
+        private const val KEY_PARAM_MODE = "mode"
+        private const val ACTION_CHANGE_PERMISSIONS = "change_permissions"
+        private const val ACTION_HIDE_VOICE_SEARCH = "hide_voice_search"
+        private const val ACTION_CANCEL = "cancel"
+        private const val MODE_SEARCH = "search"
+        private const val MODE_DUCK_AI = "duckai"
+    }
+
+    override fun showMicAccessDeniedDialog(
+        context: Context,
+        mode: VoiceSearchMode,
+        onChangePermissionsSelected: () -> Unit,
+        onHideVoiceSearchSelected: () -> Unit,
+        onCancelled: () -> Unit,
+    ) {
+        val isDuckAiMode = mode == VoiceSearchMode.DUCK_AI
+        val modeParam = if (isDuckAiMode) MODE_DUCK_AI else MODE_SEARCH
+        val message = if (isDuckAiMode) {
+            R.string.voiceSearchMicAccessDeniedDialogMessageDuckAi
+        } else {
+            R.string.voiceSearchMicAccessDeniedDialogMessage
+        }
+        val buttons = buildList {
+            add(StackedButton(R.string.voiceSearchMicAccessDeniedDialogChangePermissions, PRIMARY, CommonR.drawable.ic_open_in_16))
+            if (!isDuckAiMode) {
+                add(StackedButton(R.string.voiceSearchMicAccessDeniedDialogHideVoiceSearch, SECONDARY))
+            }
+            add(StackedButton(R.string.voiceSearchNegativeAction, SECONDARY))
+        }
+
+        pixel.fire(
+            pixel = VoiceSearchPixelNames.VOICE_SEARCH_MIC_DENIED_DIALOG_SHOWN,
+            parameters = mapOf(KEY_PARAM_MODE to modeParam),
+        )
+
+        StackedAlertDialogBuilder(context)
+            .setRebrandUpdate(true)
+            .setHeaderImageResource(CommonR.drawable.ic_microphone_24)
+            .setTitle(R.string.voiceSearchMicAccessDeniedDialogTitle)
+            .setMessage(message)
+            .setStackedButtons(buttons)
+            .addEventListener(
+                object : StackedAlertDialogBuilder.EventListener() {
+                    override fun onButtonClicked(position: Int) {
+                        when (position) {
+                            CHANGE_PERMISSIONS_BUTTON -> {
+                                fireDialogClick(ACTION_CHANGE_PERMISSIONS, modeParam)
+                                onChangePermissionsSelected()
+                            }
+                            HIDE_VOICE_SEARCH_BUTTON -> if (isDuckAiMode) {
+                                fireDialogClick(ACTION_CANCEL, modeParam)
+                                onCancelled()
+                            } else {
+                                fireDialogClick(ACTION_HIDE_VOICE_SEARCH, modeParam)
+                                onHideVoiceSearchSelected()
+                            }
+                            else -> {
+                                fireDialogClick(ACTION_CANCEL, modeParam)
+                                onCancelled()
+                            }
+                        }
+                    }
+                },
+            )
+            .show()
+    }
+
+    private fun fireDialogClick(action: String, mode: String) {
+        pixel.fire(
+            pixel = VoiceSearchPixelNames.VOICE_SEARCH_MIC_DENIED_DIALOG_CLICK,
+            parameters = mapOf(KEY_PARAM_ACTION to action, KEY_PARAM_MODE to mode),
+        )
+    }
+
+    override fun showMicPermissionDeniedSnackbar(
+        activity: Activity,
+        onAllowSelected: () -> Unit,
+    ) {
+        val rootView = activity.window?.decorView?.rootView ?: return
+        val snackbar = Snackbar.make(rootView, R.string.voiceSearchMicPermissionDeniedSnackbarMessage, Snackbar.LENGTH_LONG)
+        if (activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            val layoutParams = snackbar.view.layoutParams as ViewGroup.MarginLayoutParams
+            layoutParams.setMargins(layoutParams.leftMargin, layoutParams.topMargin, layoutParams.rightMargin, 32.toPx())
+            snackbar.view.layoutParams = layoutParams
+        }
+        snackbar
+            .setAction(R.string.voiceSearchMicPermissionDeniedSnackbarAction) { onAllowSelected() }
+            .show()
+    }
+}

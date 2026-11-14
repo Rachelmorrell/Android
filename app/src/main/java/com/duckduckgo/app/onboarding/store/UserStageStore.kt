@@ -16,21 +16,32 @@
 
 package com.duckduckgo.app.onboarding.store
 
-import androidx.lifecycle.LifecycleObserver
-import com.duckduckgo.app.global.DispatcherProvider
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.common.utils.DispatcherProvider
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import logcat.LogPriority.DEBUG
+import logcat.logcat
 import javax.inject.Inject
 
-interface UserStageStore : LifecycleObserver {
+interface UserStageStore {
+    fun userAppStageFlow(): Flow<AppStage>
     suspend fun getUserAppStage(): AppStage
     suspend fun stageCompleted(appStage: AppStage): AppStage
     suspend fun moveToStage(appStage: AppStage)
+    val currentAppStage: Flow<AppStage>
 }
 
 class AppUserStageStore @Inject constructor(
     private val userStageDao: UserStageDao,
-    private val dispatcher: DispatcherProvider
+    private val dispatcher: DispatcherProvider,
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature,
 ) : UserStageStore {
+
+    override fun userAppStageFlow(): Flow<AppStage> {
+        return userStageDao.currentUserAppStageFlow().map { it?.appStage ?: AppStage.NEW }
+    }
 
     override suspend fun getUserAppStage(): AppStage {
         return withContext(dispatcher.io()) {
@@ -41,6 +52,14 @@ class AppUserStageStore @Inject constructor(
 
     override suspend fun stageCompleted(appStage: AppStage): AppStage {
         return withContext(dispatcher.io()) {
+            val currentStage = getUserAppStage()
+            if (currentStage == AppStage.ESTABLISHED &&
+                androidBrowserConfigFeature.establishedAppStageGuard().isEnabled()
+            ) {
+                logcat(DEBUG) { "UserStageStore: User is already ESTABLISHED, returning ESTABLISHED" }
+                return@withContext AppStage.ESTABLISHED
+            }
+
             val newAppStage = when (appStage) {
                 AppStage.NEW -> AppStage.DAX_ONBOARDING
                 AppStage.DAX_ONBOARDING -> AppStage.ESTABLISHED
@@ -48,6 +67,7 @@ class AppUserStageStore @Inject constructor(
             }
 
             if (newAppStage != appStage) {
+                logcat(DEBUG) { "UserStageStore: currentStage=$currentStage, newAppStage=$newAppStage" }
                 userStageDao.updateUserStage(newAppStage)
             }
 
@@ -59,6 +79,7 @@ class AppUserStageStore @Inject constructor(
         userStageDao.updateUserStage(appStage)
     }
 
+    override val currentAppStage: Flow<AppStage> = userStageDao.currentAppStage().map { it.appStage }
 }
 
 suspend fun UserStageStore.isNewUser(): Boolean {

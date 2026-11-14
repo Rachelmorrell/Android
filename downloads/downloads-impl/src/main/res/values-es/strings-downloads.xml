@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">No se ha podido descargar. Comprueba la conexión a internet.</string>
+
+    <string name="notificationChannelFileDownloading">Archivo descargándose</string>
+    <string name="notificationChannelFileDownloaded">Archivo descargado</string>
+
+    <string name="downloadInProgress">Descargando</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">Descarga de %1$s iniciada</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">Descarga de %1$s completada</string>
+    <string name="downloadsDownloadGenericErrorMessage">No se ha podido descargar.</string>
+    <string name="downloadsCancel">Cancelar</string>
+    <string name="downloadsRetry">Volver a intentar</string>
+    <string name="notificationDownloadComplete">Descarga finalizada.</string>
+    <string name="notificationDownloadFailed">No se ha podido descargar.</string>
+
+    <string name="downloadConfirmationContinue">Guardar en descargas</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">Desde: %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Eliminar todo</string>
+    <string name="downloadsActivityNoItemsDescription">Todavía no se han descargado archivos</string>
+    <string name="downloadsActivityTitle">Descargas</string>
+    <string name="downloadsAllFilesDeletedMessage">Todos los archivos eliminados</string>
+    <string name="downloadsCannotOpenFileErrorMessage">No se puede abrir el archivo. Busca una aplicación compatible.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">%1$s eliminado</string>
+    <string name="downloadsFileNotFoundErrorMessage">El archivo ya no existe</string>
+    <string name="downloadsItemMenuCancel">Cancelar</string>
+    <string name="downloadsItemMenuDelete">Eliminar</string>
+    <string name="downloadsItemMenuShare">Compartir</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">Más opciones para %1$s</string>
+    <string name="downloadsNotifyMeSubtitle">Recibe una notificación cuando se completen las descargas.</string>
+    <string name="downloadsNotifyMeTitle">Entérate de cuándo están listas las descargas</string>
+    <string name="downloadsShareTitle">Compartir con…</string>
+    <string name="downloadsStateInProgress">En curso…</string>
+    <string name="downloadsUndoActionName">Deshacer</string>
+    <string name="downloadsSearchHint">Buscar</string>
+</resources>

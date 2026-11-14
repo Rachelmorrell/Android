@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Ayarlarda Ayarlama</b></string>
+
+    <string name="saveLoginDialogButtonSave">Şifreyi Kaydet</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Şifre Kaydet</string>
+    <string name="saveLoginDialogNotNow">Kaydetme</string>
+    <string name="saveLoginDialogTitle">Parolanız kaydedilsin mi?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Diğer Seçenekler</string>
+
+    <string name="useSavedLoginDialogTitle">Kayıtlı bir şifre mi kullanıyorsunuz?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">%1$s şifresi</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Site şifresi</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">Bu Web Sitesinden</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">%1$s adresinden</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Şifreyi Güncelle</string>
+    <string name="updateLoginDialogButtonNotNow">Kaydetme</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Kullanıcı adı güncellensin mi?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Kullanıcı Adını Güncelle</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">%1$s için şifre güncellensin mi?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo bu kayıtlı şifreyi cihazınızda güncelleyecektir.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Otomatik Doldurma İletişim Kutusunu Kapat</string>
+
+    <string name="credentialManagementEditUsernameHint">Kullanıcı adı</string>
+    <string name="credentialManagementEditPasswordHint">Parola</string>
+    <string name="credentialManagementEditWebsiteHint">Web sitesi URL\'si</string>
+    <string name="credentialManagementEditNotesHint">Notlar</string>
+    <string name="credentialManagementEditButtonDelete">Sil</string>
+    <string name="credentialManagementEditButtonSaveChanges">Değişiklikleri Kaydet</string>
+    <string name="credentialManagementEditButtonCopyUsername">Kullanıcı Adını Kopyala</string>
+    <string name="credentialManagementEditButtonCopyPassword">Şifreyi Kopyala</string>
+
+    <string name="credentialManagementViewMenuEdit">Düzenle</string>
+    <string name="credentialManagementViewMenuDelete">Sil</string>
+
+    <string name="credentialManagementSuggestionsLabel">Önerilen</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Android WebView sürümünüz güncel değil veya uyumsuz olduğundan parolalar için otomatik doldurma kullanılamıyor.</string>
+
+    <string name="autofillManagementSearchClearDescription">Arama girişini temizle</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">\'%1$s\' için sonuç yok</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Vazgeç</string>
+    <string name="autofillDeleteLoginDialogDelete">Sil</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Kullanıcı adı kopyalandı</string>
+    <string name="autofillManagementPasswordCopied">Şifre kopyalandı</string>
+
+    <string name="autofill_password_generation_offer_title">DuckDuckGo\'nun oluşturduğu güçlü bir şifre kullanmak ister misiniz?</string>
+    <string name="autofill_password_generation_offer_accept">Güçlü Şifre Kullan</string>
+    <string name="autofill_password_generation_offer_decline">Kendiminkini Oluştur</string>
+
+    <string name="deviceNotSupportedTitle">Cihaz desteklenmiyor</string>
+
+    <string name="autofillManagementUndoDeletion">Geri al</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Web sitesini aç</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Özel Duck Address devre dışı bırakılsın mı?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">%1$s adresine gönderilen e-postalar artık gelen kutunuza yönlendirilmeyecektir.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Devre dışı bırak</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Özel Duck Address yeniden etkinleştirilsin mi?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">%1$s adresine gönderilen e-postalar tekrar gelen kutunuza yönlendirilecektir.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Yeniden etkinleştir</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Aktif</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Etkinleştiriliyor...</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Devre dışı bırakıldı</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Devre dışı bırakılıyor...</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Bu adresin yönetimi geçici olarak kullanılamıyor.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated.">Bu cihazda Duck Address yönetimi için<annotation type="enable_duck_address">E-posta Korumasını</annotation> etkinleştirin.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">E-posta adresini seçin</string>
+    <string name="autofillTooltipUseYourAliasDescription">E-posta izleyicileri engelleyin</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Özel Duck Address Oluştur</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">E-posta izleyicileri engelleyin ve adresi gizleyin</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Bunu dilediğiniz zaman Ayarlar\'dan devre dışı bırakabilirsiniz.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Kaydetmeye Devam Et</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Devre dışı bırak</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">E-postanızı Gizleyin ve \n İzleyicileri Engelleyin</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">E-posta Koruması</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Gizli izleyicileri de kaldıran ve e-postaları gelen kutunuza ileten benzersiz, rastgele bir adres oluşturun.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">E-postamı Koru</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Bir Daha Gösterme</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Şimdi çıkış yaparsanız Duck Address kaydedilmez.</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Kuruluma Devam Et</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Kurulumdan Çık</string>
+
+    <string name="autofillManagementScreenTitle">Şifreler</string>
+    <string name="autofillManagementScreenTitleNew">Şifreler ve Otomatik Doldurma</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Henüz şifre kaydedilmedi</string>
+    <string name="credentialManagementAutofillToggleLabel">Şifreleri kaydedin ve otomatik doldurun</string>
+    <string name="credentialManagementAutofillSubtitle">Parolalar şifrelenir. Onları sizden başka kimse göremez. Biz bile. <annotation type="learn_more_link">Daha Fazla Bilgi</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Parola Yöneticisi Güvenliği</string>
+    <string name="saveLoginDialogSubtitle">DuckDuckGo Parolalar ve Otomatik Doldurma ile parolanızı cihazınızda güvenle saklayın.</string>
+    <string name="autofillManagementAddLogin">Şifre Ekle</string>
+    <string name="credentialManagementEditLoginTitleHint">Title</string>
+    <string name="autofillManagementDeletedConfirmation">Şifre silindi</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Son güncelleme %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Şifreleri kaydetmeye devam etmek istiyor musunuz?</string>
+    <string name="deviceNotSupportedSubtitle">Şifreleri güvenli bir şekilde saklamak için bunları şifrelememiz ve cihazınızda depolamamız gerekir. Cihazınız şifreli depolamayı desteklemediğinden, şifreleri kaydetmek ve otomatik doldurmak mümkün değildir.</string>
+    <string name="autofill_password_generation_offer_message">Şifreler cihazınızda güvenli bir şekilde saklanır.</string>
+    <string name="autofillManagementSearchLogins">Şifreleri ara</string>
+    <string name="biometric_prompt_title">Şifreler Kilitli</string>
+    <string name="autofill_auth_text_for_access">Şifrelere erişmek için cihazın kilidini açın</string>
+    <string name="managementDisabledModeTitle">Şifreleri kaydetmek için cihazınızın güvenliğini sağlayın</string>
+    <string name="managementDisabledModeSubtitle">Şifrelerinizin güvenliğini sağlamak için bir cihaz kilidi deseni, PIN veya biyometrik veri gereklidir.</string>
+    <string name="credentialManagementEditTitle">Şifreyi Düzenle</string>
+
+    <string name="credentials_limit_warning"><b>Senkronizasyon Duraklatıldı</b>\nMaksimum şifre sayısına ulaştınız. Senkronizasyona devam etmek için bazılarını silin.\n\n<annotation type="manage_logins">Şifreleri Yönet</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Şifre Senkronizasyonu Duraklatıldı</b>\nMaksimum şifre sayısına ulaştınız. Senkronizasyona devam etmek için lütfen bazı şifreleri silin.</string>
+    <string name="credentials_invalid_request_warning"><b></b>\nBazı şifreler yanlış biçimlendirilmiş veya çok uzun olduğu için senkronize edilmedi.\n\n<annotation type="manage_logins">Şifreleri Yönet</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Şifre Senkronizasyonu Durduruldu</b>\nBazı şifreler yanlış biçimlendirilmiş veya çok uzun olduğu için senkronize edilmedi.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Bu Site için Hiçbir Zaman Sorma</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Hayır Teşekkürler</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Hariç tutulan siteleri sıfırlarsanız, bu sitelerden herhangi birinde bir sonraki oturum açtığınızda şifrenizi kaydetmeniz istenecektir.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Hariç Tutulan Siteleri Sıfırla</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Hariç Tutulan Siteler Sıfırlansın mı?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Sıfırla</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Vazgeç</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Tüm Şifreleri Sil</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d şifre silindi</item>
+        <item quantity="other">%1$d şifre silindi</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Tüm şifreleri silmek istediğinizi onaylamak için kimlik doğrulaması yapın</string>
+    <string name="autofill_title_text_for_delete_all">Tüm Şifreleri Sil</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">%1$s için şifreniz, alanlarından biri karakter sınırını aştığı için senkronize edilemiyor.</item>
+        <item quantity="other">%1$s ve %2$d diğer site için şifreleriniz, bazı alanları karakter sınırını aştığı için senkronize edilemiyor.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Şifreleri Yönet</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Şifreniz bu cihazdan silinecektir.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Şifreniz bu cihazdan silinecek.</item>
+        <item quantity="other">Şifreleriniz bu cihazdan silinecek.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Şifreniz senkronize edilen tüm cihazlardan silinecek.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Şifreniz senkronize edilen tüm cihazlardan silinecek.</item>
+        <item quantity="other">Şifreleriniz senkronize edilen tüm cihazlardan silinecek.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Bu şifreyi silmek istediğinizden emin misiniz?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Bu %1$d şifreyi silmek istediğinizden emin misiniz?</item>
+        <item quantity="other">Bu %1$d şifreyi silmek istediğinizden emin misiniz?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Hesabınıza başka bir şekilde erişebilecek olduğunuzdan emin olun.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Hesabınıza başka bir şekilde erişebileceğinizden emin olun.</item>
+        <item quantity="other">Hesaplarınıza başka bir şekilde erişebileceğinizden emin olun.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Kayıtlı parolaları başka bir tarayıcıdan DuckDuckGo\'ya aktarabilirsiniz.</string>
+
+    <string name="autofillManagementImportPasswords">Şifreleri İçe Aktar</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Masaüstü Şifrelerini Senkronize Et</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Şifreler Nasıl Aktarılır</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Masaüstü Şifreleri Nasıl Senkronize Edilir</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">DuckDuckGo tarayıcısının masaüstü sürümünde şifreleri içe aktarın, ardından cihazlar arasında senkronize edin.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Masaüstü Tarayıcısını Edinin</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Mac veya Windows için DuckDuckGo Tarayıcısını edinin</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">DuckDuckGo masaüstü tarayıcısı ile gizli arama yapın ve izleyicileri engelleyin. Bugün indirmek için bilgisayarınızda bu bağlantıyı ziyaret edin.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Masaüstü ile Senkronize Et</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Masaüstü tarayıcısından içe aktarın:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">DuckDuckGo\'yu Mac veya Windows\'ta açın</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[<b>Ayarlar</b> > <b>Şifreler</b>'e gidin]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[<b>Şifreleri İçe Aktar</b>… öğesini seçin ve içe aktarma adımlarını izleyin]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Bilgisayarınıza aktarıldıktan sonra bu cihazda senkronizasyonu ayarlayabilirsiniz</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Masaüstü Uygulamasını İndirin</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Mac veya Windows için DuckDuckGo\'yu edinin</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">Bilgisayarınızda şu adrese gidin:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Otomatik Doldurmayla ilgili bir sorunu bildirin</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Otomatik doldurmanın bu sitede çalışmadığını anonim olarak bildirin. Şifreler asla paylaşılmaz.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">%1$s adresinde otomatik doldurmanın çalışmadığı bildirilsin mi?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">DuckDuckGo\'ya gönderilen raporlar anonimdir ve kullanıcı adınızı, şifrenizi veya diğer kişisel olarak tanımlanabilir bilgilerinizi içermez.\n\nRapor yalnızca web sitesi URL\'sini ve bazı otomatik doldurma ayarlarının durumunu içerir.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Rapor gönder</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Vazgeç</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Teşekkür ederiz! Raporunuz DuckDuckGo\'yu herkes için daha iyi hale getirmemize yardımcı olacak.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Temel Özellikler</string>
+    <string name="onboardingSaveDialogFeature1Title">Sorunsuz oturum açma</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Giriş bilgilerini hatırlamanıza gerek yoktur.</string>
+    <string name="onboardingSaveDialogFeature2Title">Güvenli depolama</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Parolalar şifrelenir, cihazda saklanır ve Android deseniniz veya PIN\'inizle kilitlenir.</string>
+    <string name="onboardingSaveDialogFeature3Title">Cihazlar arasında senkronizasyon</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">Uçtan uca şifrelenmiştir ve hazır olduğunuzda kurulumu kolaydır.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Parola kaydetmeyi istediğiniz zaman kapatabilirsiniz.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Ayarları Aç</string>
+
+    <string name="newTabPageShortcutPasswords">Şifreler</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Şifreleri İçe Aktar</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d şifre Google\'dan içe aktarıldı</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d şifre CSV\'den içe aktarıldı</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Google\'dan Şifreleri İçe Aktar</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Google\'dan Şifreleri İçe Aktar</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Masaüstü Şifrelerini Senkronize Et</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Masaüstü Şifrelerini Senkronize Et</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Google\'dan Şifreleri İçe Aktar</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google, onaylamak için oturum açmanızı veya şifre girmenizi isteyebilir.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Cihazın, onaylamak için PIN\'ini, şifreni veya desenini girmeni isteyebilir.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Google\'dan İçe Aktar</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Bir CSV dosyası seç</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Masaüstü Tarayıcısından İçe Aktar</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">DuckDuckGo\'ya Aktar</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">İçe Aktarma Tamamlandı</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Anladım</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Şifre içe aktarma başarısız</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Atlandı (yinelenen veya geçersiz): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[İçe aktarılan şifreler: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Şifreleri Aç</string>
+    <string name="autofill_service_select_password_activity">Kayıtlı bir şifre seç</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Şifreler ve Otomatik Doldurma</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Hariç Tutulan Siteler Sıfırlansın mı?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Hariç tutulan siteleri sıfırlarsanız, bu sitelerden herhangi birinde bir sonraki oturum açtığınızda şifrenizi kaydetmeniz istenecektir.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Sıfırla</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Vazgeç</string>
+    <string name="autofillSettingsPasswordsEntry">Şifreler</string>
+    <string name="autofillSettingsAutofillToggleLabel">Kaydetmek ve otomatik doldurmak için sor</string>
+    <string name="autofillSettingsAutofillSubtitle">Parolalar şifrelenir. Onları sizden başka kimse göremez. Biz bile. <annotation type="learn_more_link">Daha Fazla Bilgi</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Şifreleri İçe Aktar</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Google\'dan Şifreleri İçe Aktar</string>
+    <string name="autofillSettingsImportFromDesktopSync">Masaüstü Şifrelerini Senkronize Et</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Hariç Tutulan Siteleri Sıfırla</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Şifrelerinizi Google\'dan&lt;br /&gt;DuckDuckGo\'ya getirin</string>
+    <string name="passwords_import_promo_subtitle">Şifrelerinizi hızlı ve güvenli bir şekilde DuckDuckGo\'ya aktarın. Google sizden şifrenizi girmenizi isteyebilir.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Şifrelerini hızlı ve güvenli bir şekilde DuckDuckGo\'ya aktar. Cihazın, onaylamak için PIN\'ini, şifreni veya desenini girmeni isteyebilir.</string>
+    <string name="passwords_import_promo_action">Google\'dan İçe Aktar</string>
+    <string name="passwords_import_promo_in_browser_title">Şifrelerinizi Google\'dan DuckDuckGo\'ya taşıyın</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Şifrelerini Google\'dan DuckDuckGo\'ya aktar</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Bir Daha Sorma</string>
+    <string name="passwords_import_promo_in_settings_title">Google\'dan Şifreleri İçe Aktar</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Gizle</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">DuckDuckGo\'ya Aktar</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Chrome\'dan İçe Aktarıldı</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Google\'dan Yer İşaretlerini İçe Aktar</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google, onaylamak için oturum açmanızı veya şifre girmenizi isteyebilir.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Google\'dan İçe Aktar</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Yer İşaretleri Dosyasını Seç…</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Yer İmlerini İçe Aktar</string>
+    <string name="importBookmarksProgressTitle">Google\'dan İçe Aktarılıyor…</string>
+    <string name="importBookmarksProgressSubtitle">Bu ekranı açık tutun ve bekleyin. İşlem en fazla bir veya iki dakika sürecektir.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google, onaylamak için oturum açmanızı veya şifre girmenizi isteyebilir.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google, yer işaretlerinizin dışa aktarıldığını onaylayan bir e-posta gönderebilir.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">İçe aktarma iptal edilsin mi?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Şimdi iptal ederseniz yer işaretleriniz içe aktarılmayacaktır.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">İçe Aktarmayı İptal Et</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Devam et</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Yer işaretleri: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Kapat</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Bir hata oluştu</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Lütfen internete bağlı olduğunuzdan emin olun ve tekrar deneyin.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">İçe aktarma tamamlandı!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Biraz bekle — bu pencereyi açık tut. Bir iki dakikadan fazla sürmez.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google şifreni isteyebilir.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google, verilerinin dışa aktarıldığını onaylayan bir e-posta gönderecek. Hiçbir şey yapmana gerek yok.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">İçe aktarma tamamlandı!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[İçe aktarılan yer işaretleri: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Şifrelerinizi Google\'dan DuckDuckGo\'ya taşıyın.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Google\'dan Şifreleri İçe Aktar</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Yer işaretlerinizi Google\'dan DuckDuckGo\'ya taşıyın.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Google\'dan Yer İşaretlerini İçe Aktar</string>
+
+</resources>

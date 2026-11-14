@@ -21,13 +21,13 @@ import androidx.lifecycle.MutableLiveData
 import com.duckduckgo.app.browser.logindetection.FireproofDialogsEventHandler.Event
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteEntity
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
-import com.duckduckgo.app.global.DispatcherProvider
+import com.duckduckgo.app.fire.fireproofwebsite.ui.AutomaticFireproofSetting
 import com.duckduckgo.app.global.events.db.UserEventKey
 import com.duckduckgo.app.global.events.db.UserEventsStore
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.settings.db.SettingsDataStore
-import com.duckduckgo.app.statistics.VariantManager
 import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.utils.DispatcherProvider
 import kotlinx.coroutines.withContext
 
 interface FireproofDialogsEventHandler {
@@ -38,20 +38,22 @@ interface FireproofDialogsEventHandler {
     suspend fun onDisableLoginDetectionDialogShown()
     suspend fun onUserConfirmedDisableLoginDetectionDialog()
     suspend fun onUserDismissedDisableLoginDetectionDialog()
+    suspend fun onUserEnabledAutomaticFireproofing(domain: String)
+    suspend fun onUserRequestedAskEveryTime(domain: String)
+    suspend fun onUserDismissedAutomaticFireproofLoginDialog()
 
     sealed class Event {
         data class FireproofWebSiteSuccess(val fireproofWebsiteEntity: FireproofWebsiteEntity) : Event()
-        object AskToDisableLoginDetection : Event()
+        data object AskToDisableLoginDetection : Event()
     }
 }
 
-class BrowserTabFireproofDialogsEventHandler constructor(
+class BrowserTabFireproofDialogsEventHandler(
     private val userEventsStore: UserEventsStore,
     private val pixel: Pixel,
     private val fireproofWebsiteRepository: FireproofWebsiteRepository,
     private val appSettingsPreferencesStore: SettingsDataStore,
-    private val variantManager: VariantManager,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
 ) : FireproofDialogsEventHandler {
 
     override val event: MutableLiveData<Event> = MutableLiveData()
@@ -59,7 +61,7 @@ class BrowserTabFireproofDialogsEventHandler constructor(
     override suspend fun onFireproofLoginDialogShown() {
         pixel.fire(
             pixel = AppPixelName.FIREPROOF_LOGIN_DIALOG_SHOWN,
-            parameters = mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString())
+            parameters = mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()),
         )
     }
 
@@ -77,7 +79,7 @@ class BrowserTabFireproofDialogsEventHandler constructor(
         pixel.fire(AppPixelName.FIREPROOF_WEBSITE_LOGIN_DISMISS, mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()))
         if (allowUserToDisableFireproofLoginActive()) {
             if (shouldAskToDisableFireproofLogin()) {
-                event.value = Event.AskToDisableLoginDetection
+                emitEvent(Event.AskToDisableLoginDetection)
             } else {
                 userEventsStore.registerUserEvent(UserEventKey.FIREPROOF_LOGIN_DIALOG_DISMISSED)
             }
@@ -87,23 +89,57 @@ class BrowserTabFireproofDialogsEventHandler constructor(
     override suspend fun onDisableLoginDetectionDialogShown() {
         pixel.fire(
             AppPixelName.FIREPROOF_LOGIN_DISABLE_DIALOG_SHOWN,
-            mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString())
+            mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()),
         )
     }
 
     override suspend fun onUserConfirmedDisableLoginDetectionDialog() {
-        appSettingsPreferencesStore.appLoginDetection = false
+        appSettingsPreferencesStore.automaticFireproofSetting = AutomaticFireproofSetting.NEVER
         pixel.fire(
             AppPixelName.FIREPROOF_LOGIN_DISABLE_DIALOG_DISABLE,
-            mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString())
+            mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()),
         )
     }
 
     override suspend fun onUserDismissedDisableLoginDetectionDialog() {
-        appSettingsPreferencesStore.appLoginDetection = true
+        appSettingsPreferencesStore.automaticFireproofSetting = AutomaticFireproofSetting.ASK_EVERY_TIME
         userEventsStore.removeUserEvent(UserEventKey.FIREPROOF_LOGIN_DIALOG_DISMISSED)
         userEventsStore.registerUserEvent(UserEventKey.FIREPROOF_DISABLE_DIALOG_DISMISSED)
         pixel.fire(AppPixelName.FIREPROOF_LOGIN_DISABLE_DIALOG_CANCEL, mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()))
+    }
+
+    override suspend fun onUserEnabledAutomaticFireproofing(domain: String) {
+        appSettingsPreferencesStore.automaticFireproofSetting = AutomaticFireproofSetting.ALWAYS
+        appSettingsPreferencesStore.showAutomaticFireproofDialog = false
+        withContext(dispatchers.io()) {
+            fireproofWebsiteRepository.fireproofWebsite(domain)?.let {
+                pixel.fire(
+                    AppPixelName.FIREPROOF_AUTOMATIC_DIALOG_ALWAYS,
+                    mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()),
+                )
+                emitEvent(Event.FireproofWebSiteSuccess(fireproofWebsiteEntity = it))
+            }
+        }
+    }
+
+    override suspend fun onUserRequestedAskEveryTime(domain: String) {
+        appSettingsPreferencesStore.automaticFireproofSetting = AutomaticFireproofSetting.ASK_EVERY_TIME
+        appSettingsPreferencesStore.showAutomaticFireproofDialog = false
+        withContext(dispatchers.io()) {
+            fireproofWebsiteRepository.fireproofWebsite(domain)?.let {
+                pixel.fire(
+                    AppPixelName.FIREPROOF_AUTOMATIC_DIALOG_FIREPROOF_SITE,
+                    mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()),
+                )
+                emitEvent(Event.FireproofWebSiteSuccess(fireproofWebsiteEntity = it))
+            }
+        }
+    }
+
+    override suspend fun onUserDismissedAutomaticFireproofLoginDialog() {
+        appSettingsPreferencesStore.automaticFireproofSetting = AutomaticFireproofSetting.ASK_EVERY_TIME
+        appSettingsPreferencesStore.showAutomaticFireproofDialog = false
+        pixel.fire(AppPixelName.FIREPROOF_AUTOMATIC_DIALOG_NOT_NOW, mapOf(Pixel.PixelParameter.FIRE_EXECUTED to userTriedFireButton().toString()))
     }
 
     private suspend fun userTriedFireButton() = userEventsStore.getUserEvent(UserEventKey.FIRE_BUTTON_EXECUTED) != null

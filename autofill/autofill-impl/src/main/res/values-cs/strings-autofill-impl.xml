@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Nastavit v Nastaveních</b></string>
+
+    <string name="saveLoginDialogButtonSave">Uložit heslo</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Uložit heslo</string>
+    <string name="saveLoginDialogNotNow">Neukládat</string>
+    <string name="saveLoginDialogTitle">Uložit heslo?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Další možnosti</string>
+
+    <string name="useSavedLoginDialogTitle">Použít uložené heslo?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">Heslo pro %1$s</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Heslo pro web</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">Z této webové stránky</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">Ze stránky %1$ss</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Aktualizuj si heslo</string>
+    <string name="updateLoginDialogButtonNotNow">Neukládat</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Aktualizovat uživatelské jméno?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Aktualizovat uživatelské jméno</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Aktualizovat heslo pro \n%1$s?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo aktualizuje tohle uložené heslo ve tvém zařízení.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Zavřít dialogové okno Automatické vyplňování</string>
+
+    <string name="credentialManagementEditUsernameHint">Uživatelské jméno</string>
+    <string name="credentialManagementEditPasswordHint">Heslo</string>
+    <string name="credentialManagementEditWebsiteHint">URL webové stránky</string>
+    <string name="credentialManagementEditNotesHint">Poznámky</string>
+    <string name="credentialManagementEditButtonDelete">Smazat</string>
+    <string name="credentialManagementEditButtonSaveChanges">Uložit změny</string>
+    <string name="credentialManagementEditButtonCopyUsername">Kopírovat uživatelské jméno</string>
+    <string name="credentialManagementEditButtonCopyPassword">Kopírovat heslo</string>
+
+    <string name="credentialManagementViewMenuEdit">Upravit</string>
+    <string name="credentialManagementViewMenuDelete">Smazat</string>
+
+    <string name="credentialManagementSuggestionsLabel">Navrhované</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Automatické vyplňování hesel není dostupné, protože tvoje verze Android WebView je zastaralá nebo nekompatibilní.</string>
+
+    <string name="autofillManagementSearchClearDescription">Vymazat vyhledávací vstup</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Žádné výsledky pro dotaz „%1$s“</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Zrušit</string>
+    <string name="autofillDeleteLoginDialogDelete">Smazat</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Uživatelské jméno zkopírováno</string>
+    <string name="autofillManagementPasswordCopied">Heslo zkopírováno</string>
+
+    <string name="autofill_password_generation_offer_title">Použít silné heslo od DuckDuckGo?</string>
+    <string name="autofill_password_generation_offer_accept">Použít silné heslo</string>
+    <string name="autofill_password_generation_offer_decline">Vytvořit vlastní</string>
+
+    <string name="deviceNotSupportedTitle">Zařízení není podporované</string>
+
+    <string name="autofillManagementUndoDeletion">Vrátit</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Otevřít webovou stránku</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Deaktivovat soukromou adresu Duck Address?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-maily poslané na adresu %1$s už se nebudou přeposílat do tvé schránky.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Deaktivovat</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Znovu aktivovat soukromou adresu Duck Address?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-maily poslané na adresu %1$s se budou zase přeposílat do tvé schránky.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Znovu aktivovat</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Aktivní</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Aktivuje se…</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Deaktivováno</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Deaktivuje se…</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Správa této adresy je dočasně nedostupná.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated.">Pro správu adres Duck Address na tomto zařízení si <annotation type="enable_duck_address">aktivuj ochranu e-mailů</annotation>.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">Vyber e-mailovou adresu</string>
+    <string name="autofillTooltipUseYourAliasDescription">Blokuj e-mailové trackery</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Vygenerovat soukromou adresu Duck</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">Blokuj e-mailové trackery a skryj svou adresu</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Funkci můžeš kdykoli vypnout v Nastaveních.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Dál ukládat</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Vypnout</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">Skryj svůj e-mail\na blokuj trackery</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">Ochrana e-mailu</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Vytvoř si jedinečnou, náhodnou adresu, která bude odstraňovat skryté trackery a přeposílat e-maily do tvé schránky.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">Chránit můj e-mail</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Už neukazovat</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Když teď odejdeš, tvoje adresa Duck Address se neuloží.</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Pokračovat v nastavení</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Ukončit nastavení</string>
+
+    <string name="autofillManagementScreenTitle">Hesla</string>
+    <string name="autofillManagementScreenTitleNew">Hesla a automatické vyplňování</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Zatím nemáš uložená žádná hesla</string>
+    <string name="credentialManagementAutofillToggleLabel">Ukládání a automatické vyplňování hesel</string>
+    <string name="credentialManagementAutofillSubtitle">Hesla jsou šifrovaná. Nikdo kromě tebe je nevidí, dokonce ani my. <annotation type="learn_more_link">Další informace</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Zabezpečení správce hesel</string>
+    <string name="saveLoginDialogSubtitle">Bezpečně si ulož heslo do zařízení pomocí funkce pro ukládání a automatické vyplňování hesel DuckDuckGo.</string>
+    <string name="autofillManagementAddLogin">Přidat heslo</string>
+    <string name="credentialManagementEditLoginTitleHint">Název</string>
+    <string name="autofillManagementDeletedConfirmation">Heslo smazáno</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Poslední aktualizace %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Chceš dál ukládat hesla?</string>
+    <string name="deviceNotSupportedSubtitle">Abychom mohli hesla bezpečně ukládat, musíme je zašifrovat a uložit do tvého zařízení. Protože tvoje zařízení nepodporuje šifrované úložiště, hesla není možné ukládat ani automaticky vyplňovat.</string>
+    <string name="autofill_password_generation_offer_message">Hesla se bezpečně ukládají do tvého zařízení.</string>
+    <string name="autofillManagementSearchLogins">Prohledat hesla</string>
+    <string name="biometric_prompt_title">Hesla jsou uzamčená</string>
+    <string name="autofill_auth_text_for_access">Pro přístup k heslům zařízení odemkni</string>
+    <string name="managementDisabledModeTitle">Zabezpeč si zařízení, ať si můžeš ukládat hesla</string>
+    <string name="managementDisabledModeSubtitle">Na ochranu hesel se vyžaduje gesto zámku obrazovky, PIN nebo biometrické ověření.</string>
+    <string name="credentialManagementEditTitle">Upravit heslo</string>
+
+    <string name="credentials_limit_warning"><b>Synchronizace je pozastavená</b>\nUž máš maximální počet hesel. Jestli chceš synchronizaci obnovit, některá smaž.\n\n<annotation type="manage_logins">Spravovat hesla</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Synchronizace hesel je pozastavená</b>\nUž máš maximální počet hesel. Jestli chceš synchronizaci obnovit, některá hesla smaž.</string>
+    <string name="credentials_invalid_request_warning"><b>Synchronizace je pozastavená</b>\nNěkterá hesla jsou nesprávně naformátovaná nebo moc dlouhá, takže jsme je nemohli synchronizovat.\n\n<annotation type="manage_logins">Spravovat hesla</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Synchronizace hesel je pozastavená</b>\nNěkterá hesla jsou nesprávně naformátovaná nebo moc dlouhá, takže jsme je nemohli synchronizovat.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Na téhle stránce už se neptat</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Ne, děkuji</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Pokud vyloučené weby resetuješ, při příštím přihlašování na některý z nich se ti zobrazí výzva k uložení hesla.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Obnovit vyloučené stránky</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Obnovit vyloučené stránky?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Obnovit</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Zrušit</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Smazat všechna hesla</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d smazané heslo</item>
+        <item quantity="few">%1$d smazaná hesla</item>
+        <item quantity="many">%1$d smazaného hesla</item>
+        <item quantity="other">%1$d smazaných hesel</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Ověřením potvrď, že chceš smazat všechna hesla</string>
+    <string name="autofill_title_text_for_delete_all">Smazat všechna hesla</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">Tvoje heslo pro %1$s se nedá synchronizovat, protože některé z jeho polí překračuje maximální počet znaků.</item>
+        <item quantity="few">Tvoje hesla pro %1$s a %2$d další weby se nedají synchronizovat, protože některá z jejich polí překračují maximální počet znaků.</item>
+        <item quantity="many">Tvoje hesla pro %1$s a %2$d dalšího webu se nedají synchronizovat, protože některá z jejich polí překračují maximální počet znaků.</item>
+        <item quantity="other">Tvoje hesla pro %1$s a %2$d dalších webů se nedají synchronizovat, protože některá z jejich polí překračují maximální počet znaků.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Spravovat hesla</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Tvoje heslo se z tohohle zařízení smaže.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Tvoje heslo se z tohohle zařízení smaže.</item>
+        <item quantity="few">Tvoje hesla se z tohohle zařízení smažou.</item>
+        <item quantity="many">Tvoje hesla se z tohohle zařízení smažou.</item>
+        <item quantity="other">Tvoje hesla se z tohohle zařízení smažou.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Tvoje heslo se smaže ze všech synchronizovaných zařízení.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Tvoje heslo se smaže ze všech synchronizovaných zařízení.</item>
+        <item quantity="few">Tvoje hesla se smažou ze všech synchronizovaných zařízení.</item>
+        <item quantity="many">Tvoje hesla se smažou ze všech synchronizovaných zařízení.</item>
+        <item quantity="other">Tvoje hesla se smažou ze všech synchronizovaných zařízení.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Opravdu chceš smazat tohle heslo?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Opravdu chceš smazat %1$d heslo?</item>
+        <item quantity="few">Opravdu chceš smazat %1$d hesla?</item>
+        <item quantity="many">Opravdu chceš smazat %1$d hesla?</item>
+        <item quantity="other">Opravdu chceš smazat %1$d hesel?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Zkontroluj si předtím, že se i tak dostaneš ke svému účtu.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Zkontroluj si předtím, že se k účtu i tak dostaneš.</item>
+        <item quantity="few">Zkontroluj si předtím, že se k účtům i tak dostaneš.</item>
+        <item quantity="many">Zkontroluj si předtím, že se k účtům i tak dostaneš.</item>
+        <item quantity="other">Zkontroluj si předtím, že se k účtům i tak dostaneš.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Uložená hesla můžeš importovat z jiného prohlížeče do DuckDuckGo.</string>
+
+    <string name="autofillManagementImportPasswords">Importovat hesla</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Synchronizovat hesla na počítači</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Jak importovat hesla</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Jak synchronizovat hesla na počítači</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">Importuj hesla do desktopové verze prohlížeče DuckDuckGo a potom je synchronizuj mezi zařízeními.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Nainstalovat prohlížeč pro počítač</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Nainstaluj si prohlížeč DuckDuckGo pro Mac nebo Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Vyhledávej soukromě a blokuj trackery pomocí prohlížeče DuckDuckGo pro počítače. Stáhneš si ho z tohohle odkazu.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Synchronizovat s počítačem</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Import z prohlížeče na počítači:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Spusť DuckDuckGo na systému Mac nebo Windows</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Přejdi do <b>Nastavení</b> > <b>Hesla</b>]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Vyber možnost <b>Importovat hesla</b>… a postupuj podle pokynů pro import.]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Po importu hesel do počítače můžeš na tomhle zařízení nastavit synchronizaci</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Získat aplikaci pro počítač</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Nainstaluj si DuckDuckGo pro Mac nebo Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">V počítači přejdi na:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Nahlásit problém s automatickým vyplňováním</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Anonymně můžeš nahlásit, že automatické vyplňování na tomhle webu nefunguje. Hesla nikdy nesdílíme.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Nahlásit, že na webu %1$s automatické vyplňování nefunguje?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">Hlášení odeslaná službě DuckDuckGo jsou anonymní a neobsahují tvoje uživatelské jméno, heslo ani žádné jiné osobní údaje.\n\nHlášení obsahuje jenom URL webu a stav některých nastavení automatického vyplňování.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Poslat zprávu</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Zrušit</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Děkujeme! Podrobnosti od tebe nám pomůžou zlepšit DuckDuckGo pro všechny.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Klíčové vlastnosti</string>
+    <string name="onboardingSaveDialogFeature1Title">Bezproblémové přihlašování</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Nemusíš si pamatovat přihlašovací údaje.</string>
+    <string name="onboardingSaveDialogFeature2Title">Zabezpečené úložiště</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Hesla jsou šifrovaná, uložená v zařízení a zamčená pomocí gesta nebo PINu systému Android.</string>
+    <string name="onboardingSaveDialogFeature3Title">Synchronizace mezi zařízeními</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">End-to-end šifrování a jednoduchá aktivace.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Ukládání hesel můžeš kdykoli vypnout.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Otevřít nastavení</string>
+
+    <string name="newTabPageShortcutPasswords">Hesla</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Importovat hesla</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">Hesel importovaných z Googlu: %1$d</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">Hesel importovaných z CSV: %1$d</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Importovat hesla z Googlu</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Import hesel z Googlu</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Synchronizovat hesla na počítači</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Synchronizovat hesla na počítači</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Import hesel z Googlu</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google tě může požádat o přihlášení nebo potvrzení zadáním hesla.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Zařízení vás může požádat o potvrzení zadáním PIN kódu, hesla nebo vzoru.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Import z Googlu</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Vybrat soubor CSV</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Importovat z prohlížeče na počítači</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Import do DuckDuckGo</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Import je hotový</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Mám to</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Import hesel se nezdařil</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Přeskočeno (duplicitní nebo neplatné): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Importovaných hesel: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Otevřít hesla</string>
+    <string name="autofill_service_select_password_activity">Vyber uložené heslo</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Hesla a automatické vyplňování</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Obnovit vyloučené stránky?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Pokud vyloučené weby resetuješ, při příštím přihlašování na některý z nich se ti zobrazí výzva k uložení hesla.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Obnovit</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Zrušit</string>
+    <string name="autofillSettingsPasswordsEntry">Hesla</string>
+    <string name="autofillSettingsAutofillToggleLabel">Žádat o uložení a automatické vyplnění</string>
+    <string name="autofillSettingsAutofillSubtitle">Hesla jsou šifrovaná. Nikdo kromě tebe je nevidí, dokonce ani my. <annotation type="learn_more_link">Další informace</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Importovat hesla</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Import hesel z Googlu</string>
+    <string name="autofillSettingsImportFromDesktopSync">Synchronizovat hesla na počítači</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Obnovit vyloučené stránky</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Přenes si hesla&lt;br /&gt;z Googlu do DuckDuckGo</string>
+    <string name="passwords_import_promo_subtitle">Rychle a bezpečně importuj svá hesla do DuckDuckGo. Google tě může požádat o zadání hesla.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Rychle a bezpečně importuj svá hesla do DuckDuckGo. Zařízení tě může požádat o potvrzení zadáním PIN kódu, hesla nebo vzoru.</string>
+    <string name="passwords_import_promo_action">Import z Googlu</string>
+    <string name="passwords_import_promo_in_browser_title">Přenes si hesla z Googlu do DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Importuj si hesla z Googlu do DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Už se znovu neptat</string>
+    <string name="passwords_import_promo_in_settings_title">Import hesel z Googlu</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Skrýt</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Import do DuckDuckGo</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Importováno z Chromu</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Importovat záložky z Googlu</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google tě může požádat o přihlášení nebo potvrzení zadáním hesla.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Import z Googlu</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Vyber soubor záložek…</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Importovat záložky</string>
+    <string name="importBookmarksProgressTitle">Import z Googlu…</string>
+    <string name="importBookmarksProgressSubtitle">Nech obrazovku otevřenou a chvilku počkej. Nemělo by to trvat déle než pár minut.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google tě může požádat o přihlášení nebo potvrzení zadáním hesla.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google ti může poslat e-mail s potvrzením, že se tvoje záložky exportují.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Zrušit import?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Pokud akci teď zrušíš, k importu záložek nedojde.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Zrušit import</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Pokračovat</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Záložky: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Zavřít</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Něco se pokazilo</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Zkontroluj svoje připojení k internetu a zkus to znovu.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Import dokončen!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Vydrž — nech tohle okno otevřené. Nemělo by to trvat déle než minutu nebo dvě.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google tě může požádat o zadání hesla.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google ti pošle e-mail s potvrzením, že se tvoje data exportovala. Nemusíš nic dělat.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Import dokončen!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Importováno záložek: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Přenes si hesla z Googlu do DuckDuckGo.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Importovat hesla z Googlu</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Přenes si záložky z Googlu do DuckDuckGo.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Importovat záložky z Googlu</string>
+
+</resources>

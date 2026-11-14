@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.mobile.android.vpn.processor.tcp.tracker
+
+import androidx.annotation.WorkerThread
+import com.duckduckgo.common.utils.ConflatedJob
+import com.duckduckgo.di.scopes.VpnScope
+import com.duckduckgo.mobile.android.vpn.model.VpnTracker
+import com.duckduckgo.mobile.android.vpn.service.VpnServiceCallbacks
+import com.duckduckgo.mobile.android.vpn.state.VpnStateMonitor.VpnStopReason
+import com.duckduckgo.mobile.android.vpn.stats.AppTrackerBlockingStatsRepository
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.*
+import logcat.logcat
+import java.util.concurrent.Executors
+import javax.inject.Inject
+import kotlin.random.Random
+
+interface AppTrackerRecorder {
+    fun insertTracker(vpnTracker: VpnTracker)
+}
+
+@ContributesIntoSet(
+    scope = VpnScope::class,
+    binding = binding<VpnServiceCallbacks>(),
+)
+@ContributesBinding(
+    scope = VpnScope::class,
+    binding = binding<AppTrackerRecorder>(),
+)
+@SingleIn(VpnScope::class)
+class BatchedAppTrackerRecorder @Inject constructor(
+    private val appTrackerBlockingRepository: AppTrackerBlockingStatsRepository,
+) : VpnServiceCallbacks, AppTrackerRecorder {
+
+    private val batchedTrackers = mutableListOf<VpnTracker>()
+    private val insertionDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val periodicInsertionJob = ConflatedJob()
+
+    override fun onVpnStarted(coroutineScope: CoroutineScope) {
+        logcat { "Batched app tracker recorder starting" }
+
+        periodicInsertionJob += coroutineScope.launch(insertionDispatcher) {
+            while (isActive) {
+                flushInMemoryTrackersToDatabase()
+                delay(Random.nextLong(PERIODIC_INSERTION_FREQUENCY_MS))
+            }
+        }
+    }
+
+    override fun onVpnStopped(
+        coroutineScope: CoroutineScope,
+        vpnStopReason: VpnStopReason,
+    ) {
+        logcat { "Batched app tracker recorder stopped" }
+        periodicInsertionJob.cancel()
+        coroutineScope.launch(insertionDispatcher) {
+            flushInMemoryTrackersToDatabase()
+        }
+    }
+
+    @WorkerThread
+    private fun flushInMemoryTrackersToDatabase() {
+        val toInsert = mutableListOf<VpnTracker>()
+        synchronized(batchedTrackers) {
+            if (batchedTrackers.isEmpty()) {
+                return
+            }
+            toInsert.addAll(batchedTrackers)
+            batchedTrackers.clear()
+        }
+
+        appTrackerBlockingRepository.insert(toInsert)
+        logcat { "Inserted ${toInsert.size} trackers from memory into db" }
+    }
+
+    override fun insertTracker(vpnTracker: VpnTracker) {
+        synchronized(batchedTrackers) {
+            batchedTrackers.add(vpnTracker)
+        }
+    }
+
+    companion object {
+        private const val PERIODIC_INSERTION_FREQUENCY_MS: Long = 1_000
+    }
+}

@@ -1,0 +1,127 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.remote.messaging.impl.mappers
+
+import com.duckduckgo.common.ui.view.MessageCta.Message
+import com.duckduckgo.common.ui.view.MessageCta.MessageType
+import com.duckduckgo.mobile.android.R
+import com.duckduckgo.remote.messaging.api.Content.BigSingleAction
+import com.duckduckgo.remote.messaging.api.Content.BigTwoActions
+import com.duckduckgo.remote.messaging.api.Content.Medium
+import com.duckduckgo.remote.messaging.api.Content.Placeholder
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.ANNOUNCE
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.APP_UPDATE
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.BOOKMARKS_IMPORT
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.CRITICAL_UPDATE
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.DDG_ANNOUNCE
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.DUCK_AI
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.DUCK_AI_OLD
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.IMAGE_AI
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.KEY_IMPORT
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.MAC_AND_WINDOWS
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.MAC_AND_WINDOWS_NEW
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.NEW_TAB_OPTIONS
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.PIR
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.PRIVACY_SHIELD
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.RADAR
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.SPLIT_BAR_SETTINGS
+import com.duckduckgo.remote.messaging.api.Content.Placeholder.VISUAL_DESIGN_UPDATE
+import com.duckduckgo.remote.messaging.api.Content.PromoSingleAction
+import com.duckduckgo.remote.messaging.api.Content.Small
+import com.duckduckgo.remote.messaging.api.RemoteMessage
+
+fun RemoteMessage.asMessage(
+    isLightModeEnabled: Boolean,
+    localImageFilePath: String? = null,
+): Message? {
+    // Use local file if available, otherwise fall back to imageUrl
+    fun getImageSource(imageUrl: String?): String? {
+        return localImageFilePath ?: imageUrl
+    }
+    return when (val content = this.content) {
+        is Small -> Message(
+            title = content.titleText,
+            subtitle = content.descriptionText,
+            messageType = MessageType.REMOTE_MESSAGE,
+        )
+
+        is BigSingleAction -> Message(
+            topIllustration = content.placeholder.drawable(isLightModeEnabled),
+            title = content.titleText,
+            subtitle = content.descriptionText,
+            action = content.primaryActionText,
+            messageType = MessageType.REMOTE_MESSAGE,
+            imageUrl = getImageSource(content.imageUrl),
+        )
+
+        is BigTwoActions -> Message(
+            topIllustration = content.placeholder.drawable(isLightModeEnabled),
+            title = content.titleText,
+            subtitle = content.descriptionText,
+            action = content.primaryActionText,
+            action2 = content.secondaryActionText,
+            messageType = MessageType.REMOTE_MESSAGE,
+            imageUrl = getImageSource(content.imageUrl),
+        )
+
+        is Medium -> Message(
+            topIllustration = content.placeholder.drawable(isLightModeEnabled),
+            title = content.titleText,
+            subtitle = content.descriptionText,
+            messageType = MessageType.REMOTE_MESSAGE,
+            imageUrl = getImageSource(content.imageUrl),
+        )
+
+        is PromoSingleAction -> Message(
+            middleIllustration = content.placeholder.drawable(isLightModeEnabled),
+            title = content.titleText,
+            subtitle = content.descriptionText,
+            promoAction = content.actionText,
+            messageType = MessageType.REMOTE_PROMO_MESSAGE,
+            imageUrl = getImageSource(content.imageUrl),
+        )
+
+        else -> null
+    }
+}
+
+fun Placeholder.drawable(isLightModeEnabled: Boolean): Int {
+    return when (this) {
+        ANNOUNCE -> R.drawable.announcement_96
+        DDG_ANNOUNCE -> R.drawable.duckduckgo_96
+        CRITICAL_UPDATE -> R.drawable.critical_update_96
+        APP_UPDATE -> R.drawable.update_96
+        MAC_AND_WINDOWS_NEW -> R.drawable.desktop_promo_artwork
+        MAC_AND_WINDOWS -> R.drawable.laptop_ddginstall_96
+        PRIVACY_SHIELD -> R.drawable.subscription_96
+        DUCK_AI_OLD -> R.drawable.ic_duck_ai
+        DUCK_AI -> R.drawable.duckduckgo_duckai_96
+        VISUAL_DESIGN_UPDATE -> if (isLightModeEnabled) {
+            R.drawable.ic_visual_design_update_artwork_light
+        } else {
+            R.drawable.ic_visual_design_update_artwork_dark
+        }
+
+        IMAGE_AI -> R.drawable.image_sweep_96
+        RADAR -> R.drawable.radar_check_96
+        KEY_IMPORT -> R.drawable.passwords_import_96
+        SPLIT_BAR_SETTINGS -> R.drawable.mobile_split_bar_settings_96
+        BOOKMARKS_IMPORT -> R.drawable.bookmarks_import_96
+        NEW_TAB_OPTIONS -> R.drawable.newtab_options_96
+        PIR -> R.drawable.personal_information_remover_96
+    }
+}

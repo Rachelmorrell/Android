@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.mobile.android.vpn.service
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.appbuildconfig.api.isInternalBuild
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.extensions.registerNotExportedReceiver
+import com.duckduckgo.di.scopes.VpnScope
+import com.duckduckgo.mobile.android.vpn.state.VpnStateMonitor
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesIntoSet(
+    scope = VpnScope::class,
+    binding = binding<VpnServiceCallbacks>(),
+)
+@SingleIn(VpnScope::class)
+class RestartReceiver @Inject constructor(
+    @AppCoroutineScope private val coroutineScope: CoroutineScope,
+    private val context: Context,
+    private val appBuildConfig: AppBuildConfig,
+    private val dispatcherProvider: DispatcherProvider,
+) : BroadcastReceiver(), VpnServiceCallbacks {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.getStringExtra("action")?.lowercase() == "restart") {
+            coroutineScope.launch(dispatcherProvider.io()) {
+                TrackerBlockingVpnService.restartVpnService(context)
+            }
+        }
+    }
+
+    override fun onVpnStarted(coroutineScope: CoroutineScope) {
+        if (appBuildConfig.isInternalBuild()) {
+            logcat { "Starting vpn-service receiver" }
+            unregister()
+            context.registerNotExportedReceiver(this, IntentFilter("vpn-service"))
+        }
+    }
+
+    override fun onVpnStopped(coroutineScope: CoroutineScope, vpnStopReason: VpnStateMonitor.VpnStopReason) {
+        unregister()
+    }
+
+    private fun unregister() {
+        kotlin.runCatching { context.unregisterReceiver(this) }
+    }
+}

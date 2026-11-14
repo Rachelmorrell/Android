@@ -1,0 +1,67 @@
+/*
+ * Copyright (c) 2021 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.privacy.config.impl.features.trackerallowlist
+
+import com.duckduckgo.app.browser.UriString
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.feature.toggles.api.FeatureToggle
+import com.duckduckgo.privacy.config.api.PrivacyFeatureName
+import com.duckduckgo.privacy.config.api.TrackerAllowlist
+import com.duckduckgo.privacy.config.store.features.trackerallowlist.CompiledRule
+import com.duckduckgo.privacy.config.store.features.trackerallowlist.TrackerAllowlistRepository
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import javax.inject.Inject
+
+@ContributesBinding(AppScope::class)
+@SingleIn(AppScope::class)
+class RealTrackerAllowlist @Inject constructor(
+    private val trackerAllowlistRepository: TrackerAllowlistRepository,
+    private val featureToggle: FeatureToggle,
+) : TrackerAllowlist {
+
+    override fun isAnException(
+        documentURL: String,
+        url: String,
+    ): Boolean {
+        if (!featureToggle.isFeatureEnabled(PrivacyFeatureName.TrackerAllowlistFeatureName.value, true)) {
+            return false
+        }
+        val host = UriString.host(url) ?: return false
+        val rules = findRulesForHost(host, trackerAllowlistRepository.rulesByDomain) ?: return false
+        val cleanedUrl = UriString.removePort(url)
+        return rules.any { compiledRule ->
+            val regex = compiledRule.regex ?: return@any false
+            if (!cleanedUrl.matches(regex)) return@any false
+            val ruleDomains = compiledRule.rule.domains
+            ruleDomains.contains("<all>") || ruleDomains.any { domain -> UriString.sameOrSubdomain(documentURL, domain) }
+        }
+    }
+
+    private fun findRulesForHost(
+        host: String,
+        rulesByDomain: Map<String, List<CompiledRule>>,
+    ): List<CompiledRule>? {
+        var candidate = host
+        while (true) {
+            rulesByDomain[candidate]?.let { return it }
+            val dot = candidate.indexOf('.')
+            if (dot < 0) return null
+            candidate = candidate.substring(dot + 1)
+        }
+    }
+}

@@ -18,110 +18,105 @@ package com.duckduckgo.app.browser.httpauth
 
 import android.webkit.WebView
 import android.webkit.WebViewDatabase
+import androidx.lifecycle.LifecycleOwner
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
-import com.duckduckgo.app.CoroutineTestRule
+import com.duckduckgo.app.browser.WebViewDatabaseProvider
 import com.duckduckgo.app.fire.AuthDatabaseLocator
 import com.duckduckgo.app.fire.DatabaseCleaner
-import com.duckduckgo.app.runBlocking
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.never
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.whenever
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineScope
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.test.CoroutineTestRule
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
-@ExperimentalCoroutinesApi
 class WebViewHttpAuthStoreTest {
 
     @get:Rule
     val coroutineRule = CoroutineTestRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val webViewDatabaseProvider: WebViewDatabaseProvider = mock()
     private val webViewDatabase: WebViewDatabase = mock()
     private val mockDatabaseCleaner: DatabaseCleaner = mock()
     private val webView: WebView = mock()
+    private val appBuildConfig: AppBuildConfig = mock()
     private val databaseLocator = AuthDatabaseLocator(context)
+    private val mockOwner: LifecycleOwner = mock()
 
-    private val webViewHttpAuthStore = RealWebViewHttpAuthStore(webViewDatabase, mockDatabaseCleaner, databaseLocator, coroutineRule.testDispatcherProvider, TestCoroutineScope())
-
-    @Test
-    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.O)
-    fun whenSetHttpAuthUsernamePasswordApi26AndAboveThenInsertHttpAuthEntity() {
-        webViewHttpAuthStore.setHttpAuthUsernamePassword(
-            webView = webView,
-            host = "host",
-            realm = "realm",
-            username = "name",
-            password = "pass",
+    private val webViewHttpAuthStore =
+        RealWebViewHttpAuthStore(
+            webViewDatabaseProvider,
+            mockDatabaseCleaner,
+            databaseLocator,
+            coroutineRule.testDispatcherProvider,
+            TestScope(),
+            appBuildConfig,
         )
 
-        verify(webViewDatabase).setHttpAuthUsernamePassword("host", "realm", "name", "pass")
+    @Before
+    fun before() {
+        whenever(webViewDatabaseProvider.get()).thenReturn(webViewDatabase)
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.O)
-    fun whenGetHttpAuthUsernamePasswordApi26AndAboveThenReturnWebViewHttpAuthCredentials() {
-        whenever(webViewDatabase.getHttpAuthUsernamePassword("host", "realm"))
-            .thenReturn(arrayOf("name", "pass"))
-        val credentials = webViewHttpAuthStore.getHttpAuthUsernamePassword(webView, "host", "realm")
-
-        assertEquals(WebViewHttpAuthCredentials("name", "pass"), credentials)
+    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.P, maxSdkVersion = android.os.Build.VERSION_CODES.S)
+    fun whenSetHttpAuthUsernamePasswordApi28AndAboveThenInsertHttpAuthEntity() {
+        for (i in android.os.Build.VERSION_CODES.P..android.os.Build.VERSION_CODES.S) {
+            whenever(appBuildConfig.sdkInt).thenReturn(i)
+            webViewHttpAuthStore.setHttpAuthUsernamePassword(
+                webView = webView,
+                host = "host",
+                realm = "realm",
+                username = "name",
+                password = "pass",
+            )
+        }
+        val times = (android.os.Build.VERSION_CODES.P..android.os.Build.VERSION_CODES.S).toList().size
+        verify(webViewDatabase, times(times)).setHttpAuthUsernamePassword("host", "realm", "name", "pass")
     }
 
     @Test
-    @SdkSuppress(maxSdkVersion = android.os.Build.VERSION_CODES.N_MR1)
-    @Suppress("DEPRECATION")
-    fun whenSetHttpAuthUsernamePasswordApiBelow26ThenInsertHttpAuthEntity() {
-        webViewHttpAuthStore.setHttpAuthUsernamePassword(
-            webView = webView,
-            host = "host",
-            realm = "realm",
-            username = "name",
-            password = "pass",
-        )
-
-        verify(webView).setHttpAuthUsernamePassword("host", "realm", "name", "pass")
+    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.P, maxSdkVersion = android.os.Build.VERSION_CODES.S)
+    fun whenGetHttpAuthUsernamePasswordApi28AndAboveThenReturnWebViewHttpAuthCredentials() {
+        for (i in android.os.Build.VERSION_CODES.P..android.os.Build.VERSION_CODES.S) {
+            whenever(appBuildConfig.sdkInt).thenReturn(i)
+            whenever(webViewDatabase.getHttpAuthUsernamePassword("host", "realm"))
+                .thenReturn(arrayOf("name", "pass"))
+            val credentials = webViewHttpAuthStore.getHttpAuthUsernamePassword(webView, "host", "realm")
+            assertEquals(WebViewHttpAuthCredentials("name", "pass"), credentials)
+        }
     }
 
     @Test
-    @SdkSuppress(maxSdkVersion = android.os.Build.VERSION_CODES.N_MR1)
-    @Suppress("DEPRECATION")
-    fun whenGetHttpAuthUsernamePasswordApiBelow26ThenReturnWebViewHttpAuthCredentials() {
-        whenever(webView.getHttpAuthUsernamePassword("host", "realm"))
-            .thenReturn(arrayOf("name", "pass"))
-        val credentials = webViewHttpAuthStore.getHttpAuthUsernamePassword(webView, "host", "realm")
-
-        assertEquals(WebViewHttpAuthCredentials("name", "pass"), credentials)
-    }
-
-    @Test
-    fun whenCleanHttpAuthDatabaseThenCleanDatabaseCalled() = coroutineRule.runBlocking {
+    fun whenCleanHttpAuthDatabaseThenCleanDatabaseCalled() = runTest {
         webViewHttpAuthStore.cleanHttpAuthDatabase()
         verify(mockDatabaseCleaner).cleanDatabase(databaseLocator.getDatabasePath())
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.LOLLIPOP, maxSdkVersion = android.os.Build.VERSION_CODES.O_MR1)
-    fun whenAppCreatedAndApiBetween21And27ThenJournalModeChangedToDelete() = coroutineRule.runBlocking {
-        webViewHttpAuthStore.onAppCreated()
-        verify(mockDatabaseCleaner).changeJournalModeToDelete(databaseLocator.getDatabasePath())
+    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.R, maxSdkVersion = android.os.Build.VERSION_CODES.S)
+    fun whenAppCreatedAndApiGreaterThan28ThenJournalModeChangedToDelete() = runTest {
+        for (i in android.os.Build.VERSION_CODES.R..android.os.Build.VERSION_CODES.S) {
+            whenever(appBuildConfig.sdkInt).thenReturn(i)
+            webViewHttpAuthStore.onCreate(mockOwner)
+        }
+        val times = (android.os.Build.VERSION_CODES.R..android.os.Build.VERSION_CODES.S).toList().size
+        verify(mockDatabaseCleaner, times(times)).changeJournalModeToDelete(databaseLocator.getDatabasePath())
     }
 
     @Test
-    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.Q)
-    fun whenAppCreatedAndApiGreaterThan28ThenJournalModeChangedToDelete() = coroutineRule.runBlocking {
-        webViewHttpAuthStore.onAppCreated()
-        verify(mockDatabaseCleaner).changeJournalModeToDelete(databaseLocator.getDatabasePath())
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = android.os.Build.VERSION_CODES.P, maxSdkVersion = android.os.Build.VERSION_CODES.P)
-    fun whenAppCreatedAndApiIs28ThenJournalModeChangedToDeleteNotCalled() = coroutineRule.runBlocking {
-        webViewHttpAuthStore.onAppCreated()
+    fun whenAppCreatedAndApiIs28ThenJournalModeChangedToDeleteNotCalled() = runTest {
+        whenever(appBuildConfig.sdkInt).thenReturn(android.os.Build.VERSION_CODES.P)
+        webViewHttpAuthStore.onCreate(mockOwner)
         verify(mockDatabaseCleaner, never()).changeJournalModeToDelete(databaseLocator.getDatabasePath())
     }
 }

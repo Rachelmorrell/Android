@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 DuckDuckGo
+ * Copyright (c) 2022 DuckDuckGo
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,16 @@
 package com.duckduckgo.app.browser.shortcut
 
 import android.content.Intent
-import androidx.test.platform.app.InstrumentationRegistry
-import com.duckduckgo.app.CoroutineTestRule
 import com.duckduckgo.app.pixels.AppPixelName
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.verify
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineScope
+import com.duckduckgo.common.test.CoroutineTestRule
+import kotlinx.coroutines.test.TestScope
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 
-@ExperimentalCoroutinesApi
 class ShortcutReceiverTest {
 
     @get:Rule
@@ -40,8 +37,10 @@ class ShortcutReceiverTest {
 
     @Before
     fun before() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
-        testee = ShortcutReceiver(context, mockPixel, coroutinesTestRule.testDispatcherProvider, TestCoroutineScope())
+        testee = ShortcutReceiver()
+        testee.pixel = mockPixel
+        testee.dispatcher = coroutinesTestRule.testDispatcherProvider
+        testee.appCoroutineScope = TestScope()
     }
 
     @Test
@@ -49,7 +48,7 @@ class ShortcutReceiverTest {
         val intent = Intent()
         intent.putExtra(ShortcutBuilder.SHORTCUT_URL_ARG, "www.example.com")
         intent.putExtra(ShortcutBuilder.SHORTCUT_TITLE_ARG, "Title")
-        testee.onReceive(null, intent)
+        testee.onShortcutAdded(null, intent)
 
         verify(mockPixel).fire(AppPixelName.SHORTCUT_ADDED)
     }

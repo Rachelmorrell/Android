@@ -24,31 +24,27 @@
     android:layout_height="wrap_content"
     tools:showIn="@layout/activity_add_widget_instructions">
 
-    <View
+    <com.duckduckgo.common.ui.view.divider.HorizontalDivider
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/slightlyTransparentDivider"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toTopOf="@id/homeButton" />
 
-    <Button
+    <com.duckduckgo.common.ui.view.button.DaxButtonPrimary
         android:id="@+id/closeButton"
-        style="?android:attr/borderlessButtonStyle"
+        app:daxButtonSize="large"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/keyline_2"
         android:text="@string/addWidgetInstructionsButtonClose"
-        android:textColor="@color/white"
-        android:textSize="13sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/homeButton" />
 
-    <Button
+    <com.duckduckgo.common.ui.view.button.DaxButtonPrimary
         android:id="@+id/homeButton"
-        style="?android:attr/borderlessButtonStyle"
+        app:daxButtonSize="large"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/addWidgetInstructionsButtonGoHome"
-        android:textColor="@color/white"
-        android:textSize="13sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 

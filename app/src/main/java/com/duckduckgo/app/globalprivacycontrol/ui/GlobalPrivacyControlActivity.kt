@@ -16,6 +16,7 @@
 
 package com.duckduckgo.app.globalprivacycontrol.ui
 
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -25,15 +26,26 @@ import android.text.style.ClickableSpan
 import android.text.style.URLSpan
 import android.view.View
 import android.widget.CompoundButton.OnCheckedChangeListener
-import com.duckduckgo.app.browser.BrowserActivity
 import com.duckduckgo.app.browser.R
 import com.duckduckgo.app.browser.databinding.ActivityGlobalPrivacyControlBinding
-import com.duckduckgo.app.global.DuckDuckGoActivity
-import com.duckduckgo.app.global.view.html
-import com.duckduckgo.mobile.android.ui.view.quietlySetIsChecked
-import com.duckduckgo.mobile.android.ui.viewbinding.viewBinding
+import com.duckduckgo.browser.api.ui.BrowserScreens.WebViewActivityWithParams
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.common.utils.extensions.html
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import javax.inject.Inject
 
+@InjectWith(ActivityScope::class)
 class GlobalPrivacyControlActivity : DuckDuckGoActivity() {
+
+    @Inject
+    lateinit var globalActivityStarter: GlobalActivityStarter
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
 
     private val binding: ActivityGlobalPrivacyControlBinding by viewBinding()
 
@@ -54,11 +66,21 @@ class GlobalPrivacyControlActivity : DuckDuckGoActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        enableTransparentEdgeToEdge()
+
         setContentView(binding.root)
         setupToolbar(toolbar)
+        configureEdgeToEdgeInsets()
         configureUiEventHandlers()
         configureClickableLink()
         observeViewModel()
+    }
+
+    private fun configureEdgeToEdgeInsets() {
+        edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.root)
+        edgeToEdgeHandler.applyStatusBarInsets(binding.includeToolbar.appBarLayout)
+        edgeToEdgeHandler.applyNavigationBarInsets(binding.globalPrivacyControlToggle, drawBehindGestureNav = true)
     }
 
     private fun configureClickableLink() {
@@ -71,9 +93,10 @@ class GlobalPrivacyControlActivity : DuckDuckGoActivity() {
                     clickableSpan,
                     gpcSpannableString.getSpanStart(it),
                     gpcSpannableString.getSpanEnd(it),
-                    gpcSpannableString.getSpanFlags(it)
+                    gpcSpannableString.getSpanFlags(it),
                 )
                 removeSpan(it)
+                trim()
             }
         }
         binding.globalPrivacyControlDescription.apply {
@@ -92,8 +115,9 @@ class GlobalPrivacyControlActivity : DuckDuckGoActivity() {
             { viewState ->
                 viewState?.let {
                     binding.globalPrivacyControlToggle.quietlySetIsChecked(it.globalPrivacyControlEnabled, globalPrivacyControlToggleListener)
+                    binding.globalPrivacyControlToggle.isEnabled = it.globalPrivacyControlFeatureEnabled
                 }
-            }
+            },
         )
 
         viewModel.command.observe(
@@ -101,16 +125,16 @@ class GlobalPrivacyControlActivity : DuckDuckGoActivity() {
             { command ->
                 command?.let {
                     when (it) {
-                        is GlobalPrivacyControlViewModel.Command.OpenLearnMore -> openLearnMoreSite(it.url)
+                        is GlobalPrivacyControlViewModel.Command.OpenLearnMore -> openLearnMoreSite(it)
                     }
                 }
-            }
+            },
         )
     }
 
-    private fun openLearnMoreSite(url: String) {
-        startActivity(BrowserActivity.intent(this, url))
-        finish()
+    private fun openLearnMoreSite(command: GlobalPrivacyControlViewModel.Command.OpenLearnMore) {
+        val options = ActivityOptions.makeSceneTransitionAnimation(this).toBundle()
+        globalActivityStarter.start(this, WebViewActivityWithParams(command.url, getString(command.titleId)), options)
     }
 
     companion object {

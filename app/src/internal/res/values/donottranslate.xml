@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources>
+    <!-- Developer settings -->
+    <string name="devSettingsTitle">Developer Settings</string>
+    <string name="devSettingsSubtitle">Features useful for devs and debugging</string>
+    <string name="devSettingsScreenPrivacySection">Privacy</string>
+    <string name="devSettingsScreenGeneralSection">General</string>
+    <string name="devSettingsScreenResetTds">Reset tracker data (TDS)</string>
+    <string name="devSettingsScreenResetTdsSubtitle">Clear the stored TDS and download it again</string>
+    <string name="devStartupTracing">Start-up tracing</string>
+    <string name="devStartupTracingByline">Enable/disable start-up tracing</string>
+    <string name="devSettingsUseSandBoxSurvey">Use Sandbox Survey</string>
+    <string name="devEnableWebContentDebuggingTitle">Web Content Debugging</string>
+    <string name="devEnableWebContentDebuggingByline">Enable WebView debugging in Chrome DevTools</string>
+
+    <string name="devSettingsScreenUserAgentSection">User Agent</string>
+    <string name="devSettingsScreenUserAgentOverride">Override UserAgent</string>
+    <string name="devSettingsScreenPrivacyRemoteConfigUrlOverride">Override Privacy Remote Config URL</string>
+    <string name="devSettingsScreenCustomTabs">Custom Tabs</string>
+    <string name="devSettingsScreenNotificationsTitle">Notifications</string>
+    <string name="devSettingsScreenNotificationsSubtitle">Trigger notifications for testing</string>
+    <string name="devSettingsScreenPrivacyRemoteConfigUrlOverrideSubtitle">Click here to customize the Privacy Remote Config URL</string>
+    <string name="devSettingsScreenCustomTabsSubtitle">Load a Custom Tab for a specified URL</string>
+    <string name="devSettingsScreenUserAgentSelectorTitle">UserAgent</string>
+    <string name="devSettingsScreenUserAgentFirefox">Firefox</string>
+    <string name="devSettingsScreenUserAgentDefault">Default</string>
+    <string name="devSettingsScreenUserAgentWebView">UA WebView</string>
+
+    <!-- Tabs and Saved Sites -->
+    <string name="devSettingsScreenTabs">Tabs and Saved Sites</string>
+    <string name="devSettingsScreenTabsSubtitle">Create tabs or bookmarks for testing</string>
+    <string name="devSettingsTabsScreenHeader" instruction="Not translated">Current tab count: %1$d</string>
+    <string name="devSettingsTabsScreenTabsToAdd">Tabs to add</string>
+    <string name="devSettingsTabsScreenAddTabsButtonText">Add Tabs</string>
+    <string name="devSettingsTabsScreenClearTabsButtonText">Clear Tabs</string>
+    <string name="devSettingsFireTabsScreenHeader" instruction="Not translated">Current fire tab count: %1$d</string>
+    <string name="devSettingsFireTabsScreenTabsToAdd">Fire tabs to add</string>
+    <string name="devSettingsFireTabsScreenAddTabsButtonText">Add Fire Tabs</string>
+    <string name="devSettingsFireTabsScreenClearTabsButtonText">Clear Fire Tabs</string>
+    <string name="devSettingsTabsBookmarksScreenHeader" instruction="Not translated">Current bookmarks count: %1$d</string>
+    <string name="devSettingsTabsFavoritesScreenHeader" instruction="Not translated">Current favorites count: %1$d</string>
+    <string name="devSettingsTabsScreenBookmarksToAdd">Bookmarks to add</string>
+    <string name="devSettingsTabsScreenFavoritesToAdd">Favorites to add</string>
+    <string name="devSettingsTabsScreenAddBookmarksButtonText">Add Bookmarks</string>
+    <string name="devSettingsTabsScreenAddFavoritesButtonText">Add Favorites</string>
+    <string name="devSettingsTabsScreenClearBookmarksButtonText">Clear Bookmarks</string>
+    <string name="devSettingsTabsScreenClearFavoritesButtonText">Clear Favorites</string>
+
+    <!-- Privacy Audit settings -->
+    <string name="auditSettingsTitle">Audit Settings</string>
+    <string name="auditSettingsSubtitle">Features useful for doing our privacy audit</string>
+    <string name="auditSettingsScreenPrivacyAuditSection">Privacy Audit</string>
+    <string name="auditSettingsScreenRefTestsSection">Reference Tests</string>
+    <string name="auditStep1Title">Step 1: Visit cnn.com</string>
+    <string name="auditStep1Subtitle">Add as bookmark. Visit bookmarks Activity</string>
+    <string name="auditStep2Title">Step 2: Visit gizmodo.com</string>
+    <string name="auditStep2Subtitle">Accept cookies. Fireproof site. Visit fireproofed sites in settings.</string>
+    <string name="auditStep3Title">Step 3: Basic auth database check</string>
+    <string name="auditStep3Subtitle">Enter username=u password=pw</string>
+    <string name="requestBlockingTitle">Request Blocking</string>
+    <string name="requestBlockingSubtitle">Wait for the page to fully load.\nAll boxes should be gray or red.</string>
+    <string name="requestBlockingDisabledTitle">Request Blocking Disabled</string>
+    <string name="requestBlockingDisabledSubtitle">Wait for the page to fully load.\nAll boxes should be green (apart from websocket).</string>
+    <string name="httpsUpgradesTitle">Https Upgrades</string>
+    <string name="httpsUpgradesSubtitle">Click on Start test.\nClick for details.\nUpgrade navigation should be https. We don\'t support the rest.</string>
+    <string name="fireButtonStoreTitle">Fire Button store</string>
+    <string name="fireButtonStoreSubtitle">This will store the data in browser storage.</string>
+    <string name="fireButtonRetrieveTitle">Fire Button retrieve</string>
+    <string name="fireButtonRetrieveSubtitle">This will try to read data from the data stores.\nAll storages, except for browser cache, should report empty (undefined, null or error message).</string>
+    <string name="cookies3pStoreTitle">3rd Party Cookies store</string>
+    <string name="cookies3pStoreSubtitle">This will attempt to store third party cookies.</string>
+    <string name="cookies3pRetrieveTitle">3rd Party Cookies retrieve</string>
+    <string name="cookies3pRetrieveSubtitle">This will try to read third party cookies.\nAll third party cookie tests, both "safe" and tracking", should report no cookie (null or error message).</string>
+    <string name="gpcTitle">GPC</string>
+    <string name="gpcSubtitle">Top frame JS API should return "true".</string>
+    <string name="gpcOtherTitle">GPC Second test</string>
+    <string name="gpcOtherSubtitle">Header and DOM signal should be present.</string>
+    <string name="surrogatesTitle">Surrogates</string>
+    <string name="surrogatesSubtitle">Main frame and iFrame should be green.</string>
+    <string name="surrogatesDisabledTitle">Surrogates Disabled</string>
+    <string name="surrogatesDisabledSubtitle">Main frame and iFrame should be red.</string>
+
+    <!-- Custom tabs -->
+    <string name="customTabsTitle">Custom Tabs</string>
+    <string name="customTabsLoad">Load Custom Tab</string>
+    <string name="customTabsUrlHint">Add your URL here</string>
+    <string name="customTabsToolbarColorHint">Toolbar color (e.g., #FF5733 or leave empty for default)</string>
+    <string name="customTabsInvalidUrl">Invalid URL</string>
+    <string name="customTabsEmptyUrl">Enter a URL</string>
+    <string name="customTabsInvalidColor">Invalid color format. Use hex format like #FF5733</string>
+    <string name="customTabsClearColor">Clear Custom Color</string>
+    <string name="customTabsColorPicker">Pick a Color</string>
+    <string name="customTabsDefaultBrowserTitle">Default Browser</string>
+
+    <!-- Notifications -->
+    <string name="devSettingsNotificationsScheduledTitle">Scheduled Notifications</string>
+    <string name="devSettingsNotificationsVPNTitle">VPN Notifications</string>
+
+    <!-- WebView Dev Settings -->
+    <string name="webview_about">About WebView</string>
+    <string name="webview_version">WebView Version (tap to copy)</string>
+    <string name="webview_package">WebView Package (tap to copy)</string>
+    <string name="webview_utilities">WebView utilities</string>
+    <string name="webview_dev_tools">Launch WebView DevTools</string>
+    <string name="webview_update_play_store">Update WebView through Play store</string>
+    <string name="webview_requires_play_store">Requires Play Store to be installed</string>
+    <string name="webview_dev_settings_label">WebView Dev Settings</string>
+    <string name="webview_internal_feature_title">System WebView</string>
+    <string name="webview_internal_feature_subtitle">WebView dev settings and tools</string>
+    <string name="webview_dev_ui_not_available">WebView Developer UI is not available.</string>
+    <string name="webview_play_store_unavailable">Play Store unavailable on this device</string>
+
+    <!-- Onboarding Dev Settings -->
+    <string name="onboardingDevSettingsTitle">Onboarding Dev Settings</string>
+    <string name="onboardingDevSettingsStateSection">Onboarding state</string>
+    <string name="onboardingDevSettingsCompletedTitle">Onboarding completed</string>
+    <string name="onboardingDevSettingsSkippedTitle">Onboarding skipped</string>
+    <string name="onboardingDevSettingsDialogsSection">Dialogs shown</string>
+
+    <!-- Modal Coordinator Dev Settings -->
+    <string name="modalCoordinatorDevSettingsTitle">Modal Coordinator Dev Settings</string>
+    <string name="modalCoordinatorDevSettingsResetCooldownDescription">Once a prompt is shown, further modals are blocked: by the prompts coordinator quiet gap, or by the internal 24-hour window when the coordinator is off. This clears both, so modals are evaluated again on the next app resume.</string>
+    <string name="modalCoordinatorDevSettingsResetCooldown">Reset modal cooldown</string>
+    <string name="modalCoordinatorDevSettingsResetCooldownDone">Modal cooldown reset</string>
+
+    <!-- New Tab Transition Dev Settings -->
+    <string name="devSettingsScreenNewTabTransitions">New Tab Transitions</string>
+    <string name="devSettingsScreenNewTabTransitionsSubtitle">Animate opening a new tab</string>
+    <string name="newTabTransitionDevSettingsFlag">newTabTransitions feature flag</string>
+    <string name="newTabTransitionDevSettingsFlagOn">On</string>
+    <string name="newTabTransitionDevSettingsFlagOff">Off: these settings apply once it\'s on</string>
+    <string name="newTabTransitionDevSettingsBrowserOrigin">Browser</string>
+    <string name="newTabTransitionDevSettingsTabManagerOrigin">Tab manager</string>
+    <string name="newTabTransitionDevSettingsBelowCenter">Below center animation</string>
+    <string name="newTabTransitionDevSettingsRightOfCenter">Right of center animation</string>
+    <string name="newTabTransitionDevSettingsOriginSubtitle">Start size, offset, scale back, dim, slide left and duration</string>
+    <string name="newTabTransitionDevSettingsStartSize">New page start size</string>
+    <string name="newTabTransitionDevSettingsOffset">Offset</string>
+    <string name="newTabTransitionDevSettingsScaleBack">Current page scales back to</string>
+    <string name="newTabTransitionDevSettingsDim">Current page dims by</string>
+    <string name="newTabTransitionDevSettingsDuration">Duration</string>
+    <string name="newTabTransitionDevSettingsSlideLeft">Current page slides left by</string>
+    <string name="newTabTransitionDevSettingsSlowMotion">Slow motion</string>
+    <string name="newTabTransitionDevSettingsReset">Reset</string>
+    <string name="newTabTransitionDevSettingsPercent" instruction="Not translated">%1$d%%</string>
+    <string name="newTabTransitionDevSettingsMilliseconds" instruction="Not translated">%1$d ms</string>
+    <string name="newTabTransitionDevSettingsOffsetBelow" instruction="Not translated">%1$d%% below</string>
+    <string name="newTabTransitionDevSettingsOffsetAbove" instruction="Not translated">%1$d%% above</string>
+    <string name="newTabTransitionDevSettingsOffsetRight" instruction="Not translated">%1$d%% right</string>
+    <string name="newTabTransitionDevSettingsOffsetCentered">Centered</string>
+</resources>

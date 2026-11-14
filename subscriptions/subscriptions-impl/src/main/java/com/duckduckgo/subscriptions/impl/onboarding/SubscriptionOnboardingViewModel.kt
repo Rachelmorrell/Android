@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.subscriptions.impl.onboarding
+
+import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.ConflatedJob
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.onboarding.api.LinearOnboardingOrchestrator
+import com.duckduckgo.onboarding.api.LinearOnboardingState
+import com.duckduckgo.onboarding.api.forPlan
+import com.duckduckgo.subscriptions.api.ActiveOfferType
+import com.duckduckgo.subscriptions.api.SubscriptionOnboardingController
+import com.duckduckgo.subscriptions.api.SubscriptionOnboardingStepOutcome
+import com.duckduckgo.subscriptions.api.SubscriptionOnboardingStepPlugin
+import com.duckduckgo.subscriptions.impl.SubscriptionsManager
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingEvent.BackPressed
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingEvent.Closed
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingEvent.StepFinished
+import com.duckduckgo.subscriptions.impl.onboarding.SubscriptionOnboardingPlanProvider.Companion.SUBSCRIPTION_ONBOARDING_PLAN_ID
+import com.duckduckgo.subscriptions.impl.pixels.SubscriptionOnboardingStepPixels.Step
+import com.duckduckgo.subscriptions.impl.pixels.SubscriptionPixelSender
+import com.duckduckgo.subscriptions.impl.store.SubscriptionOnboardingStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
+
+@ContributesViewModel(ActivityScope::class)
+class SubscriptionOnboardingViewModel @Inject constructor(
+    private val orchestrator: LinearOnboardingOrchestrator,
+    private val planProvider: SubscriptionOnboardingPlanProvider,
+    private val onboardingStore: SubscriptionOnboardingStore,
+    private val controller: SubscriptionOnboardingController,
+    private val handoffState: SubscriptionOnboardingHandoffState,
+    private val pixelSender: SubscriptionPixelSender,
+    private val subscriptionsManager: SubscriptionsManager,
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+) : ViewModel() {
+
+    sealed interface Command {
+        data class ShowStep(val stepPlugin: SubscriptionOnboardingStepPlugin) : Command
+        data class RunHandoff(val action: () -> Unit) : Command
+        data object FinishToSettings : Command
+    }
+
+    data class ToolbarState(
+        val titleResId: Int? = null,
+        val canGoBack: Boolean = false,
+        val showNavigationIcon: Boolean = false,
+    )
+
+    private val _commands = Channel<Command>(1, DROP_OLDEST)
+    val commands: Flow<Command> = _commands.receiveAsFlow()
+
+    private val _toolbarState = MutableStateFlow(ToolbarState())
+    val toolbarState: StateFlow<ToolbarState> = _toolbarState.asStateFlow()
+
+    private var started = false
+    private var canGoBack = false
+    private var pendingHandoff: (() -> Unit)? = null
+    private val handoffJob = ConflatedJob()
+    private var lastShownStepId: String? = null
+    private var freeTrial: Boolean? = null
+
+    fun start() {
+        if (started) return
+        started = true
+
+        viewModelScope.launch {
+            orchestrator.startPlan(planProvider.buildPlan())
+            orchestrator.state
+                .forPlan(SUBSCRIPTION_ONBOARDING_PLAN_ID)
+                .collect { handleState(it) }
+        }
+
+        controller.events
+            .onEach { handleControllerEvent(it) }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun handleState(state: LinearOnboardingState.Started) {
+        when (state) {
+            is LinearOnboardingState.InProgress -> {
+                val step = state.currentStep
+                if (step is SubscriptionOnboardingActivityStep) {
+                    canGoBack = state.canGoBack && step.stepPlugin.allowsBackNavigation
+                    _toolbarState.value = ToolbarState(
+                        titleResId = step.stepPlugin.titleResId,
+                        canGoBack = canGoBack,
+                        showNavigationIcon = !handoffState.isHandoff,
+                    )
+                    _commands.send(Command.ShowStep(step.stepPlugin))
+                    fireStepShown(step.stepPlugin.stepId)
+                    scheduleHandoffIfPending()
+                }
+            }
+            is LinearOnboardingState.Completed -> _commands.send(Command.FinishToSettings)
+            is LinearOnboardingState.Skipped -> _commands.send(Command.FinishToSettings)
+        }
+    }
+
+    private suspend fun handleControllerEvent(event: SubscriptionOnboardingController.Event) {
+        when (event) {
+            is SubscriptionOnboardingController.Event.StepFinished -> {
+                fireStepOutcome(event.stepId, event.outcome)
+                if (event.outcome == SubscriptionOnboardingStepOutcome.COMPLETED) {
+                    onboardingStore.setStepCompleted(event.stepId)
+                }
+                event.handoff?.let {
+                    pendingHandoff = it
+                    handoffState.isHandoff = true
+                }
+                orchestrator.onEvent(StepFinished(event.stepId, event.outcome))
+            }
+            SubscriptionOnboardingController.Event.Back -> {
+                if (handoffState.isHandoff) return
+                if (canGoBack) {
+                    orchestrator.onEvent(BackPressed)
+                } else {
+                    _commands.send(Command.FinishToSettings)
+                }
+            }
+            SubscriptionOnboardingController.Event.Exit -> {
+                cancelHandoff()
+                _commands.send(Command.FinishToSettings)
+            }
+        }
+    }
+
+    private suspend fun fireStepShown(stepId: String) {
+        if (stepId == lastShownStepId) return
+        lastShownStepId = stepId
+        Step.fromStepId(stepId)?.let { pixelSender.reportOnboardingStepShown(it, isFreeTrial()) }
+    }
+
+    private suspend fun fireStepOutcome(
+        stepId: String,
+        outcome: SubscriptionOnboardingStepOutcome,
+    ) {
+        val step = Step.fromStepId(stepId)?.takeIf { it.supportsOutcome } ?: return
+        when (outcome) {
+            SubscriptionOnboardingStepOutcome.COMPLETED -> pixelSender.reportOnboardingStepCompleted(step, isFreeTrial())
+            SubscriptionOnboardingStepOutcome.SKIPPED -> pixelSender.reportOnboardingStepSkipped(step, isFreeTrial())
+        }
+    }
+
+    private suspend fun isFreeTrial(): Boolean =
+        freeTrial ?: (subscriptionsManager.getSubscription()?.activeOffers?.contains(ActiveOfferType.TRIAL) == true)
+            .also { freeTrial = it }
+
+    private fun scheduleHandoffIfPending() {
+        val handoff = pendingHandoff ?: return
+        pendingHandoff = null
+        handoffJob += viewModelScope.launch {
+            delay(HANDOFF_DELAY)
+            _commands.send(Command.RunHandoff(handoff))
+        }
+    }
+
+    private fun cancelHandoff() {
+        pendingHandoff = null
+        handoffJob.cancel()
+    }
+
+    @VisibleForTesting
+    public override fun onCleared() {
+        super.onCleared()
+        val state = orchestrator.state.value
+        if (state is LinearOnboardingState.InProgress && state.rootPlanId == SUBSCRIPTION_ONBOARDING_PLAN_ID) {
+            appCoroutineScope.launch { orchestrator.onEvent(Closed) }
+        }
+    }
+
+    companion object {
+        private val HANDOFF_DELAY = 2.5.seconds
+    }
+}

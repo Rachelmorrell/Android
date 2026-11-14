@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Zrušiť</string>
+    <string name="ok">OK</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">Predplatné DuckDuckGo</string>
+    <string name="manageEmail">Spravovať e-mail</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Späť na nastavenia</string>
+    <string name="somethingWentWrong">Vyskytla sa chyba</string>
+    <string name="somethingWentWrongDescription">Google Play nemohol spracovať tvoj nákup. Prosím, skús to neskôr znova.</string>
+    <string name="youAreSet">Všetko je pripravené.</string>
+    <string name="viewPlans">Zobraziť plány</string>
+    <string name="subscriptionNotFound">Predplatné nebolo nájdené</string>
+    <string name="subscriptionNotFoundDescription">Predplatné spojené s týmto účtom Google Play už nie je aktívne.</string>
+    <string name="purchaseRestored">Tvoje nákupy boli obnovené.</string>
+    <string name="restoreSubscriptionTitle">Pridaj svoje predplatné do tohto zariadenia</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Pridať prostredníctvom účtu Google Play</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Obnov svoje predplatné na zariadeniach so systémom Android pomocou svojho účtu Google Play.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Obnoviť nákup</string>
+    <string name="restoreSubscriptionEmailTitle">Pridať cez e-mail</string>
+    <string name="restoreSubscriptionEmailDescription">Prepoj e-mailovú adresu so svojím predplatným, aby si ho mohol/mohla pridať do tohto zariadenia.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Začnite</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Zrušiť predplatné</string>
+    <string name="subscriptionRemoved">Tvoje predplatné bolo z tohto zariadenia odstránené</string>
+    <string name="removeFromDevice">Odstrániť z tohto zariadenia?</string>
+    <string name="removeFromDeviceDescription">Na tomto zariadení už nebudeš mať prístup k svojmu predplatnému. Tým sa tvoje predplatné nezruší a zostane aktívne na tvojich ostatných zariadeniach.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Tvoje mesačné predplatné %1$s dňa %2$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Tvoje ročné predplatné %1$s na %2$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Platnosť tvojho predplatného vypršala dňa %1$s.</string>
+    <string name="monthlySubscription">Mesačné predplatné</string>
+    <string name="yearlySubscription">Ročné predplatné</string>
+    <string name="renews">obnovuje</string>
+    <string name="expires">platnosť sa končí</string>
+    <string name="activateOnOtherDevices">Pridaj svoje predplatné do ďalších zariadení</string>
+    <string name="addToDevicePrimaryText">Pridať do zariadenia</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Pridaj si predplatné do svojich ďalších zariadení cez Google Play alebo prepojením e-mailovej adresy.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">Použi vyššie uvedený e-mail na pridanie predplatného v iných zariadeniach v aplikácii DuckDuckGo. Prejdi do Nastavenia &gt; Nastavenia predplatného &gt; Mám predplatné.</string>
+    <string name="editEmailPrimaryText">Upraviť e-mail</string>
+    <string name="learnMore">Zistite viac</string>
+    <string name="privacyProFaq">Potrebuješ pomoc s tvojím predplatným?</string>
+    <string name="privacyProFaqSecondary">Získaj odpovede na často kladené otázky alebo kontaktuj podporu predplatného na našich stránkach pomoci. Dostupnosť funkcií sa líši podľa krajiny.</string>
+    <string name="subscriptionStatusSubscribed">Prihlásený/-á</string>
+    <string name="privacyPolicyAndTermsOfService">Zásady ochrany osobných údajov a podmienky služby</string>
+    <string name="subscriptionStatusFreeTrial">Bezplatná skúšobná verzia je aktívna</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tvoja bezplatná skúšobná verzia končí dňa %1$s a v ten deň sa automaticky zmení na mesačné platené predplatné.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tvoja bezplatná skúšobná verzia končí dňa %1$s a v ten deň sa automaticky zmení na ročné platené predplatné.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tvoja bezplatná skúšobná verzia končí %1$s a nebude sa automaticky meniť na platené predplatné.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Nastavenia predplatného</string>
+    <string name="subscriptionSettingSubscribe">Chráň si pripojenie a identitu s jedným predplatným.</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Predplatitelia získajú našu sieť VPN, Personal Information Removal a Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Predplatitelia získajú našu VPN a Identity Theft Restoration.</string>
+
+    <string name="subscriptionSettingGet">Predplatné DuckDuckGo</string>
+    <string name="subscriptionSettingTryFreeTrial">Vyskúšať zadarmo</string>
+    <string name="subscriptionSettingRestore">Mám predplatné</string>
+    <string name="subscriptionSettingExpired">Platnosť tvojho predplatného DuckDuckGo vypršala</string>
+    <string name="subscriptionSettingExpiredViewPlans">Zobraziť plány</string>
+    <string name="subscriptionSettingSectionSubscription">Predplatné</string>
+    <string name="subscriptionSettingRemoveFromDevice">Odstrániť z tohto zariadenia</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Pomoc a podpora</string>
+    <string name="subscriptionSettingSendFeedback">Odoslať spätnú väzbu</string>
+    <string name="subscriptionSettingActivating">Aktivácia</string>
+    <string name="subscriptionSettingManagePlan">Spravovať platby</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Máš všetko pripravené.</string>
+    <string name="purchaseCompletedText">Tvoj nákup bol úspešný.</string>
+    <string name="purchaseRecoveredText">Už si mal/-a predplatné a my sme ho pre teba obnovili.</string>
+    <string name="purchaseErrorTitle">Vyskytla sa chyba</string>
+    <string name="purchaseError">Máme problémy s pripojením. Prosím, skús to neskôr znova.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Aktualizovať plán alebo zrušiť</string>
+    <string name="changePlanDescription">Tvoje predplatné bolo zakúpené prostredníctvom obchodu Apple App Store. Ak chceš zmeniť svoje nastavenia plánu alebo fakturácie, prejdi do časti Nastavenia &gt; Apple účet &gt; Predplatné na zariadení prihlásenom do rovnakého Apple účtu, ktorý bol použitý na zakúpenie predplatného.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Otvorené</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Súbor sa nedá otvoriť. Vyhľadajte kompatibilnú aplikáciu.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Odoslať spätnú väzbu</string>
+    <string name="feedbackActionHeader">VYBERTE KATEGÓRIU</string>
+    <string name="feedbackActionReportIssue">Nahlásiť problém</string>
+    <string name="feedbackActionGeneralFeedback">Všeobecná spätná väzba</string>
+    <string name="feedbackActionFeatureRequest">Požiadaj o funkciu</string>
+
+    <string name="feedbackGeneralHeader">VYBERTE KATEGÓRIU</string>
+    <string name="feedbackGeneralBrowser">Spätná väzba prehliadača</string>
+    <string name="feedbackGeneralPpro">Ochrana osobných údajov Pro</string>
+
+    <string name="feedbackCategoryHeader">VYBERTE KATEGÓRIU</string>
+    <string name="feedbackCategorySubscription">Predplatné a platby</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">VYBERTE KATEGÓRIU</string>
+
+    <string name="feedbackSubCategoryVpnConnection">Nedarí sa pripojiť k VPN.</string>
+    <string name="feedbackSubCategoryVpnSlow">VPN pripojenie je príliš pomalé</string>
+    <string name="feedbackSubCategoryVpnOtherApps">VPN spôsobuje problémy s inými aplikáciami alebo webovými stránkami.</string>
+    <string name="feedbackSubCategoryVpnIot">VPN mi nedovolí pripojiť sa k lokálnemu zariadeniu</string>
+    <string name="feedbackSubCategoryVpnCrash">VPN spôsobuje zlyhanie alebo zamrznutie prehliadača</string>
+    <string name="feedbackSubCategoryVpnOther">Iné</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">Na konkrétnej stránke nie sú informácie</string>
+    <string name="feedbackSubCategoryPirNotMe">Záznamy nepatria užívateľovi</string>
+    <string name="feedbackSubCategoryPirScanStuck">Skenovanie je zaseknuté</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Odstránenie je zaseknuté</string>
+    <string name="feedbackSubCategoryPirOther">Iné</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Problém s prístupovým kódom</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Nemôžem sa spojiť s poradcom</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Telefonát poradcovi nebol nápomocný</string>
+    <string name="feedbackSubCategoryItrOther">Iné</string>
+
+    <string name="feedbackSubCategorySubsOtp">Problém s jednorazovým heslom</string>
+    <string name="feedbackSubCategorySubsOther">Niečo iné</string>
+
+    <string name="feedbackSubmitVpnHeader">Našiel/našla si problém, ktorý nepokrýva naše <annotation type="faqs_link">centrum pomoci</annotation> ? Určite o tom chceme vedieť.</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Povedz nám, čo sa deje...</string>
+    <string name="feedbackSubmitVpnDisclaimer">"Okrem vyššie uvedených údajov posielame spolu s tvojou spätnou väzbou aj niektoré anonymizované informácie:\n\n- Či sú niektoré funkcie prehliadača aktívne\n- Súhrnná diagnostika aplikácie (napr. kódy chýb)\n\nKliknutím na tlačidlo Odoslať súhlasíš s tým, že DuckDuckGo môže použiť odoslané informácie na zlepšenie aplikácie."</string>
+    <string name="feedbackSubmitVpnSubmit">Odoslať</string>
+    <string name="feedbackSubmitCompletedMessage">Ďakujeme! Spätná väzba bola odoslaná</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Prosím, daj nám svoju spätnú väzbu...</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Akú funkciu by si chcel/-a?</string>
+    <string name="feedbackSubmitContactSupport">Potrebuješ pomoc? <annotation type="support_link">Kontaktuj podporu</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Predplatné</string>
+    <string name="activitySubscriptionSettings">Nastavenia predplatného</string>
+    <string name="activityActivateSubscription">Mám predplatné</string>
+    <string name="activitySendFeedback">Odoslať spätnú väzbu</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Predplatitelia získajú našu VPN, pokročilé modely umelej inteligencie v Duck.ai, Personal Information Removal a Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Predplatitelia získajú našu VPN, pokročilé modely umelej inteligencie v Duck.ai a službu Identity Theft Restoration.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Nepodarilo sa získať prístup k modelom Duck.ai, ktoré sú určené výhradne pre predplatiteľov.</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Nemôžem sa s mojím predplatným dostať na Duck.ai v iných prehliadačoch.</string>
+    <string name="feedbackSubCategoryDuckAiOther">Ďalšie pripomienky Duck.ai</string>
+
+    <string name="subscriptionSettingSectionTitle">Predplatné DuckDuckGo</string>
+    <string name="subscriptionSettingSubscribeSecure">Zabezpeč si Wi-Fi a chatuj súkromne s pokročilými modelmi umelej inteligencie</string>
+
+    <string name="feedbackGeneralSubscription">Predplatné</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Nie je možné získať prístup k funkciám úrovne Plus alebo Pro</string>
+    <string name="subscriptionsProUpgradeTitle">Aktualizovať na Pro</string>
+    <string name="subscriptionsProUpgradeMessage">Odomkni silnejšiu umelú inteligenciu</string>
+    <string name="subscriptionSettingSectionManageSubscription">Spravovať predplatné</string>
+    <string name="subscriptionSettingViewAllPlans">Zobraziť všetky plány</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Spravovať platbu alebo zrušiť</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">Tvoj plán prejde na nižšiu úroveň %1$s dňa %2$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Tvoj plán prejde na vyššiu úroveň %1$s dňa %2$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Tvoj plán prejde na nižšiu úroveň %1$s dňa %2$s.</string>
+    <string name="planNamePlusMonthly">Plus mesačne</string>
+    <string name="planNamePlusYearly">Plus ročne</string>
+    <string name="planNameProMonthly">Pro mesačne</string>
+    <string name="planNameProYearly">Pro ročne</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Platnosť tvojho predplatného vypršala</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Predplatné aktívne</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Odstúpiť od zmluvy</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">Až do %1$s môžeš odstúpiť a získať späť celú sumu.</string>
+    <string name="subscriptionWithdrawDialogTitle">Zrušiť predplatné?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">Tvoje predplatné %1$s sa okamžite skončí a do 14 dní ti bude suma %2$s vrátená pôvodným spôsobom platby.\n\nVPN, Personal Information Removal a pokročilé modely Duck.ai prestanú fungovať, keď to potvrdíš.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Potvrdiť výber</string>
+    <string name="subscriptionWithdrawDialogKeep">Ponechať predplatné</string>
+    <string name="subscriptionStatusNotSubscribed">Bez predplatného</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">Od predplatného si odstúpil/-a dňa %1$s.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">Vrátenie sumy %1$s sa spracúva.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">Vrátenie peňazí sa spracúva.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">Nepodarilo sa nám automaticky spracovať tvoje odstúpenie od predplatného. Navštív <annotation type="withdrawal_help_link">túto stránku</annotation> a dokonči odstúpenie od predplatného.</string>
+
+</resources>

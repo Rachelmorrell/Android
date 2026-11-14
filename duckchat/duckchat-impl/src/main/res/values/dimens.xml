@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2025 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources>
+    <dimen name="inputScreenUserPrefToggleSpacing">16dp</dimen>
+    <dimen name="nativeInputModeWidgetMarginHorizontal">4dp</dimen>
+    <dimen name="nativeInputFooterOverlap">32dp</dimen>
+    <dimen name="contextualBottomSheetTopOffset">80dp</dimen>
+    <dimen name="onboardingBackgroundMaxHeight">126dp</dimen>
+
+    <!-- Model Picker -->
+    <dimen name="modelPickerChipHeight">36dp</dimen>
+    <dimen name="modelPickerChipTextSize">13sp</dimen>
+    <dimen name="modelPickerMenuElevation">6dp</dimen>
+
+    <!-- Shared width for the native input widget popup menus (options, model picker, reasoning picker, attachment) -->
+    <dimen name="nativeInputMenuWidth">260dp</dimen>
+    <dimen name="nativeInputButtonSize">36dp</dimen>
+
+    <!-- Added to keyline_0 so the input text aligns with the bottom row icon glyphs -->
+    <dimen name="nativeInputFieldStartMargin">6dp</dimen>
+
+    <!-- Width of the contextual sheet "recent chats" popup menu. Wider than the default popupMenuWidth (200dp) to fit chat titles. -->
+    <dimen name="contextualChatsPopupMenuWidth">280dp</dimen>
+
+
+    <!-- Chip-->
+    <dimen name="chipCornerRadius">20dp</dimen>
+    <dimen name="chipStrokeWidth">1dp</dimen>
+    <dimen name="chipImageCornerRadius">6dp</dimen>
+</resources>

@@ -1,0 +1,48 @@
+<!--
+  ~ Copyright (c) 2025 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Widget.DuckDuckGo.DuckChatContextualFavicon">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/smallShapeCornerRadius</item>
+    </style>
+
+    <style name="Widget.DuckDuckGo.DuckAiContextualEntryDialog" parent="@style/Theme.Design.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="enableEdgeToEdge">true</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="bottomSheetStyle">@style/Widget.DuckDuckGo.DuckAiContextualEntryDialogStyle
+        </item>
+    </style>
+
+    <style name="Widget.DuckDuckGo.DuckAiTabCardChatType">
+        <item name="android:background">@drawable/background_duck_ai_tab_card_chat_type</item>
+        <item name="android:drawablePadding">@dimen/keyline_2</item>
+        <item name="android:drawableTint">?attr/daxColorSecondaryText</item>
+        <item name="android:paddingHorizontal">@dimen/keyline_2</item>
+        <item name="android:paddingVertical">6dp</item>
+        <item name="android:textAppearance">@style/Typography.DuckDuckGo.Caption</item>
+        <item name="android:textColor">?attr/daxColorSecondaryText</item>
+    </style>
+
+    <style name="Widget.DuckDuckGo.DuckAiContextualEntryDialogStyle" parent="@style/Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+</resources>

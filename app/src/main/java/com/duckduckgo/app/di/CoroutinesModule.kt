@@ -16,17 +16,20 @@
 
 package com.duckduckgo.app.di
 
-import com.duckduckgo.app.global.DefaultDispatcherProvider
-import com.duckduckgo.app.global.DispatcherProvider
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.common.utils.DefaultDispatcherProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-class CoroutinesModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object CoroutinesModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun providesDispatcherProvider(): DispatcherProvider {
         return DefaultDispatcherProvider()
     }

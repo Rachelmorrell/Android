@@ -16,37 +16,39 @@
 
 package com.duckduckgo.app.job
 
+import android.annotation.SuppressLint
 import androidx.annotation.CheckResult
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.LifecycleOwner
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.WorkManager
 import com.duckduckgo.app.global.job.AppConfigurationSyncWorkRequestBuilder
 import com.duckduckgo.app.global.job.AppConfigurationSyncWorkRequestBuilder.Companion.APP_CONFIG_SYNC_WORK_TAG
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesTo
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import io.reactivex.Completable
 import io.reactivex.schedulers.Schedulers
-import timber.log.Timber
-import javax.inject.Singleton
+import logcat.LogPriority.INFO
+import logcat.LogPriority.WARN
+import logcat.logcat
 
-@Module
-@ContributesTo(AppObjectGraph::class)
+@BindingContainer
+@ContributesTo(AppScope::class)
 class AppConfigurationSyncerModule {
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @IntoSet
     fun provideAppConfigurationSyncer(
         appConfigurationSyncWorkRequestBuilder: AppConfigurationSyncWorkRequestBuilder,
         workManager: WorkManager,
-        appConfigurationDownloader: ConfigurationDownloader
-    ): LifecycleObserver {
+        appConfigurationDownloader: ConfigurationDownloader,
+    ): MainProcessLifecycleObserver {
         return AppConfigurationSyncer(appConfigurationSyncWorkRequestBuilder, workManager, appConfigurationDownloader)
     }
 }
@@ -55,28 +57,28 @@ class AppConfigurationSyncerModule {
 class AppConfigurationSyncer(
     private val appConfigurationSyncWorkRequestBuilder: AppConfigurationSyncWorkRequestBuilder,
     private val workManager: WorkManager,
-    private val appConfigurationDownloader: ConfigurationDownloader
-) : LifecycleObserver {
+    private val appConfigurationDownloader: ConfigurationDownloader,
+) : MainProcessLifecycleObserver {
 
+    @SuppressLint("CheckResult")
     @UiThread
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    fun configureDataDownloader() {
+    override fun onCreate(owner: LifecycleOwner) {
         scheduleImmediateSync()
             .subscribeOn(Schedulers.io())
             .doAfterTerminate {
                 scheduleRegularSync()
             }
-            .subscribe({}, { Timber.w("Failed to download initial app configuration ${it.localizedMessage}") })
+            .subscribe({}, { logcat(WARN) { "Failed to download initial app configuration ${it.localizedMessage}" } })
     }
 
     @CheckResult
     fun scheduleImmediateSync(): Completable {
-        Timber.i("Running immediate attempt to download app configuration")
+        logcat(INFO) { "Running immediate attempt to download app configuration" }
         return appConfigurationDownloader.downloadTask()
     }
 
     fun scheduleRegularSync() {
-        Timber.i("Scheduling regular sync")
+        logcat(INFO) { "Scheduling regular sync" }
         val workRequest = appConfigurationSyncWorkRequestBuilder.appConfigurationWork()
         workManager.enqueueUniquePeriodicWork(APP_CONFIG_SYNC_WORK_TAG, ExistingPeriodicWorkPolicy.KEEP, workRequest)
     }

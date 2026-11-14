@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="voiceSearchError">Vyskytla sa chyba. Skúste to, prosím, neskôr.</string>
+    <string name="voiceSearchIconContentDescription">Hlasové vyhľadávanie</string>
+    <string name="voiceSearchListening">Hovorte teraz</string>
+    <string name="voiceSearchListeningFooter">Zvuk sa spracováva v zariadení. Neukladá sa nikde a s nikým, vrátane DuckDuckGo, sa nezdieľa.</string>
+    <string name="voiceSearchNegativeAction">Zrušiť</string>
+    <string name="voiceSearchMicAccessDeniedDialogTitle">DuckDuckGo potrebuje prístup k tvojmu mikrofónu</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessage">Ak chceš používať naše súkromné hlasové vyhľadávanie, je potrebné povolenie pre mikrofón.</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessageDuckAi">Ak chceš používať naše súkromné hlasové funkcie, je potrebné povolenie pre mikrofón.</string>
+    <string name="voiceSearchMicAccessDeniedDialogChangePermissions">Zmeniť oprávnenia</string>
+    <string name="voiceSearchMicAccessDeniedDialogHideVoiceSearch">Skryť hlasové vyhľadávanie</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarMessage">Na používanie hlasových funkcií je potrebný prístup k mikrofónu</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarAction">Povoliť</string>
+    <string name="voiceSearchTitle">Hlasové vyhľadávanie</string>
+</resources>

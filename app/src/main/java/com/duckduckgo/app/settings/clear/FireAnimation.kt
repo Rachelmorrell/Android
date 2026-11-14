@@ -16,20 +16,41 @@
 
 package com.duckduckgo.app.settings.clear
 
+import androidx.annotation.StringRes
 import com.duckduckgo.app.browser.R
+import com.duckduckgo.app.settings.clear.FireAnimation.HeroAbstract
+import com.duckduckgo.app.settings.clear.FireAnimation.HeroFire
+import com.duckduckgo.app.settings.clear.FireAnimation.HeroWater
+import com.duckduckgo.app.settings.clear.FireAnimation.Inferno
+import com.duckduckgo.app.settings.clear.FireAnimation.None
 import com.duckduckgo.app.statistics.pixels.Pixel
 import java.io.Serializable
 
-sealed class FireAnimation(val resId: Int, val nameResId: Int) : Serializable {
-    object HeroFire : FireAnimation(R.raw.hero_fire_inferno, R.string.settingsHeroFireAnimation)
-    object HeroWater : FireAnimation(R.raw.hero_water_whirlpool, R.string.settingsHeroWaterAnimation)
-    object HeroAbstract : FireAnimation(R.raw.hero_abstract_airstream, R.string.settingsHeroAbstractAnimation)
-    object None : FireAnimation(-1, R.string.settingsNoneAnimation)
+sealed class FireAnimation(
+    val resId: Int,
+    val nameResId: Int,
+) : Serializable {
+    data object Inferno : FireAnimation(R.raw.inferno, R.string.settingsHeroFireAnimation)
+
+    /**
+     * The selector displays "Inferno Classic" as a presentation-only label. The storage key, pixel value, and asset
+     * filename remain intentionally preserved.
+     */
+    data object HeroFire : FireAnimation(R.raw.hero_fire_inferno, R.string.settingsHeroFireAnimation)
+    data object HeroWater : FireAnimation(R.raw.hero_water_whirlpool, R.string.settingsHeroWaterAnimation)
+    data object HeroAbstract : FireAnimation(R.raw.hero_abstract_airstream, R.string.settingsHeroAbstractAnimation)
+    data object None : FireAnimation(-1, R.string.settingsNoneAnimation)
 }
 
+fun availableFireAnimations(): List<FireAnimation> = listOf(Inferno, HeroFire, HeroWater, HeroAbstract, None)
+
+@StringRes
+fun FireAnimation.displayLabelResId(): Int = if (this == HeroFire) R.string.settingsHeroFireAnimationClassic else nameResId
+
 fun FireAnimation.getPixelValue() = when (this) {
-    FireAnimation.HeroFire -> Pixel.PixelValues.FIRE_ANIMATION_INFERNO
-    FireAnimation.HeroWater -> Pixel.PixelValues.FIRE_ANIMATION_WHIRLPOOL
-    FireAnimation.HeroAbstract -> Pixel.PixelValues.FIRE_ANIMATION_AIRSTREAM
-    FireAnimation.None -> Pixel.PixelValues.FIRE_ANIMATION_NONE
+    Inferno -> Pixel.PixelValues.FIRE_ANIMATION_INFERNO_NEW
+    HeroFire -> Pixel.PixelValues.FIRE_ANIMATION_INFERNO
+    HeroWater -> Pixel.PixelValues.FIRE_ANIMATION_WHIRLPOOL
+    HeroAbstract -> Pixel.PixelValues.FIRE_ANIMATION_AIRSTREAM
+    None -> Pixel.PixelValues.FIRE_ANIMATION_NONE
 }

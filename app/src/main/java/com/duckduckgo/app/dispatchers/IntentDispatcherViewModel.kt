@@ -1,0 +1,223 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.dispatchers
+
+import android.content.Intent
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.net.toUri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayerSettingsNoParams
+import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
+import com.duckduckgo.app.browser.customtabs.CustomTabLaunchMode
+import com.duckduckgo.app.browser.customtabs.CustomTabsFeature
+import com.duckduckgo.app.browser.pdf.InlinePdfHandler
+import com.duckduckgo.app.browser.pdf.LocalPdfResult
+import com.duckduckgo.app.global.intentText
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.appbuildconfig.api.isInternalBuild
+import com.duckduckgo.autofill.api.emailprotection.EmailProtectionLinkVerifier
+import com.duckduckgo.browser.api.ui.BrowserScreens.PdfViewerActivityParams
+import com.duckduckgo.browser.api.ui.BrowserScreens.PdfViewerSource
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.customtabs.api.CustomTabDetector
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.navigation.api.GlobalActivityStarter.ActivityParams
+import com.duckduckgo.sync.api.setup.SyncUrlIdentifier
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import logcat.LogPriority.WARN
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesViewModel(ActivityScope::class)
+class IntentDispatcherViewModel @Inject constructor(
+    private val dispatcherProvider: DispatcherProvider,
+    private val emailProtectionLinkVerifier: EmailProtectionLinkVerifier,
+    private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector,
+    private val syncUrlIdentifier: SyncUrlIdentifier,
+    private val duckChat: DuckChat,
+    private val appBuildConfig: AppBuildConfig,
+    private val inlinePdfHandler: InlinePdfHandler,
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+    private val customTabDetector: CustomTabDetector,
+    private val customTabsFeature: CustomTabsFeature,
+) : ViewModel() {
+
+    private var customTabMarkedEarly = false
+
+    private val _viewState = MutableStateFlow(ViewState())
+    val viewState = _viewState.asStateFlow()
+
+    data class ViewState(
+        // false until onIntentReceived has computed a real routing decision. The initial default state
+        // must not be dispatched (it would otherwise fall through to the browser and finish the dispatcher
+        // before a slower path — e.g. cacheLocalPdf — emits its result).
+        val resolved: Boolean = false,
+        val customTabRequested: Boolean = false,
+        val intentText: String? = null,
+        val activityParams: ActivityParams? = null,
+        val toolbarColor: Int? = null,
+        val isExternal: Boolean = false,
+        val localPdfError: Boolean = false,
+        val customTabLaunchMode: CustomTabLaunchMode = CustomTabLaunchMode.LEGACY,
+    )
+
+    fun onIntentReceived(
+        intent: Intent?,
+        isExternal: Boolean,
+        isTaskRoot: Boolean = false,
+    ) {
+        // Marked before the background routing below: on a cold start the dispatcher resumes first, and
+        // app-resume work such as modal prompts would otherwise run before CustomTabActivity marks itself.
+        customTabMarkedEarly = runCatching { intent?.hasExtra(CustomTabsIntent.EXTRA_SESSION) == true }.getOrDefault(false)
+        if (customTabMarkedEarly) {
+            customTabDetector.setCustomTab(true)
+        }
+
+        viewModelScope.launch(dispatcherProvider.io()) {
+            runCatching {
+                val localPdfUri = localPdfUriOrNull(intent)
+                if (localPdfUri != null) {
+                    when (val result = inlinePdfHandler.cacheLocalPdf(localPdfUri)) {
+                        is LocalPdfResult.Success -> {
+                            resolve(
+                                viewState.value.copy(
+                                    resolved = true,
+                                    activityParams = PdfViewerActivityParams(
+                                        result.uri.toString(),
+                                        result.displayName,
+                                        PdfViewerSource.EXTERNAL_INTENT,
+                                    ),
+                                    localPdfError = false,
+                                    isExternal = isExternal,
+                                ),
+                            )
+                        }
+
+                        is LocalPdfResult.Failure -> {
+                            resolve(viewState.value.copy(resolved = true, localPdfError = true, isExternal = isExternal))
+                        }
+                    }
+                    return@launch
+                }
+
+                val hasSession = intent?.hasExtra(CustomTabsIntent.EXTRA_SESSION) == true
+                val intentText = intent?.intentText
+                val activityParams = if (appBuildConfig.isInternalBuild()) {
+                    if (intent?.data?.toString() == "duck://settings.player") {
+                        DuckPlayerSettingsNoParams
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+
+                val toolbarColor = if (intent?.hasExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR) == true) {
+                    intent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, 0)
+                } else {
+                    null
+                }
+
+                val isEmailProtectionLink = emailProtectionLinkVerifier.shouldDelegateToInContextView(intentText, true)
+                val isDuckDuckGoUrl = intentText?.let { duckDuckGoUrlDetector.isDuckDuckGoUrl(it) } ?: false
+                val isDuckAiUrl = intentText?.let { duckChat.isDuckChatUrl(it.toUri()) } ?: false
+                val isSyncPairingUrl = syncUrlIdentifier.shouldDelegateToSyncSetup(intentText)
+                val customTabRequested = hasSession && !isEmailProtectionLink && !isDuckDuckGoUrl && !isSyncPairingUrl && !isDuckAiUrl
+
+                val customTabLaunchMode = if (customTabRequested) {
+                    CustomTabLaunchMode.resolve(
+                        keepOnAppSwitchEnabled = customTabsFeature.keepCustomTabOnAppSwitch().isEnabled(),
+                        launchedWithNewTask = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_NEW_TASK != 0,
+                        isTaskRoot = isTaskRoot,
+                    )
+                } else {
+                    CustomTabLaunchMode.LEGACY
+                }
+
+                logcat {
+                    "Intent $intent received. Has extra session=$hasSession. Intent text=$intentText. Toolbar color=$toolbarColor. " +
+                        "Is task root=$isTaskRoot. Custom tab launch mode=$customTabLaunchMode"
+                }
+
+                resolve(
+                    viewState.value.copy(
+                        resolved = true,
+                        customTabRequested = customTabRequested,
+                        intentText = if (customTabRequested) intentText?.sanitize() else intentText,
+                        activityParams = activityParams,
+                        toolbarColor = toolbarColor,
+                        isExternal = isExternal,
+                        customTabLaunchMode = customTabLaunchMode,
+                    ),
+                )
+            }.onFailure {
+                logcat(WARN) { "Error handling custom tab intent: ${it.message}" }
+                // Resolve to a routable state so the dispatcher doesn't hang on the unresolved default;
+                // fall back to opening the intent's URL in the browser.
+                resolve(
+                    viewState.value.copy(
+                        resolved = true,
+                        intentText = runCatching { intent?.intentText }.getOrNull(),
+                        isExternal = isExternal,
+                    ),
+                )
+            }
+        }
+    }
+
+    private suspend fun resolve(state: ViewState) {
+        if (customTabMarkedEarly && !state.customTabRequested) {
+            customTabDetector.setCustomTab(false)
+        }
+        _viewState.emit(state)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        if (customTabMarkedEarly && !viewState.value.resolved) {
+            customTabDetector.setCustomTab(false)
+        }
+    }
+
+    private fun localPdfUriOrNull(intent: Intent?): Uri? {
+        if (intent?.action != Intent.ACTION_VIEW) return null
+        if (appBuildConfig.sdkInt < 31) return null
+        if (!androidBrowserConfigFeature.externalPdfHandler().isEnabled()) return null
+        val data = intent.data ?: return null
+        val scheme = data.scheme?.lowercase()
+        if (scheme != "content" && scheme != "file") return null
+        val isPdf = intent.type?.lowercase() == "application/pdf" ||
+            data.lastPathSegment?.endsWith(".pdf", ignoreCase = true) == true
+        return if (isPdf) data else null
+    }
+
+    private fun String.sanitize(): String {
+        if (this.startsWith("http://") || this.startsWith("https://")) {
+            // Some apps send URLs with spaces in the intent. This is happening mostly for authorization URLs.
+            // E.g https://mastodon.social/oauth/authorize?client_id=AcfPDZlcKUjwIatVtMt8B8cmdW-w1CSOR6_rYS_6Kxs&scope=read write push&redirect_uri=mastify://oauth&response_type=code
+            return this.replace(" ", "%20")
+        }
+        return this
+    }
+}

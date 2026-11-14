@@ -14,12 +14,13 @@
 # update_fastlane
 
  # CONSTANTS
-    releaseNotesBodyHeader = "What's new in this release?"
-    releaseNotesSuffixHeader = "Have feedback?"
+    releaseNotesDefault = "Bug fixes and other improvements"
+    releaseNotesBodyHeader = "What's new:"
     releaseNotesFileBody = "../app/version/release-notes"
-    releaseNotesFileHiring = "../app/version/release-notes-hiring"
-    releaseNotesFileSuffix = "../app/version/release-notes-suffix"
+    appVersionFilePath = "../app/version/version.properties"
+    firebaseFilePath = "#{ENV["HOME"]}/jenkins_static/com.duckduckgo.mobile.android/ddg-upload-firebase.json"
     releaseNotesLocales= ["en-US", "en-GB", "en-CA"]
+    releaseNotesMaxLength = 500
     errorMessageCancelled = "Release cancelled 😢"
 
 default_platform(:android)
@@ -30,11 +31,12 @@ platform :android do
   private_lane :release_notes_playstore do
 
     releaseNotesBody = File.read(releaseNotesFileBody)
-    releaseNotesSuffix = File.read(releaseNotesFileSuffix)
-    releaseNotesHiring = File.read(releaseNotesFileHiring)
 
-    formatted = "#{releaseNotesBodyHeader}\n#{releaseNotesBody}#{releaseNotesHiring}\n\n#{releaseNotesSuffixHeader}\n#{releaseNotesSuffix}"
+    formatted = "#{releaseNotesBodyHeader}\n#{releaseNotesBody}"
+
+    validateReleaseNotes(releaseNotes: formatted)
     UI.message("\n#{formatted}")
+
     formatted
 
   end
@@ -43,35 +45,115 @@ platform :android do
     private_lane :release_notes_github do
 
       releaseNotesBody = File.read(releaseNotesFileBody)
-      releaseNotesSuffix = File.read(releaseNotesFileSuffix)
-      releaseNotesHiring = File.read(releaseNotesFileHiring)
 
-      formatted = "\#\# #{releaseNotesBodyHeader}\n#{releaseNotesBody}#{releaseNotesHiring}\n\n\#\# #{releaseNotesSuffixHeader}\n#{releaseNotesSuffix}"
+      formatted = "\#\# #{releaseNotesBodyHeader}\n#{releaseNotesBody}"
       UI.message("\n#{formatted}")
       formatted
-
     end
 
 
-  desc "Upload APK to Play Store"
+  desc "Upload AAB to Play Store, in production track with a very small rollout percentage"
   lane :deploy_playstore do
-
-    update_fastlane_release_notes()
 
     props = property_file_read(file: "app/version/version.properties")
     version = props["VERSION"]
-    apkPath = "app/build/outputs/apk/play/release/duckduckgo-#{version}-play-release.apk"
+    flversion = convert_version(release_number: version)
+    aabPath = "app/build/outputs/bundle/playRelease/duckduckgo-#{version}-play-release.aab"
+
+    update_fastlane_release_notes(release_number: flversion)
 
     upload_to_play_store(
-      apk: apkPath,
-      track: 'internal',
+      aab: aabPath,
+      track: 'production',
+      rollout: '0.000001', # ie. 0.0001%
       skip_upload_screenshots: true,
       skip_upload_images: true,
       validate_only: false
     )
 
-    cleanup_fastlane_release_notes()
+    cleanup_fastlane_release_notes(release_number: flversion)
+    annotate_release()
 
+  end
+
+
+  desc "Update Play Store release notes"
+    lane :update_release_notes_playstore do |options|
+
+      options_release_number = options[:release_number]
+      options_release_notes = options[:release_notes]
+      options_notes_type = options[:notes_type]
+
+      newVersion = determine_version_number(
+          release_number: options_release_number
+      )
+      releaseNotes = determine_release_notes_interactive(
+          release_notes: options_release_notes,
+          notes_type: options_notes_type
+      )
+
+      formattedPlayStore = "#{releaseNotesBodyHeader}\n#{releaseNotes}"
+      validateReleaseNotes(releaseNotes: formattedPlayStore)
+      UI.message("\n#{formattedPlayStore}")
+
+      flversion = convert_version(release_number: newVersion)
+
+      releaseNotesLocales.each do |locale|
+        File.open("../fastlane/metadata/android/#{locale}/changelogs/#{flversion}.txt", 'w') do |file| file.write("#{formattedPlayStore}") end
+        end
+
+      upload_to_play_store(
+          version_code: flversion,
+          skip_upload_apk: true,
+          skip_upload_aab: true,
+          skip_upload_metadata: true,
+          skip_upload_changelogs: false,
+          skip_upload_images: true,
+          skip_upload_screenshots: true,
+          validate_only: false
+      )
+
+      cleanup_fastlane_release_notes(release_number: flversion)
+
+    end
+
+   desc "Update GitHub release notes"
+       lane :update_release_notes_github do |options|
+
+         options_release_number = options[:release_number]
+         options_release_notes = options[:release_notes]
+         options_release_notes = options[:release_notes]
+         options_notes_type = options[:notes_type]
+
+         newVersion = determine_version_number(
+             release_number: options_release_number
+         )
+         releaseNotes = determine_release_notes_interactive(
+             release_notes: options_release_notes,
+             notes_type: options_notes_type
+         )
+
+         formatted = "## What's new:\n\n#{releaseNotes}"
+         UI.message("\n#{formatted} for release #{newVersion}")
+
+        sh "gh release edit #{newVersion} -n \"#{formatted}\""
+   end
+
+
+  desc "Annotate release"
+  private_lane :annotate_release do
+    props = property_file_read(file: "app/version/version.properties")
+    version = props["VERSION"]
+
+    http_status = sh("curl -s -o /dev/null -w '%{http_code}' https://improving.duckduckgo.com/t/m_new_release_android?appVersion=#{version}", log: false).to_i
+
+      if http_status >= 200 && http_status < 300
+        # Successful response
+        puts "Release annotation successful with status code #{http_status}"
+      else
+        # Unsuccessful response
+        puts "Release annotation failed with status code #{http_status}"
+      end
   end
 
   desc "Upload APK to ad-hoc internal app sharing"
@@ -79,13 +161,44 @@ platform :android do
 
       props = property_file_read(file: "app/version/version.properties")
       version = props["VERSION"]
-      apkPath = "app/build/outputs/apk/play/release/duckduckgo-#{version}-play-release.apk"
+      aabPath = "app/build/outputs/bundle/playRelease/duckduckgo-#{version}-play-release.aab"
 
       upload_to_play_store_internal_app_sharing(
-        apk: apkPath
+        aab: aabPath
       )
 
  end
+
+ desc "Upload AAB to Play Store internal testing track and APK to Firebase"
+ lane :deploy_dogfood do |options|
+
+   UI.message("Aab path: #{options[:aab_path]}")
+
+   upload_to_play_store(
+     aab: options[:aab_path],
+     track: 'internal',
+     skip_upload_screenshots: true,
+     skip_upload_images: true,
+     validate_only: false
+   )
+
+  versionCode = google_play_track_version_codes(track: 'internal').max
+  apkPath = "duckduckgo.apk"
+
+  download_universal_apk_from_google_play(
+      version_code: versionCode,
+      destination: apkPath
+  )
+
+  firebase_app_distribution(
+      app: "1:239339218528:android:732e03dcf13d1488db8505",
+      groups: "ddg-employees",
+      android_artifact_type: "APK",
+      android_artifact_path: apkPath,
+      service_credentials_file: firebaseFilePath
+  )
+
+  end
 
   desc "Deploy APK to GitHub"
   lane :deploy_github do
@@ -94,9 +207,14 @@ platform :android do
     version = props["VERSION"]
     releaseNotes = release_notes_github()
     apkPath = "app/build/outputs/apk/play/release/duckduckgo-#{version}-play-release.apk"
-    token = ENV["GITHUB_UPLOAD_TOKEN"]
+    token = ENV["GH_TOKEN"]
 
     UI.message ("Upload new app version to GitHub\nVersion: #{version}\nRelease Notes:\n=====\n#{releaseNotes}\n=====\n")
+
+    download_universal_apk_from_google_play(
+        version_code: convert_version(release_number: version),
+        destination: apkPath
+    )
 
     set_github_release(
         repository_name: "DuckDuckGo/Android",
@@ -111,11 +229,10 @@ platform :android do
     end
 
     desc "Update local changelist metadata"
-    private_lane :update_fastlane_release_notes do
-
+    private_lane :update_fastlane_release_notes do |options|
+      flversion = options[:release_number]
       releaseNotes = release_notes_playstore()
 
-      flversion=gradle(task: '-q fastlaneVersionCode')
       UI.message("App version for fastlane is #{flversion}.\nRelease notes for Play Store:\n\n#{releaseNotes}")
 
       releaseNotesLocales.each do |locale|
@@ -125,9 +242,9 @@ platform :android do
     end
 
     desc "Clean up local changelist metadata"
-        private_lane :cleanup_fastlane_release_notes do
+        private_lane :cleanup_fastlane_release_notes do |options|
 
-          flversion=gradle(task: '-q fastlaneVersionCode')
+          flversion = options[:release_number]
 
           releaseNotesLocales.each do |locale|
             sh("rm '../fastlane/metadata/android/#{locale}/changelogs/#{flversion}.txt'")
@@ -135,33 +252,275 @@ platform :android do
 
         end
 
+    desc "Cut a local release branch, merge it into develop then main, and publish the tag last"
+    lane :tag_and_push_release_version do |options|
+        app_version = options[:app_version]
+        ref = options[:ref]
+
+        # app_version reaches git through interpolated shell commands below, and the
+        # workflow input is a free-form string, so require the production release format.
+        unless app_version.to_s =~ /\A\d+\.\d+\.\d+\z/
+            UI.user_error!("app_version must be X.Y.Z, got #{app_version.inspect}")
+        end
+
+        branch_name = "release/#{app_version}"
+
+        # Checkout all branches are available
+        sh("git fetch")
+        sh("git checkout main")
+        sh("git submodule update --init --recursive")
+        sh("git reset --hard")
+        sh("git clean -f -fxd")
+
+        sh("git checkout #{ref}")
+        sh("git submodule update --init --recursive")
+        sh("git reset --hard")
+        sh("git clean -f -fxd")
+
+        # Create a new release branch. Deliberately never pushed: the bump commit is
+        # regenerated from `ref` on every run, and a remote release branch rejects the
+        # same-version retry as non-fast-forward. -B resets a branch a previous local
+        # attempt left behind, which reset and clean do not remove.
+        sh("git checkout -B #{branch_name}")
+        UI.success("Release branch #{branch_name} created successfully!")
+
+        # Update version properties file and push release branch
+        File.open(appVersionFilePath, 'w') do |file|
+            file.write("VERSION=#{app_version}")
+        end
+
+        sh("git add #{appVersionFilePath}")
+        # A retry after a failed tag push can find the bump already on develop, reached
+        # through a newer LGC, leaving nothing to stage. Test the index rather than the
+        # worktree, so an unrelated modification cannot turn this into an empty commit.
+        if sh("git diff --cached --name-only", log: false).strip.empty?
+            UI.important("version.properties is already at #{app_version}, skipping the bump commit")
+        else
+            sh("git commit -m 'Updated version number for new release - #{app_version}'")
+        end
+
+        # develop before main: a push rejected here must not leave a published tag behind.
+        # --ff-only on both pulls: a plain pull on a diverged local branch would quietly
+        # merge and push that merge.
+        sh "git checkout develop"
+        sh "git pull --ff-only origin develop"
+        sh "git merge --no-ff #{branch_name}"
+        sh "git push origin develop"
+
+        # The tag is the last thing to become public, and lands with main or not at all
+        sh "git checkout main"
+        sh "git pull --ff-only origin main"
+        sh "git merge --no-ff #{branch_name}"
+        # -f: reset/clean do not remove tags, so a previous local attempt can leave one
+        # behind. The remote still refuses a tag it already has, so this cannot mispublish.
+        sh "git tag -f -a #{app_version} -m #{app_version}"
+        sh "git push --atomic origin main refs/tags/#{app_version}"
+        UI.header("#{app_version} tag has been successfully created. 🎉")
+
+        sh "git branch -d #{branch_name}"
+    end
+
     # Note, this currently relies on having `git flow` tools installed.
     # This dependency could be removed with a little more time to tidy up this script to do the branching/merging manually.
 
     desc "Create new release"
-      lane :release do
+    lane :release do |options|
 
         ensure_git_status_clean
         ensure_git_branch( branch: 'develop' )
 
-        releaseNotes = determine_release_notes()
+        options_release_number = options[:release_number]
+        options_release_notes = options[:release_notes]
+        options_notes_type = options[:notes_type]
 
-        newVersion = prompt(text: "\nLast release was: #{last_git_tag}\nEnter New Version Number:")
+        newVersion = determine_version_number(
+            release_number: options_release_number
+        )
+        releaseNotes = determine_release_notes_interactive(
+            release_notes: options_release_notes,
+            notes_type: options_notes_type
+        )
 
-        if UI.confirm("Are you sure you're happy with this release?\n\nVersion=#{newVersion}\nRelease Notes:\n#{releaseNotes}\n")
-          UI.success "Creating release branch for release/#{newVersion}"
+        isInteractiveMode = options_release_number == nil || (options_notes_type == nil && options_release_notes == nil) || (options_notes_type == "CUSTOM" && options_release_notes == nil)
 
-          sh "git flow release start #{newVersion}"
+        # For interactive flows, we want to confirm the data inputted by the user before proceeding
+        if !isInteractiveMode
+            UI.message("This are the release information:\n\nVersion=#{newVersion}\nRelease Notes:\n#{releaseNotes}\n")
+            do_create_release_branch(newVersion: newVersion, releaseNotes: releaseNotes)
+            do_create_and_push_tags(newVersion: newVersion)
+        else
+            if UI.confirm("Are you sure you're happy with this release?\n\nVersion=#{newVersion}\nRelease Notes:\n#{releaseNotes}\n")
+                UI.success "Creating release branch for release/#{newVersion}"
+                do_create_release_branch(newVersion: newVersion, releaseNotes: releaseNotes)
+                if UI.confirm(text:"If you have any other changes to make to the release branch, do them now. Enter `y` when ready to create and push tags")
+                    do_create_and_push_tags(newVersion: newVersion)
+                else
+                    UI.error errorMessageCancelled
+                end
+            else
+                UI.error errorMessageCancelled
+            end
+        end
+    end
 
-          File.open('../app/version/version.properties', 'w') do |file|
-            file.write("VERSION=#{newVersion}")
-          end
+        # Naming is wrong, this will be deprecated / removed in the near future
+        private_lane :do_create_release_branch do |options|
+            newVersion = options[:newVersion]
+            releaseNotes = options[:releaseNotes]
+            sh "git checkout -b release/#{newVersion} develop"
 
-          File.open('../app/version/release-notes', 'w') do |file|
-            file.write("""#{releaseNotes}""")
-          end
+            File.open('../app/version/version.properties', 'w') do |file|
+                file.write("VERSION=#{newVersion}")
+            end
 
-          if UI.confirm(text:"If you have any other changes to make to the release branch, do them now. Enter `y` when ready to create and push tags")
+            File.open('../app/version/release-notes', 'w') do |file|
+                file.write("""#{releaseNotes}""")
+            end
+        end
+
+        desc "Creates and pushes tag for new release"
+        private_lane :do_create_and_push_tags do |options|
+            newVersion = options[:newVersion]
+            git_commit(
+                message: "Updated release notes and version number for new release - #{newVersion}",
+                path: "*",
+                allow_nothing_to_commit: true,
+                skip_git_hooks: true
+            )
+
+            sh "git fetch"
+            sh "git checkout main"
+            sh "git merge --no-ff release/#{newVersion}"
+            sh "git tag -a #{newVersion} -m #{newVersion}"
+            sh "git checkout develop"
+            sh "git merge --no-ff release/#{newVersion}"
+            sh "git branch -d release/#{newVersion}"
+
+            push_git_tags(tag: newVersion)
+            sh "git push origin main"
+            sh "git push origin develop"
+
+            UI.header("#{newVersion} tag has been successfully created. 🎉")
+        end
+
+        desc "Determine release notes, if no value passed default ones are used."
+        private_lane :determine_release_notes do |options|
+            custom_release_notes = options[:release_notes]
+
+            releaseNotes = if (custom_release_notes == nil) then
+                default_release_notes()
+            else
+                custom_release_notes
+            end
+
+            validateReleaseNotes(releaseNotes: releaseNotes)
+
+            releaseNotes
+        end
+
+        desc "Generate default release notes"
+        private_lane :default_release_notes do
+            formatted = "#{releaseNotesBodyHeader}\n#{releaseNotesDefault}"
+
+            UI.message("\n#{formatted}")
+
+            formatted
+        end
+
+        desc "Determine release notes, if no value passed default ones the user is prompted to provide them."
+        private_lane :determine_release_notes_interactive do |options|
+            notes_type = options[:notes_type]
+            custom_release_notes = options[:release_notes]
+            existingReleaseNotes = File.read(releaseNotesFileBody)
+
+            # This handles the flow when no options were passed. We will prompt the user for input.
+            releaseNotes = if (notes_type == nil && custom_release_notes == nil) then
+                commits = changelog_from_git_commits(
+                    between: [last_git_tag, "HEAD"],
+                    pretty: "- %s",
+                    date_format: "short",
+                    match_lightweight_tag: false,
+                    merge_commit_filtering: "exclude_merges"
+                )
+                    UI.important("Existing release notes:\n")
+                    UI.message("#{existingReleaseNotes}\n")
+                    choice = UI.select "What do you want to do for release notes?", ["KEEP EXISTING", "CUSTOM",
+                    "Bug fixes and other improvements",
+                    ]
+
+                retrieve_notes_for_type(
+                    notes_type: choice,
+                    existingReleaseNotes: existingReleaseNotes
+                )
+            else
+                # Force notes_type to custom when custom_release_notes is present.
+                if custom_release_notes != nil
+                    retrieve_notes_for_type(
+                        notes_type: "CUSTOM",
+                        release_notes: custom_release_notes,
+                        existingReleaseNotes: existingReleaseNotes
+                    )
+                else
+                    retrieve_notes_for_type(
+                        notes_type: notes_type,
+                        release_notes: custom_release_notes,
+                        existingReleaseNotes: existingReleaseNotes
+                    )
+                end
+
+            end
+
+            validateReleaseNotes(releaseNotes: releaseNotes)
+            releaseNotes
+        end
+
+        desc "Validates the release notes to ensure they are suitable for the Play Store"
+        private_lane :validateReleaseNotes do |options|
+            releaseNotesLength = options[:releaseNotes].length
+            if (releaseNotesLength > releaseNotesMaxLength)
+                UI.user_error!("Release notes are too long for Play Store (#{releaseNotesLength} characters). Max size allowed: #{releaseNotesMaxLength}")
+            end
+        end
+
+        private_lane :retrieve_notes_for_type do |options|
+            notes_type = options[:notes_type]
+            custom_release_notes = options[:release_notes]
+            rl = case notes_type
+                when "KEEP EXISTING"
+                    options[:existingReleaseNotes]
+                when "CUSTOM"
+                    if custom_release_notes == nil then
+                        prompt(text: "Release Notes: ", multi_line_end_keyword: "END")
+                    else
+                        custom_release_notes
+                    end
+                else
+                     notes_type
+                end
+        end
+
+       desc "Start new hotfix"
+       lane :"hotfix-start" do |options|
+            UI.important("Starting a new hotfix")
+
+            ensure_git_status_clean
+            sh('git checkout develop && git pull')
+            sh('git checkout main && git pull')
+
+            # When :version / :release_notes are provided (e.g. from CI) the helpers skip their
+            # interactive prompts; omitting them keeps the original interactive behaviour for local use.
+            newVersion = determine_version_number(release_number: options[:version])
+            releaseNotes = determine_release_notes_interactive(release_notes: options[:release_notes])
+
+            sh("git flow hotfix start #{newVersion}")
+
+            File.open('../app/version/version.properties', 'w') do |file|
+                file.write("VERSION=#{newVersion}")
+            end
+
+            File.open('../app/version/release-notes', 'w') do |file|
+                file.write("""#{releaseNotes}""")
+            end
 
             git_commit(
                 message: "Updated release notes and version number for new release - #{newVersion}",
@@ -169,49 +528,45 @@ platform :android do
                 allow_nothing_to_commit: true,
                 skip_git_hooks: true
             )
-            
-            sh "git flow release finish -mnFS '#{newVersion}' '#{newVersion}'"
-            push_git_tags
+
+            UI.important(text:"Hotfix branch created. Apply your changes that need to be included in the hotfix now. Prefer the 'Hotfix - Orchestrate' GitHub Actions workflow, which runs the full release-blocking test suite (the same suite that gates LGC creation) before finishing. Only run `fastlane hotfix-finish` directly if you have separately confirmed the release-blocking checks pass on the hotfix branch.")
+       end
+
+       desc "Finish a hotfix in progress"
+       lane :"hotfix-finish" do
+            ensure_git_status_clean
+            ensure_git_branch( branch: '^hotfix/*' )
+            version = property_file_read(file: "app/version/version.properties")["VERSION"]
+            sh('git checkout main && git pull')
+            sh('git checkout develop && git pull')
+            sh("git checkout hotfix/#{version}")
+            sh("git flow hotfix finish -m '#{version}' '#{version}'")
+
+            sh "git push origin #{version}"
             sh "git push origin main"
             sh "git push origin develop"
 
-            UI.header("#{newVersion} tag has been successfully created. 🎉")
+            UI.header("🎉 #{version} tag has been successfully created, and hotfix has been merged back into main and develop. Everything has been pushed.")
 
-          else
-            UI.error errorMessageCancelled
-          end
+       end
 
-        else
-          UI.error errorMessageCancelled
-        end
-
-        end
-
-        private_lane :determine_release_notes do
-
-        commits = changelog_from_git_commits(
-            between: [last_git_tag, "HEAD"],
-            pretty: "- %s",
-            date_format: "short",
-            match_lightweight_tag: false,
-            merge_commit_filtering: "exclude_merges"
-        )
-
-            existingReleaseNotes = File.read(releaseNotesFileBody)
-            UI.important("Existing release notes:\n")
-            UI.message("#{existingReleaseNotes}\n")
-            choice = UI.select "What do you want to do for release notes?", ["KEEP EXISTING", "CUSTOM",
-              "Bug fixes and other improvements",
-            ]
-
-            rl = case choice
-                when "KEEP EXISTING"
-                    existingReleaseNotes
-                when "CUSTOM"
-                    prompt(text: "Release Notes: ", multi_line_end_keyword: "END")
-                else
-                    choice
+       desc "Prompt for version number"
+       private_lane :"determine_version_number" do |options|
+            release_number = options[:release_number]
+            if release_number == nil
+                prompt(text: "\nLast release was: #{last_git_tag}\nEnter New Version Number:")
+            else
+                release_number
             end
-        end
+       end
+
+    private_lane :"convert_version" do |options|
+        original = options[:release_number]
+        major, minor, patch = original.downcase.split('.')
+        major = major.to_i
+        minor = minor.to_i
+        patch = patch.to_i
+        (major * 10_000_000) + (minor * 10_000) + (patch * 1_000)
+    end
 
 end

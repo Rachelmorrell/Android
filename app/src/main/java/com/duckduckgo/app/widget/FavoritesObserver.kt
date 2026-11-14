@@ -19,33 +19,42 @@ package com.duckduckgo.app.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
-import com.duckduckgo.app.bookmarks.model.FavoritesRepository
-import com.duckduckgo.app.browser.R
+import android.content.Intent
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.coroutineScope
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.savedsites.api.SavedSitesRepository
 import com.duckduckgo.widget.SearchAndFavoritesWidget
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
+import dev.zacsweers.metro.SingleIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
+@SingleIn(AppScope::class)
 class FavoritesObserver @Inject constructor(
     private val context: Context,
-    private val favoritesRepository: FavoritesRepository,
-    private val appCoroutineScope: CoroutineScope
-) : LifecycleObserver {
+    private val savedSitesRepository: SavedSitesRepository,
+    private val dispatcherProvider: DispatcherProvider,
+) : MainProcessLifecycleObserver {
 
-    private val instance = AppWidgetManager.getInstance(context)
+    private val appWidgetManager: AppWidgetManager? by lazy {
+        AppWidgetManager.getInstance(context)
+    }
     private val componentName = ComponentName(context, SearchAndFavoritesWidget::class.java)
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun notifyWidgets() {
-        appCoroutineScope.launch {
-            favoritesRepository.favorites().collect {
-                instance.notifyAppWidgetViewDataChanged(instance.getAppWidgetIds(componentName), R.id.favoritesGrid)
-                instance.notifyAppWidgetViewDataChanged(instance.getAppWidgetIds(componentName), R.id.emptyfavoritesGrid)
+    override fun onStart(owner: LifecycleOwner) {
+        owner.lifecycle.coroutineScope.launch(dispatcherProvider.io()) {
+            appWidgetManager?.let { instance ->
+                savedSitesRepository.getFavorites().collect {
+                    val appWidgetIds = instance.getAppWidgetIds(componentName)
+                    if (appWidgetIds.isNotEmpty()) {
+                        val updateIntent = Intent(context, SearchAndFavoritesWidget::class.java)
+                        updateIntent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                        updateIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                        context.sendBroadcast(updateIntent)
+                    }
+                }
             }
         }
     }

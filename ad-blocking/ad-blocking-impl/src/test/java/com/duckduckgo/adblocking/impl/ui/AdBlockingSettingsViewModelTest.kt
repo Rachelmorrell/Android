@@ -1,0 +1,353 @@
+/*
+ * Copyright (c) 2026 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.adblocking.impl.ui
+
+import android.annotation.SuppressLint
+import app.cash.turbine.test
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer.UserPreferences
+import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode
+import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode.AlwaysAsk
+import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode.Disabled
+import com.duckduckgo.adblocking.api.duckplayer.PrivatePlayerMode.Enabled
+import com.duckduckgo.adblocking.impl.AdBlockingPixelNames
+import com.duckduckgo.adblocking.impl.AdBlockingSettingsRepository
+import com.duckduckgo.adblocking.impl.domain.AdBlockingState
+import com.duckduckgo.adblocking.impl.domain.AdBlockingStatusChecker
+import com.duckduckgo.adblocking.impl.duckplayer.DuckPlayerSettingsPlacement
+import com.duckduckgo.adblocking.impl.duckplayer.DuckPlayerSettingsPlacementProvider
+import com.duckduckgo.adblocking.impl.remoteconfig.AdBlockingExtensionFeature
+import com.duckduckgo.adblocking.impl.sponsorblock.SponsorBlock
+import com.duckduckgo.adblocking.impl.sponsorblock.SponsorBlockConfig
+import com.duckduckgo.adblocking.impl.sponsorblock.SponsorBlockFeature
+import com.duckduckgo.adblocking.impl.sponsorblock.SponsorBlockMode
+import com.duckduckgo.adblocking.impl.sponsorblock.SponsorBlockSegment
+import com.duckduckgo.adblocking.impl.store.RealAdBlockingSessionStore
+import com.duckduckgo.adblocking.impl.ui.AdBlockingSettingsViewModel.DuckPlayerSection
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.feature.toggles.api.FakeToggleStore
+import com.duckduckgo.feature.toggles.api.FeatureToggles
+import com.duckduckgo.feature.toggles.api.Toggle
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+@SuppressLint("DenyListedApi") // setRawStoredState
+class AdBlockingSettingsViewModelTest {
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private val statusChecker: AdBlockingStatusChecker = mock()
+    private val feature = FeatureToggles.Builder()
+        .store(FakeToggleStore())
+        .appVersionProvider { Int.MAX_VALUE }
+        .featureName("adBlockingExtension")
+        .ioDispatcher(coroutineRule.testDispatcher)
+        .build()
+        .create(AdBlockingExtensionFeature::class.java)
+    private val repository: AdBlockingSettingsRepository = mock()
+    private val sessionStore = RealAdBlockingSessionStore()
+    private val pixel: Pixel = mock()
+    private val duckPlayer: DuckPlayer = mock()
+    private val duckPlayerSettingsPlacementProvider: DuckPlayerSettingsPlacementProvider = mock()
+    private val sponsorBlockFeature = FeatureToggles.Builder()
+        .store(FakeToggleStore())
+        .appVersionProvider { Int.MAX_VALUE }
+        .featureName("sponsorBlock")
+        .ioDispatcher(coroutineRule.testDispatcher)
+        .build()
+        .create(SponsorBlockFeature::class.java)
+    private val sponsorBlock = FakeSponsorBlock()
+
+    private fun createViewModel(
+        duckPlayerMode: PrivatePlayerMode = AlwaysAsk,
+        duckPlayerSettingsPlacement: DuckPlayerSettingsPlacement = DuckPlayerSettingsPlacement.InAdBlocking,
+    ): AdBlockingSettingsViewModel {
+        whenever(duckPlayer.observeUserPreferences()).thenReturn(flowOf(userPreferences(duckPlayerMode)))
+        whenever(duckPlayerSettingsPlacementProvider.placementFlow()).thenReturn(flowOf(duckPlayerSettingsPlacement))
+        return AdBlockingSettingsViewModel(
+            statusChecker,
+            feature,
+            repository,
+            sessionStore,
+            pixel,
+            duckPlayer,
+            duckPlayerSettingsPlacementProvider,
+            sponsorBlockFeature,
+            sponsorBlock,
+        )
+    }
+
+    private fun setSponsorBlockEnabled(enabled: Boolean) {
+        sponsorBlockFeature.self().setRawStoredState(Toggle.State(remoteEnableState = true))
+        sponsorBlockFeature.mvpEnabled().setRawStoredState(Toggle.State(remoteEnableState = enabled))
+    }
+
+    private fun setToggles(contingency: Boolean) {
+        feature.enableContingencyMode().setRawStoredState(Toggle.State(remoteEnableState = contingency))
+    }
+
+    private fun userPreferences(privatePlayerMode: PrivatePlayerMode) =
+        UserPreferences(overlayInteracted = false, privatePlayerMode = privatePlayerMode)
+
+    @Test
+    fun whenEnabledByDefaultThenDoesNotShowConsentDescription() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel().viewState.test {
+            val state = expectMostRecentItem()
+            assertTrue(state.isEnabled)
+            assertEquals(false, state.showConsentDescription)
+        }
+    }
+
+    @Test
+    fun whenEnabledWithoutPixelConsentThenDoesNotShowConsentDescription() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.WithoutPixelConsent))
+
+        createViewModel().viewState.test {
+            val state = expectMostRecentItem()
+            assertTrue(state.isEnabled)
+            assertEquals(false, state.showConsentDescription)
+        }
+    }
+
+    @Test
+    fun whenEnabledWithPixelConsentThenShowsConsentDescription() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.WithPixelConsent))
+
+        createViewModel().viewState.test {
+            val state = expectMostRecentItem()
+            assertTrue(state.isEnabled)
+            assertEquals(true, state.showConsentDescription)
+        }
+    }
+
+    @Test
+    fun whenDisabledThenShowsConsentDescription() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Disabled.Permanent))
+
+        createViewModel().viewState.test {
+            val state = expectMostRecentItem()
+            assertFalse(state.isEnabled)
+            assertEquals(true, state.showConsentDescription)
+        }
+    }
+
+    @Test
+    fun whenDisabledUntilRelaunchThenNotEnabledAndFlagSet() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Disabled.UntilRelaunch))
+
+        createViewModel().viewState.test {
+            val state = expectMostRecentItem()
+            assertFalse(state.isEnabled)
+            assertTrue(state.disabledUntilRelaunch)
+        }
+    }
+
+    @Test
+    fun whenEnabledThenDisabledUntilRelaunchFlagNotSet() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.WithPixelConsent))
+
+        createViewModel().viewState.test {
+            assertFalse(expectMostRecentItem().disabledUntilRelaunch)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerModeIsEnabledThenViewStateReflectsIt() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel(duckPlayerMode = Enabled).viewState.test {
+            assertEquals(Enabled, expectMostRecentItem().duckPlayerMode)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerModeIsDisabledThenViewStateReflectsIt() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel(duckPlayerMode = Disabled).viewState.test {
+            assertEquals(Disabled, expectMostRecentItem().duckPlayerMode)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerSettingsInAdBlockingThenShowsEntry() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel(duckPlayerSettingsPlacement = DuckPlayerSettingsPlacement.InAdBlocking).viewState.test {
+            assertEquals(DuckPlayerSection.Entry, expectMostRecentItem().duckPlayerSection)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerSettingsStandaloneThenShowsLink() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel(duckPlayerSettingsPlacement = DuckPlayerSettingsPlacement.Standalone).viewState.test {
+            assertEquals(DuckPlayerSection.Link, expectMostRecentItem().duckPlayerSection)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerSettingsHiddenThenShowsNoDuckPlayerSection() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel(duckPlayerSettingsPlacement = DuckPlayerSettingsPlacement.Hidden).viewState.test {
+            assertEquals(DuckPlayerSection.None, expectMostRecentItem().duckPlayerSection)
+        }
+    }
+
+    @Test
+    fun whenDuckPlayerClickedThenOpensDuckPlayerSettings() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        val viewModel = createViewModel(duckPlayerSettingsPlacement = DuckPlayerSettingsPlacement.Standalone)
+
+        viewModel.commands.test {
+            viewModel.onDuckPlayerClicked()
+            assertEquals(AdBlockingSettingsViewModel.Command.OpenDuckPlayerSettings, awaitItem())
+        }
+    }
+
+    @Test
+    fun whenContingencyModeOnThenIsContingencyMode() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        setToggles(contingency = true)
+
+        createViewModel().viewState.test {
+            assertTrue(expectMostRecentItem().isContingencyMode)
+        }
+    }
+
+    @Test
+    fun whenContingencyModeOffThenNotContingencyMode() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        setToggles(contingency = false)
+
+        createViewModel().viewState.test {
+            assertFalse(expectMostRecentItem().isContingencyMode)
+        }
+    }
+
+    @Test
+    fun whenViewModelCreatedThenFiresSettingsOpenedPixels() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Disabled.Permanent))
+
+        createViewModel()
+
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_SETTINGS_OPENED_DAILY, type = Pixel.PixelType.Daily())
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_SETTINGS_OPENED_COUNT)
+    }
+
+    @Test
+    fun whenBlockAdsToggledOnThenFiresEnabledPixels() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Disabled.Permanent))
+
+        createViewModel().onBlockAdsToggled(enabled = true)
+
+        verify(repository).enable(withPixelConsent = true)
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_ENABLED_DAILY, type = Pixel.PixelType.Daily())
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_ENABLED_COUNT)
+    }
+
+    @Test
+    fun whenBlockAdsToggledThenClearsSessionOverride() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Disabled.UntilRelaunch))
+        sessionStore.setDisabledUntilRelaunch()
+
+        createViewModel().onBlockAdsToggled(enabled = true)
+
+        assertFalse(sessionStore.isDisabledUntilRelaunch())
+    }
+
+    @Test
+    fun whenBlockAdsToggledOffThenFiresDisabledPixels() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.WithPixelConsent))
+
+        createViewModel().onBlockAdsToggled(enabled = false)
+
+        verify(repository).disable()
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_DISABLED_DAILY, type = Pixel.PixelType.Daily())
+        verify(pixel).fire(AdBlockingPixelNames.AD_BLOCKING_DISABLED_COUNT)
+    }
+
+    @Test
+    fun whenSponsorBlockDisabledThenHidesSponsorBlockMode() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        setSponsorBlockEnabled(false)
+
+        createViewModel().viewState.test {
+            assertNull(expectMostRecentItem().sponsorBlockMode)
+        }
+    }
+
+    @Test
+    fun whenSponsorBlockEnabledThenShowsStoredSponsorBlockMode() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        setSponsorBlockEnabled(true)
+        sponsorBlock.mode.value = SponsorBlockMode.ALWAYS_SKIP
+
+        createViewModel().viewState.test {
+            assertEquals(SponsorBlockMode.ALWAYS_SKIP, expectMostRecentItem().sponsorBlockMode)
+        }
+    }
+
+    @Test
+    fun whenSponsorBlockModeClickedThenShowsDialogWithCurrentMode() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+        sponsorBlock.mode.value = SponsorBlockMode.OFF
+        val viewModel = createViewModel()
+
+        viewModel.commands.test {
+            viewModel.onSponsorBlockModeClicked()
+            assertEquals(AdBlockingSettingsViewModel.Command.ShowSponsorBlockModeDialog(SponsorBlockMode.OFF), awaitItem())
+        }
+    }
+
+    @Test
+    fun whenSponsorBlockModeSelectedThenStoresIt() = runTest {
+        whenever(statusChecker.observeState()).thenReturn(flowOf(AdBlockingState.Enabled.Default))
+
+        createViewModel().onSponsorBlockModeSelected(SponsorBlockMode.ALWAYS_SKIP)
+
+        assertEquals(SponsorBlockMode.ALWAYS_SKIP, sponsorBlock.mode.value)
+    }
+
+    private class FakeSponsorBlock : SponsorBlock {
+        val mode = MutableStateFlow(SponsorBlockMode.ALWAYS_ASK)
+
+        override fun config(): SponsorBlockConfig = throw UnsupportedOperationException()
+        override suspend fun getSegments(videoId: String): List<SponsorBlockSegment> = throw UnsupportedOperationException()
+        override fun modeFlow(): Flow<SponsorBlockMode> = mode
+        override suspend fun setMode(mode: SponsorBlockMode) {
+            this.mode.value = mode
+        }
+    }
+}

@@ -19,37 +19,37 @@ package com.duckduckgo.app.widget.ui
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
-import android.os.Build
 import com.duckduckgo.widget.SearchAndFavoritesWidget
+import com.duckduckgo.widget.SearchOnlyWidget
 import com.duckduckgo.widget.SearchWidget
 import com.duckduckgo.widget.SearchWidgetLight
 import javax.inject.Inject
 
 interface WidgetCapabilities {
-    val supportsStandardWidgetAdd: Boolean
     val supportsAutomaticWidgetAdd: Boolean
     val hasInstalledWidgets: Boolean
 }
 
-class AppWidgetCapabilities @Inject constructor(val context: Context) : WidgetCapabilities {
-
-    override val supportsStandardWidgetAdd: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+class AppWidgetCapabilities @Inject constructor(
+    private val context: Context,
+) : WidgetCapabilities {
 
     override val supportsAutomaticWidgetAdd: Boolean
-        get() = context.supportsAutomaticWidgetAdd
+        get() {
+            val manager = AppWidgetManager.getInstance(context) ?: return false
+            return manager.isRequestPinAppWidgetSupported
+        }
 
     override val hasInstalledWidgets: Boolean
         get() = context.hasInstalledWidgets
 }
 
-val Context.supportsAutomaticWidgetAdd: Boolean
-    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && AppWidgetManager.getInstance(this).isRequestPinAppWidgetSupported
-
 val Context.hasInstalledWidgets: Boolean
     get() {
-        val manager = AppWidgetManager.getInstance(this)
+        val manager = AppWidgetManager.getInstance(this) ?: return false
         val hasDarkWidget = manager.getAppWidgetIds(ComponentName(this, SearchWidget::class.java)).any()
         val hasLightWidget = manager.getAppWidgetIds(ComponentName(this, SearchWidgetLight::class.java)).any()
+        val hasSearchOnlyWidget = manager.getAppWidgetIds(ComponentName(this, SearchOnlyWidget::class.java)).any()
         val hasSearchAndFavoritesWidget = manager.getAppWidgetIds(ComponentName(this, SearchAndFavoritesWidget::class.java)).any()
-        return hasDarkWidget || hasLightWidget || hasSearchAndFavoritesWidget
+        return hasDarkWidget || hasLightWidget || hasSearchOnlyWidget || hasSearchAndFavoritesWidget
     }

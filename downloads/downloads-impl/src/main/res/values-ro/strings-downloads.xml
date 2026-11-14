@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="downloadsErrorMessage">Nu s-a putut descărca. Verifică conexiunea la internet.</string>
+
+    <string name="notificationChannelFileDownloading">Descărcare fișier</string>
+    <string name="notificationChannelFileDownloaded">Fișier descărcat</string>
+
+    <string name="downloadInProgress">Se descarcă</string>
+
+    <string name="downloadsDownloadStartedMessage" instruction="Placeholder is the name of a file">Descărcarea a început pentru %1$s</string>
+    <string name="downloadsDownloadFinishedMessage" instruction="Placeholder is the name of a file">Descărcare finalizată pentru %1$s</string>
+    <string name="downloadsDownloadGenericErrorMessage">Nu s-a putut descărca.</string>
+    <string name="downloadsCancel">Anulează</string>
+    <string name="downloadsRetry">Reîncearcă</string>
+    <string name="notificationDownloadComplete">Descărcare completă.</string>
+    <string name="notificationDownloadFailed">Nu s-a putut descărca.</string>
+
+    <string name="downloadConfirmationContinue">Salvează în Descărcări</string>
+    <string name="downloadConfirmationSubtitle" instruction="Placeholder is the address of a website">De la: %1$s</string>
+    <string name="downloadsActivityMenuDeleteAll">Șterge toate</string>
+    <string name="downloadsActivityNoItemsDescription">Nu a fost descărcat încă niciun fișier</string>
+    <string name="downloadsActivityTitle">Descărcări</string>
+    <string name="downloadsAllFilesDeletedMessage">Toate fișierele au fost șterse</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Nu se poate deschide fișierul. Caută o aplicație compatibilă.</string>
+    <string name="downloadsFileDeletedMessage" instruction="Placeholder is the name of the file deleted">S-a șters %1$s</string>
+    <string name="downloadsFileNotFoundErrorMessage">Fișierul nu mai există</string>
+    <string name="downloadsItemMenuCancel">Anulează</string>
+    <string name="downloadsItemMenuDelete">Ștergere</string>
+    <string name="downloadsItemMenuShare">Trimite…</string>
+    <string name="downloadsMoreOptionsContentDescription" instruction="Placeholder is the name of a file">Mai multe opțiuni pentru %1$s</string>
+    <string name="downloadsNotifyMeSubtitle">Primește o notificare când s-au finalizat descărcările.</string>
+    <string name="downloadsNotifyMeTitle">Află când sunt pregătite descărcările</string>
+    <string name="downloadsShareTitle">Distribuie către...</string>
+    <string name="downloadsStateInProgress">În curs...</string>
+    <string name="downloadsUndoActionName">Anulează</string>
+    <string name="downloadsSearchHint">Căutare</string>
+</resources>

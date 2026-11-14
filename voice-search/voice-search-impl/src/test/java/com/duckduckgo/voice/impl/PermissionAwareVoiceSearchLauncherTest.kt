@@ -1,0 +1,214 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.voice.impl
+
+import android.app.Activity
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.voice.api.VoiceSearchAvailability
+import com.duckduckgo.voice.api.VoiceSearchLauncher.Source
+import com.duckduckgo.voice.api.VoiceSearchLauncher.VoiceSearchMode
+import org.junit.Before
+import org.junit.Test
+import org.mockito.Mock
+import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+class PermissionAwareVoiceSearchLauncherTest {
+    @Mock
+    private lateinit var permissionRequest: PermissionRequest
+
+    @Mock
+    private lateinit var voiceSearchActivityLauncher: VoiceSearchActivityLauncher
+
+    @Mock
+    private lateinit var voiceSearchPermissionCheck: VoiceSearchPermissionCheck
+
+    @Mock
+    private lateinit var voiceSearchAvailability: VoiceSearchAvailability
+
+    @Mock
+    private lateinit var pixel: Pixel
+
+    private lateinit var testee: PermissionAwareVoiceSearchLauncher
+
+    @Before
+    fun setUp() {
+        MockitoAnnotations.openMocks(this)
+        testee = PermissionAwareVoiceSearchLauncher(
+            permissionRequest,
+            voiceSearchActivityLauncher,
+            voiceSearchPermissionCheck,
+            voiceSearchAvailability,
+            pixel,
+        )
+    }
+
+    @Test
+    fun whenPermissionsNotGrantedThenLaunchPermissionRequest() {
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.launch(mock())
+
+        verify(permissionRequest).launch(any(), any())
+        verify(voiceSearchActivityLauncher, never()).launch(any(), anyOrNull())
+    }
+
+    @Test
+    fun whenPermissionsNotGrantedAndVoiceSearchNotAvailableThenLaunchPermissionRequest() {
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(false)
+
+        testee.launch(mock())
+
+        verify(permissionRequest, never()).launch(any(), any())
+        verify(voiceSearchActivityLauncher, never()).launch(any(), anyOrNull())
+    }
+
+    @Test
+    fun whenPermissionsGrantedThenLaunchVoiceSearchActivity() {
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.launch(mock())
+
+        verify(voiceSearchActivityLauncher).launch(any(), anyOrNull())
+        verify(permissionRequest, never()).launch(any(), any())
+    }
+
+    @Test
+    fun whenPermissionsGrantedAndVoiceSearchNotAvailableThenLaunchVoiceSearchActivity() {
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(false)
+
+        testee.launch(mock())
+
+        verify(voiceSearchActivityLauncher, never()).launch(any(), anyOrNull())
+        verify(permissionRequest, never()).launch(any(), any())
+    }
+
+    @Test
+    fun whenLaunchWithModeAndPermissionsNotGrantedThenPendingInitialModeStored() {
+        val activity = mock<Activity>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.launch(activity, VoiceSearchMode.DUCK_AI)
+
+        verify(permissionRequest).launch(activity, VoiceSearchMode.DUCK_AI)
+        verify(voiceSearchActivityLauncher, never()).launch(any(), anyOrNull())
+    }
+
+    @Test
+    fun whenLaunchWithModeAndPermissionsGrantedThenModePassedDirectly() {
+        val activity = mock<Activity>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.launch(activity, VoiceSearchMode.DUCK_AI)
+
+        verify(voiceSearchActivityLauncher).launch(activity, VoiceSearchMode.DUCK_AI)
+        verify(permissionRequest, never()).launch(any(), any())
+    }
+
+    @Test
+    fun whenLaunchWithNullModeAndPermissionsNotGrantedThenPermissionRequestDefaultsToSearch() {
+        val activity = mock<Activity>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.launch(activity, null)
+
+        verify(permissionRequest).launch(activity, VoiceSearchMode.SEARCH)
+        verify(voiceSearchActivityLauncher, never()).launch(any(), anyOrNull())
+    }
+
+    @Test
+    fun whenPermissionsGrantedAfterRequestThenPendingInitialModeUsed() {
+        val activity = mock<Activity>()
+        val onPermissionsGrantedCaptor = argumentCaptor<() -> Unit>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.registerResultsCallback(mock(), activity, Source.BROWSER) {}
+        testee.launch(activity, VoiceSearchMode.DUCK_AI)
+
+        verify(permissionRequest).registerResultsCallback(
+            any(),
+            any(),
+            onPermissionsGrantedCaptor.capture(),
+            any(),
+            any(),
+        )
+
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        onPermissionsGrantedCaptor.firstValue.invoke()
+
+        verify(voiceSearchActivityLauncher).launch(activity, VoiceSearchMode.DUCK_AI)
+    }
+
+    @Test
+    fun whenPermissionsGrantedAfterRequestWithNullModeThenNullModeUsed() {
+        val activity = mock<Activity>()
+        val onPermissionsGrantedCaptor = argumentCaptor<() -> Unit>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(false)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.registerResultsCallback(mock(), activity, Source.BROWSER) {}
+        testee.launch(activity, null)
+
+        verify(permissionRequest).registerResultsCallback(
+            any(),
+            any(),
+            onPermissionsGrantedCaptor.capture(),
+            any(),
+            any(),
+        )
+
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        onPermissionsGrantedCaptor.firstValue.invoke()
+
+        verify(voiceSearchActivityLauncher).launch(activity, null)
+    }
+
+    @Test
+    fun whenLaunchAndVoiceSearchAvailableThenFireIconClickedPixelWithSource() {
+        val activity = mock<Activity>()
+        whenever(voiceSearchPermissionCheck.hasRequiredPermissionsGranted()).thenReturn(true)
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(true)
+
+        testee.registerResultsCallback(mock(), activity, Source.WIDGET) {}
+        testee.launch(activity, null)
+
+        verify(pixel).fire(VoiceSearchPixelNames.VOICE_SEARCH_ICON_CLICKED, mapOf("source" to "widget"))
+    }
+
+    @Test
+    fun whenLaunchAndVoiceSearchNotAvailableThenDoNotFireIconClickedPixel() {
+        whenever(voiceSearchAvailability.isVoiceSearchAvailable).thenReturn(false)
+
+        testee.launch(mock(), null)
+
+        verify(pixel, never()).fire(VoiceSearchPixelNames.VOICE_SEARCH_ICON_CLICKED, mapOf("source" to ""))
+    }
+}

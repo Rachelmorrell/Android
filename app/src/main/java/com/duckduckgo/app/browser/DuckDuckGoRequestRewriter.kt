@@ -17,12 +17,14 @@
 package com.duckduckgo.app.browser
 
 import android.net.Uri
-import com.duckduckgo.app.global.AppUrl.ParamKey
-import com.duckduckgo.app.global.AppUrl.ParamValue
-import com.duckduckgo.app.referral.AppReferrerDataStore
-import com.duckduckgo.app.statistics.VariantManager
 import com.duckduckgo.app.statistics.store.StatisticsDataStore
-import timber.log.Timber
+import com.duckduckgo.common.utils.AppUrl.ParamKey
+import com.duckduckgo.common.utils.AppUrl.ParamValue
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.device.isTablet
+import com.duckduckgo.experiments.api.VariantManager
+import com.duckduckgo.referral.api.AppReferrer
+import logcat.logcat
 
 interface RequestRewriter {
     fun shouldRewriteRequest(uri: Uri): Boolean
@@ -34,7 +36,8 @@ class DuckDuckGoRequestRewriter(
     private val duckDuckGoUrlDetector: DuckDuckGoUrlDetector,
     private val statisticsStore: StatisticsDataStore,
     private val variantManager: VariantManager,
-    private val appReferrerDataStore: AppReferrerDataStore
+    private val appReferrer: AppReferrer,
+    private val deviceInfo: DeviceInfo,
 ) : RequestRewriter {
 
     override fun rewriteRequestWithCustomQueryParams(request: Uri): Uri {
@@ -51,12 +54,13 @@ class DuckDuckGoRequestRewriter(
         addCustomQueryParams(builder)
         val newUri = builder.build()
 
-        Timber.d("Rewriting request\n$request [original]\n$newUri [rewritten]")
+        logcat { "Rewriting request\n$request [original]\n$newUri [rewritten]" }
         return newUri
     }
 
     override fun shouldRewriteRequest(uri: Uri): Boolean {
         return (duckDuckGoUrlDetector.isDuckDuckGoQueryUrl(uri.toString()) || duckDuckGoUrlDetector.isDuckDuckGoStaticUrl(uri.toString())) &&
+            !duckDuckGoUrlDetector.isDuckDuckGoEmailUrl(uri.toString()) &&
             !uri.queryParameterNames.containsAll(arrayListOf(ParamKey.SOURCE, ParamKey.ATB))
     }
 
@@ -67,10 +71,14 @@ class DuckDuckGoRequestRewriter(
     override fun addCustomQueryParams(builder: Uri.Builder) {
         val atb = statisticsStore.atb
         if (atb != null) {
-            builder.appendQueryParameter(ParamKey.ATB, atb.formatWithVariant(variantManager.getVariant()))
+            builder.appendQueryParameter(ParamKey.ATB, atb.formatWithVariant(variantManager.getVariantKey()))
         }
 
-        val sourceValue = if (appReferrerDataStore.installedFromEuAuction) ParamValue.SOURCE_EU_AUCTION else ParamValue.SOURCE
+        val sourceValue = if (appReferrer.isInstalledFromEuAuction()) {
+            ParamValue.SOURCE_EU_AUCTION
+        } else {
+            if (deviceInfo.isTablet()) ParamValue.SOURCE_TABLET else ParamValue.SOURCE
+        }
 
         builder.appendQueryParameter(ParamKey.HIDE_SERP, ParamValue.HIDE_SERP)
         builder.appendQueryParameter(ParamKey.SOURCE, sourceValue)

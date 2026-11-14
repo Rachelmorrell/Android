@@ -19,16 +19,19 @@ package com.duckduckgo.app.di
 import android.content.Context
 import com.duckduckgo.app.widget.ui.AppWidgetCapabilities
 import com.duckduckgo.app.widget.ui.WidgetCapabilities
+import com.duckduckgo.di.scopes.AppScope
 import com.duckduckgo.widget.SearchAndFavoritesGridCalculator
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
-class WidgetModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object WidgetModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun widgetCapabilities(context: Context): WidgetCapabilities = AppWidgetCapabilities(context)
 
     @Provides

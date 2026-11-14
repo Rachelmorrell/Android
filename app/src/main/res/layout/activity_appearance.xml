@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.duckduckgo.app.appearance.AppearanceActivity">
+
+    <include
+        android:id="@+id/includeToolbar"
+        layout="@layout/include_default_toolbar" />
+
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        tools:ignore="Overdraw">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="@dimen/keyline_5"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/selectedThemeSetting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/keyline_4"
+                app:primaryText="@string/settingsTheme"
+                app:primaryTextTruncated="false"
+                app:secondaryText="@string/settingsSystemTheme" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/experimentalNightMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/appearanceNightModeTitle"
+                app:primaryTextTruncated="false"
+                app:showSwitch="true"
+                app:secondaryText="@string/appearanceNightModeSecondary" />
+
+            <LinearLayout
+                android:id="@+id/changeAppIconSetting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:orientation="horizontal">
+
+                <com.duckduckgo.common.ui.view.text.DaxTextView
+                    android:id="@+id/changeAppIconLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/oneLineItemHeight"
+                    android:layout_marginStart="@dimen/keyline_4"
+                    android:layout_marginEnd="@dimen/keyline_4"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:text="@string/changeIconCtaLabel"
+                    app:typography="body1" />
+
+                <ImageView
+                    android:id="@+id/changeAppIcon"
+                    android:layout_width="@dimen/keyline_6"
+                    android:layout_height="@dimen/keyline_6"
+                    android:layout_gravity="center"
+                    android:layout_marginEnd="@dimen/keyline_4"
+                    android:importantForAccessibility="no"
+                    tools:srcCompat="@drawable/ic_ddg_logo" />
+
+            </LinearLayout>
+
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                android:id="@+id/addressBarPositionSettingDivider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="0dp" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/addressBarPositionSetting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/settingsAddressBarPositionTitle"
+                app:primaryTextTruncated="false"
+                app:secondaryText="@string/settingsAddressBarPositionTop" />
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                android:id="@+id/omnibarTypeSettingsTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/settingsAddressBarPositionHeaderTitle" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/omnibarTypeToggleContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/keyline_1"
+                android:layout_marginBottom="@dimen/keyline_2"
+                android:layout_marginHorizontal="@dimen/keyline_4">
+
+                <LinearLayout
+                    android:id="@+id/topOmnibarContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/keyline_2"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/bottomOmnibarContainer"
+                    app:layout_constraintHorizontal_chainStyle="packed"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintWidth_max="160dp">
+
+                    <ImageView
+                        android:id="@+id/topOmnibarToggleImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:scaleType="fitCenter"
+                        android:foreground="@drawable/selectable_rounded_ripple"
+                        android:contentDescription="@string/settingsAddressBarPositionTop"
+                        android:src="@drawable/mobile_toolbar_top_selected_light" />
+
+                    <com.duckduckgo.common.ui.view.text.DaxTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:text="@string/settingsAddressBarPositionTop"
+                        app:textType="primary"
+                        app:typography="caption" />
+
+                    <ImageView
+                        android:id="@+id/topOmnibarToggleCheck"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:src="@drawable/ic_check_accent_24"
+                        android:contentDescription="@string/checkbox_label_title"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/bottomOmnibarContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/inputScreenUserPrefToggleSpacing"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/keyline_2"
+                    app:layout_constraintWidth_max="160dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/splitOmnibarContainer"
+                    app:layout_constraintStart_toEndOf="@+id/topOmnibarContainer"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageView
+                        android:id="@+id/bottomOmnibarToggleImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:scaleType="fitCenter"
+                        android:foreground="@drawable/selectable_rounded_ripple"
+                        android:contentDescription="@string/settingsAddressBarPositionBottom"
+                        android:src="@drawable/mobile_toolbar_bottom_unselected_light" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <com.duckduckgo.common.ui.view.text.DaxTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="@string/settingsAddressBarPositionBottom"
+                            app:textType="primary"
+                            app:typography="caption" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/bottomOmnibarToggleCheck"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:src="@drawable/ic_shape_circle_24"
+                        android:contentDescription="@string/checkbox_label_title"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/splitOmnibarContainer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/inputScreenUserPrefToggleSpacing"
+                    android:padding="@dimen/keyline_2"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    app:layout_constraintWidth_max="160dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/bottomOmnibarContainer"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <ImageView
+                        android:id="@+id/splitOmnibarToggleImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:scaleType="fitCenter"
+                        android:foreground="@drawable/selectable_rounded_ripple"
+                        android:contentDescription="@string/settingsAddressBarPositionSplit"
+                        android:src="@drawable/mobile_toolbar_split_unselected_light" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <com.duckduckgo.common.ui.view.text.DaxTextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:text="@string/settingsAddressBarPositionSplit"
+                            app:textType="primary"
+                            app:typography="caption" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/splitOmnibarToggleCheck"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:src="@drawable/ic_shape_circle_24"
+                        android:contentDescription="@string/checkbox_label_title"/>
+
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                android:id="@+id/showFullUrlSettingDivider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="0dp" />
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                android:id="@+id/showFullUrlSetting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/settingsShowFullUrlTitle"
+                app:primaryTextTruncated="false"
+                app:showSwitch="true" />
+
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                android:id="@+id/trackersAnimationSectionDivider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="0dp" />
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                android:id="@+id/trackersAnimationSettingsTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/settingsTrackersBlockedAnimationHeaderTitle" />
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                android:id="@+id/showTrackersCountInAddressBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/showTrackerCountInAddressBar"
+                app:primaryTextTruncated="false"
+                app:showSwitch="true" />
+
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                android:id="@+id/showTrackersCountInTabSwitcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/showWeeklyTrackerCountInTabSwitcher"
+                app:primaryTextTruncated="false"
+                app:showSwitch="true" />
+
+        </LinearLayout>
+
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+

@@ -19,12 +19,38 @@ package com.duckduckgo.app.onboarding.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.Lifecycle.State.CREATED
+import androidx.lifecycle.Lifecycle.State.STARTED
+import androidx.lifecycle.flowWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.duckduckgo.app.browser.BrowserActivity
 import com.duckduckgo.app.browser.databinding.ActivityOnboardingBinding
-import com.duckduckgo.app.global.DuckDuckGoActivity
-import com.duckduckgo.mobile.android.ui.viewbinding.viewBinding
+import com.duckduckgo.app.browser.mode.Onboarding
+import com.duckduckgo.app.onboarding.ui.OnboardingViewModel.ExtendedOnboardingFlow.DEFAULT_WITHOUT_INTRO_CTA
+import com.duckduckgo.app.onboarding.ui.OnboardingViewModel.ExtendedOnboardingFlow.DUCK_AI_FOCUSED
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.gone
+import com.duckduckgo.common.ui.view.show
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@InjectWith(ActivityScope::class)
 class OnboardingActivity : DuckDuckGoActivity() {
+
+    @Inject
+    lateinit var duckChat: DuckChat
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
 
     private lateinit var viewPageAdapter: PagerAdapter
 
@@ -38,21 +64,66 @@ class OnboardingActivity : DuckDuckGoActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        configurePager()
+        configureSkipButton()
+        observeViewModel()
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(CREATED) {
+                configurePager()
+            }
+        }
     }
 
     fun onContinueClicked() {
+        if (!::viewPageAdapter.isInitialized) {
+            return
+        }
+
         val next = viewPager.currentItem + 1
-        if (next < viewPager.adapter!!.count) {
+        if (next < viewPageAdapter.count) {
             viewPager.setCurrentItem(next, true)
         } else {
-            viewModel.onOnboardingDone()
-            startActivity(BrowserActivity.intent(this@OnboardingActivity))
+            onOnboardingDone()
+        }
+    }
+
+    fun onSkipClicked() {
+        startActivity(BrowserActivity.intent(this@OnboardingActivity, launchSource = Onboarding, newSearch = true))
+        finish()
+    }
+
+    fun finishAndSubmitSearchQuery(query: String) {
+        lifecycleScope.launch {
+            viewModel.onOnboardingDone(extendedOnboardingFlow = DEFAULT_WITHOUT_INTRO_CTA)
+            startActivity(BrowserActivity.intent(this@OnboardingActivity, launchSource = Onboarding, queryExtra = query))
             finish()
         }
     }
 
-    private fun configurePager() {
+    fun handOffToBrowserActivity() {
+        startActivity(BrowserActivity.intent(this@OnboardingActivity, launchSource = Onboarding, newSearch = true))
+        finish()
+    }
+
+    fun finishAndSubmitChatPrompt(prompt: String) {
+        lifecycleScope.launch {
+            viewModel.onOnboardingDone(extendedOnboardingFlow = DUCK_AI_FOCUSED)
+            val duckChatUrl = duckChat.getDuckChatUrl(prompt, autoPrompt = true) + "&flow=mobile-app-onboarding"
+            duckChat.reportDuckChatEntry(DuckChatEntryPoint.ONBOARDING, opensNewTab = true, hasPrompt = prompt.isNotBlank())
+            startActivity(BrowserActivity.intent(this@OnboardingActivity, launchSource = Onboarding, duckChatUrl = duckChatUrl, openDuckChat = true))
+            finish()
+        }
+    }
+
+    private fun onOnboardingDone() {
+        lifecycleScope.launch {
+            viewModel.onOnboardingDone()
+            startActivity(BrowserActivity.intent(this@OnboardingActivity, launchSource = Onboarding, newSearch = true))
+            finish()
+        }
+    }
+
+    private suspend fun configurePager() {
         viewModel.initializePages()
 
         viewPageAdapter = PagerAdapter(supportFragmentManager, viewModel)
@@ -62,12 +133,37 @@ class OnboardingActivity : DuckDuckGoActivity() {
     }
 
     override fun onBackPressed() {
+        super.onBackPressed()
         val currentPage = viewPager.currentItem
         if (currentPage == 0) {
             finish()
         } else {
             viewPager.setCurrentItem(currentPage - 1, true)
         }
+    }
+
+    private fun observeViewModel() {
+        viewModel.viewState.flowWithLifecycle(lifecycle, STARTED)
+            .onEach {
+                if (it.canShowSkipOnboardingButton) {
+                    binding.skipOnboardingButton.show()
+                } else {
+                    binding.skipOnboardingButton.gone()
+                }
+            }
+            .launchIn(lifecycleScope)
+    }
+
+    private fun configureSkipButton() {
+        binding.skipOnboardingButton.background.mutate().alpha = 180
+        edgeToEdgeHandler.applyStatusBarInsetsAsMargin(binding.skipOnboardingButton)
+
+        binding.skipOnboardingButton.setOnClickListener {
+            lifecycleScope.launch {
+                viewModel.devOnlyFullyCompleteAllOnboarding()
+            }
+        }
+        viewModel.initializeOnboardingSkipper()
     }
 
     companion object {

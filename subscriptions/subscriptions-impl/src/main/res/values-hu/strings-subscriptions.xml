@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Mégsem</string>
+    <string name="ok">OK</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">DuckDuckGo-előfizetés</string>
+    <string name="manageEmail">E-mail-cím kezelése</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Vissza a Beállításokhoz</string>
+    <string name="somethingWentWrong">Hiba történt</string>
+    <string name="somethingWentWrongDescription">A Google Play nem tudta feldolgozni a vásárlást. Próbálkozz újra később.</string>
+    <string name="youAreSet">Minden készen áll.</string>
+    <string name="viewPlans">Csomagok megtekintése</string>
+    <string name="subscriptionNotFound">Előfizetés nem található</string>
+    <string name="subscriptionNotFoundDescription">Az ehhez a Google Play-fiókhoz tartozó előfizetés már nem aktív.</string>
+    <string name="purchaseRestored">A vásárlások vissza lettek állítva.</string>
+    <string name="restoreSubscriptionTitle">Add hozzá az előfizetésedet ezen az eszközön</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Add hozzá a Google Play-fiókodon keresztül</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Állítsd vissza az előfizetésedet Android-eszközökön a Google Play-fiókoddal.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Vásárlás visszaállítása</string>
+    <string name="restoreSubscriptionEmailTitle">Hozzáadás e-mail-cím használatával</string>
+    <string name="restoreSubscriptionEmailDescription">Az előfizetés hozzáadásához társíts hozzá egy e-mail-címet.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Első lépések</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Előfizetés eltávolítása</string>
+    <string name="subscriptionRemoved">Az előfizetésed el lett távolítva erről az eszközről</string>
+    <string name="removeFromDevice">Eltávolítod erről az eszközről?</string>
+    <string name="removeFromDeviceDescription">Ezen az eszközön többé nem férhetsz hozzá az előfizetésedhez. Ez nem szünteti meg az előfizetésedet, amely a többi eszközödön aktív marad.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">A havi előfizetésed %2$s dátummal %1$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Az éves előfizetésed %2$s dátummal %1$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Az előfizetésed %1$s dátummal lejárt.</string>
+    <string name="monthlySubscription">Havi előfizetés</string>
+    <string name="yearlySubscription">Éves előfizetés</string>
+    <string name="renews">megújul</string>
+    <string name="expires">lejár</string>
+    <string name="activateOnOtherDevices">Előfizetésed hozzáadása más eszközökhöz</string>
+    <string name="addToDevicePrimaryText">Hozzáadás az eszközhöz</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Add hozzá az előfizetésedet a többi eszközödön is a Google Play-en keresztül, vagy e-mail-cím társításával.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">A DuckDuckGo-alkalmazásban hozzáadhatod az előfizetésedet a többi eszközödön a fenti e-mail-cím használatával. Lépj a Beállítások &gt; Előfizetési beállítások &gt; Van előfizetésem menüpontra.</string>
+    <string name="editEmailPrimaryText">E-mail-cím szerkesztése</string>
+    <string name="learnMore">További részletek</string>
+    <string name="privacyProFaq">Segítségre van szükséged az előfizetéssel kapcsolatban?</string>
+    <string name="privacyProFaqSecondary">A súgóoldalainkon választ kaphatsz a gyakran ismételt kérdésekre, vagy felveheted a kapcsolatot az előfizetési támogatást nyújtó ügyfélszolgálattal. A funkciók elérhetősége országonként változik.</string>
+    <string name="subscriptionStatusSubscribed">Előfizetve</string>
+    <string name="privacyPolicyAndTermsOfService">Adatvédelmi szabályzat és szolgáltatási feltételek</string>
+    <string name="subscriptionStatusFreeTrial">Az ingyenes próbaidőszak aktív</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Az ingyenes próbaidőszakod %1$s dátummal véget ér, és aznap automatikusan fizetős havi előfizetéssé alakul.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Az ingyenes próbaidőszakod %1$s dátummal véget ér, és aznap automatikusan fizetős éves előfizetéssé alakul.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Az ingyenes próbaidőszakod %1$s dátummal véget ér, és nem alakul automatikusan előfizetéssé.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Előfizetési beállítások</string>
+    <string name="subscriptionSettingSubscribe">Védd a kapcsolatodat és a személyazonosságodat egyetlen előfizetés segítségével.</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Az előfizetők megkapják a VPN-megoldásunkat, a személyes adatok eltávolítására szolgáló Personal Information Removal és a személyazonosság helyreállításához használható Identity Theft Restoration funkciókat.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Az előfizetők megkapják a VPN-megoldásunkat és a személyazonosság helyreállításához használható Identity Theft Restoration funkciókat.</string>
+
+    <string name="subscriptionSettingGet">Előfizetés a DuckDuckGóra</string>
+    <string name="subscriptionSettingTryFreeTrial">Ingyenes próba</string>
+    <string name="subscriptionSettingRestore">Van előfizetésem</string>
+    <string name="subscriptionSettingExpired">A DuckDuckGo-előfizetésed lejárt</string>
+    <string name="subscriptionSettingExpiredViewPlans">Csomagok megtekintése</string>
+    <string name="subscriptionSettingSectionSubscription">Előfizetés</string>
+    <string name="subscriptionSettingRemoveFromDevice">Eltávolítás erről az eszközről</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Segítség és támogatás</string>
+    <string name="subscriptionSettingSendFeedback">Visszajelzés küldése</string>
+    <string name="subscriptionSettingActivating">Aktiválás</string>
+    <string name="subscriptionSettingManagePlan">Fizetés kezelése</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Minden készen áll.</string>
+    <string name="purchaseCompletedText">A vásárlás sikeres volt.</string>
+    <string name="purchaseRecoveredText">Már volt előfizetésed, és ezt visszaállítottuk neked.</string>
+    <string name="purchaseErrorTitle">Hiba történt</string>
+    <string name="purchaseError">Hiba történt a csatlakozáskor. Próbálkozz újra később.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Csomag frissítése vagy lemondása</string>
+    <string name="changePlanDescription">Előfizetésed az Apple App Store áruházban lett megvásárolva. A csomag vagy a számlázási beállítások módosításához lépj a Beállítások &gt; Apple-fiók &gt; Előfizetések menüpontra egy olyan eszközön, amely ugyanabba az Apple-fiókba van bejelentkezve, mint amellyel az előfizetés meg lett vásárolva.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Megnyitás</string>
+    <string name="downloadsCannotOpenFileErrorMessage">A fájl nem nyitható meg. Keress kompatibilis alkalmazást.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Visszajelzés küldése</string>
+    <string name="feedbackActionHeader">VÁLASSZ KATEGÓRIÁT</string>
+    <string name="feedbackActionReportIssue">Probléma bejelentése</string>
+    <string name="feedbackActionGeneralFeedback">Általános visszajelzés</string>
+    <string name="feedbackActionFeatureRequest">Funkcióra irányuló kérés</string>
+
+    <string name="feedbackGeneralHeader">VÁLASSZ KATEGÓRIÁT</string>
+    <string name="feedbackGeneralBrowser">Böngésző-visszajelzés</string>
+    <string name="feedbackGeneralPpro">Privacy Pro</string>
+
+    <string name="feedbackCategoryHeader">VÁLASSZ KATEGÓRIÁT</string>
+    <string name="feedbackCategorySubscription">Előfizetés és befizetések</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">VÁLASSZ KATEGÓRIÁT</string>
+
+    <string name="feedbackSubCategoryVpnConnection">Sikertelen VPN-csatlakozás</string>
+    <string name="feedbackSubCategoryVpnSlow">Túl lassú VPN-kapcsolat</string>
+    <string name="feedbackSubCategoryVpnOtherApps">A VPN problémákat okoz más alkalmazásokkal vagy weboldalakkal</string>
+    <string name="feedbackSubCategoryVpnIot">A VPN nem enged helyi eszközhöz csatlakozni</string>
+    <string name="feedbackSubCategoryVpnCrash">A VPN a böngésző összeomlását vagy lefagyását okozza</string>
+    <string name="feedbackSubCategoryVpnOther">Egyéb</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">Nem egy bizonyos webhelyre vonatkozó információ</string>
+    <string name="feedbackSubCategoryPirNotMe">Nem a felhasználóhoz tartozó bejegyzések</string>
+    <string name="feedbackSubCategoryPirScanStuck">Elakadt beolvasás</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Elakadt eltávolítás</string>
+    <string name="feedbackSubCategoryPirOther">Egyéb</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Hozzáférési kóddal kapcsolatos probléma</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Nem sikerült felvenni a kapcsolatot az ügyintézővel</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Az ügyintézővel folytatott hívás nem volt hasznos</string>
+    <string name="feedbackSubCategoryItrOther">Egyéb</string>
+
+    <string name="feedbackSubCategorySubsOtp">Egyszeri jelszóval kapcsolatos probléma</string>
+    <string name="feedbackSubCategorySubsOther">Valami más</string>
+
+    <string name="feedbackSubmitVpnHeader">Olyan problémát találtál, amelyet a <annotation type="faqs_link">súgóközpont</annotation> nem tárgyal? Mindenképpen jelezd felénk!</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Mondd el, mit tapasztaltál…</string>
+    <string name="feedbackSubmitVpnDisclaimer">"A visszajelzéseddel együtt a fent megadott adatokon kívül továbbítunk néhány anonimizált adatot is:\n\n• Aktívak-e bizonyos böngészőfunkciók\n• Összesített alkalmazásdiagnosztika (pl. hibakódok)\n\nA Küldés lehetőségre kattintva elfogadod, hogy a DuckDuckGo a megadott információkat felhasználhatja az alkalmazás fejlesztéséhez."</string>
+    <string name="feedbackSubmitVpnSubmit">Küldés</string>
+    <string name="feedbackSubmitCompletedMessage">Köszönjük! Visszajelzés elküldve.</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Küldj nekünk visszajelzést…</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Milyen funkciót szeretnél látni?</string>
+    <string name="feedbackSubmitContactSupport">Segítségre van szükséged? <annotation type="support_link">Vedd fel a kapcsolatot az ügyfélszolgálattal</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Előfizetések</string>
+    <string name="activitySubscriptionSettings">Előfizetési beállítások</string>
+    <string name="activityActivateSubscription">Van előfizetésem</string>
+    <string name="activitySendFeedback">Visszajelzés küldése</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Az előfizetők megkapják a VPN-megoldásunkat, a Duck.ai fejlett AI-modelljeit, a személyes adatok eltávolítására szolgáló Personal Information Removal és a személyazonosság helyreállításához használható Identity Theft Restoration funkciókat.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Az előfizetők megkapják a VPN-megoldásunkat, a Duck.ai fejlett AI-modelljeit és a személyazonosság helyreállításához használható Identity Theft Restoration funkciókat.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Nem tudok hozzáférni a csak előfizetőknek szóló Duck.ai modellekhez</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Más böngészőkben nem tudok hozzáférni a Duck.ai szolgáltatáshoz az előfizetésemmel.</string>
+    <string name="feedbackSubCategoryDuckAiOther">Egyéb Duck.ai visszajelzés</string>
+
+    <string name="subscriptionSettingSectionTitle">DuckDuckGo-előfizetés</string>
+    <string name="subscriptionSettingSubscribeSecure">A Wi-Fi biztonságossá tétele, és privát csevegés a fejlett AI-modellekkel</string>
+
+    <string name="feedbackGeneralSubscription">Előfizetés</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Nem sikerült hozzáférni a Plusz vagy a Pro szintű funkciókhoz</string>
+    <string name="subscriptionsProUpgradeTitle">Váltás Pro előfizetésre</string>
+    <string name="subscriptionsProUpgradeMessage">Férj hozzá erősebb mesterséges intelligenciához</string>
+    <string name="subscriptionSettingSectionManageSubscription">Előfizetés kezelése</string>
+    <string name="subscriptionSettingViewAllPlans">Összes csomag megtekintése</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Fizetés kezelése vagy lemondása</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">A csomagod %2$s dátummal erre vált vissza: %1$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">A csomagod %2$s dátummal erre frissül: %1$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">A csomagod %2$s dátummal erre vált vissza: %1$s.</string>
+    <string name="planNamePlusMonthly">Plus – havi</string>
+    <string name="planNamePlusYearly">Plus – éves</string>
+    <string name="planNameProMonthly">Pro – havi</string>
+    <string name="planNameProYearly">Pro – éves</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Az előfizetés lejárt</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Az előfizetés aktív</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Elállás a szerződéstől</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">%1$s dátumig elállhatsz az előfizetéstől, és teljes visszatérítést kaphatsz</string>
+    <string name="subscriptionWithdrawDialogTitle">Elállsz az előfizetéstől?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">%1$s-előfizetésed azonnal megszűnik, és 14 napon belül visszatérítünk %2$s összeget az eredeti fizetési módodra.A VPN, a Personal Information Removal és a fejlett Duck.ai-modellek a megerősítés után nem működnek tovább.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Elállás megerősítése</string>
+    <string name="subscriptionWithdrawDialogKeep">Előfizetés megtartása</string>
+    <string name="subscriptionStatusNotSubscribed">Nincs előfizetve</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">%1$s dátummal elálltál az előfizetéstől.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">%1$s összegű visszatérítésed feldolgozása folyamatban van.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">A visszatérítésed feldolgozása folyamatban van.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">Nem sikerült automatikusan feldolgoznunk az elállási kérelmedet. Az elállásod véglegesítéséhez látogass el <annotation type="withdrawal_help_link">erre az oldalra</annotation>.</string>
+
+</resources>

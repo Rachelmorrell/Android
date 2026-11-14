@@ -1,0 +1,1363 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.generalsettings.showonapplaunch
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.cash.turbine.test
+import com.duckduckgo.app.browser.autofill.SystemAutofillEngagement
+import com.duckduckgo.app.generalsettings.showonapplaunch.model.ShowOnAppLaunchOption.LastOpenedTab
+import com.duckduckgo.app.generalsettings.showonapplaunch.model.ShowOnAppLaunchOption.NewTabPage
+import com.duckduckgo.app.generalsettings.showonapplaunch.model.ShowOnAppLaunchOption.SpecificPage
+import com.duckduckgo.app.generalsettings.showonapplaunch.store.FakeShowOnAppLaunchOptionDataStore
+import com.duckduckgo.app.global.model.Site
+import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.app.tabs.model.TabEntity
+import com.duckduckgo.app.tabs.model.TabRepository
+import com.duckduckgo.app.tabs.model.TabSwitcherData
+import com.duckduckgo.app.tabs.model.TabSwitcherData.LayoutType
+import com.duckduckgo.browser.api.wideevents.BrowserInteractionsPlugin
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.browsermode.api.BrowserModeDataProvider
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.newtabpage.api.NtpAfterIdleManager
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+
+@RunWith(AndroidJUnit4::class)
+class ShowOnAppLaunchOptionHandlerImplTest {
+
+    @get:Rule
+    val coroutineTestRule = CoroutineTestRule()
+    private val dispatcherProvider: DispatcherProvider = coroutineTestRule.testDispatcherProvider
+
+    private lateinit var fakeDataStore: FakeShowOnAppLaunchOptionDataStore
+    private lateinit var fakeTabRepository: TabRepository
+    private lateinit var fakeFireTabRepository: TabRepository
+    private val ntpAfterIdleManager: NtpAfterIdleManager = mock()
+    private val settingsDataStore: SettingsDataStore = mock()
+    private val systemAutofillEngagement: SystemAutofillEngagement = mock()
+    private val browserInteractionsPlugins: PluginPoint<BrowserInteractionsPlugin> = mock()
+    private lateinit var testee: ShowOnAppLaunchOptionHandler
+
+    @Before
+    fun setup() {
+        fakeDataStore = FakeShowOnAppLaunchOptionDataStore()
+        fakeTabRepository = FakeTabRepository()
+        fakeFireTabRepository = FakeTabRepository()
+        val provider = object : BrowserModeDataProvider<TabRepository> {
+            override fun forMode(mode: BrowserMode): TabRepository =
+                if (mode == BrowserMode.FIRE) fakeFireTabRepository else fakeTabRepository
+        }
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(null)
+        testee = ShowOnAppLaunchOptionHandlerImpl(
+            dispatcherProvider,
+            fakeDataStore,
+            ntpAfterIdleManager,
+            settingsDataStore,
+            systemAutofillEngagement,
+            browserInteractionsPlugins,
+            provider,
+        )
+    }
+
+    @Test
+    fun whenOptionIsLastTabOpenedThenNoTabIsAdded() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(LastOpenedTab)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.isEmpty())
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = null, treatment = null), result)
+    }
+
+    @Test
+    fun whenOptionIsNewTabPageAndSelectedTabHasUrlThenNewTabPageIsAdded() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "https://example.com", position = 0)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "")
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = null, treatment = null, landingTabId = "1"), result)
+    }
+
+    @Test
+    fun whenOptionIsNewTabPageAndNoSelectedTabThenNewTabPageIsAdded() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "")
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = null, treatment = null, landingTabId = "1"), result)
+    }
+
+    @Test
+    fun whenOptionIsNewTabPageAndSelectedTabIsAlreadyNtpThenNoTabIsAdded() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = null, position = 0)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.isEmpty())
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = null, treatment = null, landingTabId = null), result)
+    }
+
+    @Test
+    fun whenOptionIsNewTabPageAndSelectedTabHasBlankUrlThenNoTabIsAdded() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "", position = 0)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.isEmpty())
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = null, treatment = null, landingTabId = null), result)
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlThenTabIsAdded() = runTest {
+        val url = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = url, treatment = null, landingTabId = "1"), result)
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndTabDoesNotExistThenTabIdIsStored() = runTest {
+        val url = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tab = awaitItem()
+            awaitComplete()
+
+            assertTrue(fakeDataStore.showOnAppLaunchTabId == tab.first().tabId)
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = url, treatment = null, landingTabId = "1"), result)
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndTabExistsThenExistingTabIdIsStored() = runTest {
+        val url = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        val existingTabId = fakeTabRepository.add(url)
+
+        val result = testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            awaitItem()
+            awaitComplete()
+
+            assertTrue(fakeDataStore.showOnAppLaunchTabId == existingTabId)
+        }
+        assertEquals(ShowOnAppLaunchResult(destinationUrl = url, treatment = null, landingTabId = existingTabId), result)
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithSubdomainThenTabIsAdded() = runTest {
+        val url = "https://www.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndUrlIsHttpThenTabIsAdded() = runTest {
+        val url = "http://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndTabAlreadyAddedThenTabIsSelected() = runTest {
+        val url = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(url)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithSubdomainAndTabAlreadyAddedThenTabIsSelected() = runTest {
+        val url = "https://www.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(url)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndIsHttpAndTabAlreadyAddedThenTabIsSelected() = runTest {
+        val url = "http://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(url)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndIsHttpAndHttpsTabAlreadyAddedThenTabIsNotAdded() = runTest {
+        val url = "http://example.com/"
+        val httpsUrl = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(httpsUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == httpsUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlAndIsHttpsAndHttpTabAlreadyAddedThenTabIsNotAdded() = runTest {
+        val url = "https://example.com/"
+        val httpUrl = "http://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(httpUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == httpUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithDomainOnlyAndTabAlreadyAddedWithSchemeAndSubdomainThenTabIsNotAdded() =
+        runTest {
+            val url = "https://www.example.com/"
+
+            fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+            fakeTabRepository.add(url)
+
+            testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+            fakeTabRepository.flowTabs.test {
+                val tabs = awaitItem()
+                awaitComplete()
+
+                assertTrue(tabs.size == 1)
+                assertTrue(tabs.last().url == url)
+            }
+        }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithPathThenTabIsAdded() = runTest {
+        val queryUrl = "https://example.com/article/1234"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(queryUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == queryUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithPathAndTabAlreadyAddedThenTabIsNotAdded() = runTest {
+        val queryUrl = "https://example.com/article/1234"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(queryUrl))
+        fakeTabRepository.add(queryUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == queryUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNoPathAndTabExistsWithPathThenTabIsAdded() = runTest {
+        val url = "http://example.com/"
+        val pathUrl = "https://example.com/article/1234/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(pathUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithPathAndTabExistsWithoutPathThenTabIsAdded() = runTest {
+        val url = "https://example.com/article/1234/"
+        val pathUrl = "https://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(pathUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithDifferentPathThenTabIsAdded() = runTest {
+        val url1 = "https://example.com/path1"
+        val url2 = "https://example.com/path2"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url1))
+        fakeTabRepository.add(url2)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url1)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithWWWSubdomainAndDifferentPathThenTabIsAdded() = runTest {
+        val url1 = "https://www.example.com/path1"
+        val url2 = "https://www.example.com/path2"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url1))
+        fakeTabRepository.add(url2)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url1)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNonWWWSubdomainAndTabExistsWithWWWSubdomainThenTabIsAdded() = runTest {
+        val url1 = "https://blog.example.com/"
+        val url2 = "https://www.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url1))
+        fakeTabRepository.add(url2)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url1)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNoSubdomainAndTabExistsWithWWWSubdomainThenTabIsNotAdded() = runTest {
+        val url1 = "https://example.com/"
+        val url2 = "https://www.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url1))
+        fakeTabRepository.add(url2)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url2)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithQueryStringThenTabIsAdded() = runTest {
+        val queryUrl = "https://example.com/?query=1"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(queryUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == queryUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithDifferentQueryParameterThenTabIsAdded() = runTest {
+        val url1 = "https://example.com/path?query1=value1"
+        val url2 = "https://example.com/path?query2=value2"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url1))
+        fakeTabRepository.add(url2)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url1)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithFragmentThenTabIsAdded() = runTest {
+        val fragmentUrl = "https://example.com/#fragment"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(fragmentUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == fragmentUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithDifferentFragmentThenTabIsAdded() = runTest {
+        val url1 = "https://example.com/path?query=value#fragment1"
+        val url2 = "https://example.com/path?query=value#fragment2"
+
+        fakeTabRepository.add(url1)
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url2))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 2)
+            assertTrue(tabs.last().url == url2)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithFragmentAndIsAddedThenTabIsNotAdded() = runTest {
+        val fragmentUrl = "https://example.com/#fragment"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(fragmentUrl))
+        fakeTabRepository.add(fragmentUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == fragmentUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithQueryStringAndFragmentThenTabIsAdded() = runTest {
+        val queryFragmentUrl = "https://example.com/?query=1#fragment"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(queryFragmentUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == queryFragmentUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithQueryStringAndFragmentAndIsAddedThenTabIsNotAdded() = runTest {
+        val queryFragmentUrl = "https://example.com/?query=1#fragment"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(queryFragmentUrl))
+        fakeTabRepository.add(queryFragmentUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == queryFragmentUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNonHttpOrHttpsProtocolAndNotAddedThenTabIsAdded() = runTest {
+        val ftpUrl = "ftp://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(ftpUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == ftpUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNonHttpOrHttpsProtocolAndAddedThenTabIsNotAdded() = runTest {
+        val ftpUrl = "ftp://example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(ftpUrl))
+        fakeTabRepository.add(ftpUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == ftpUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithResolvedUrlThenTabIsAdded() = runTest {
+        val url = "https://www.example.com/"
+        val resolvedUrl = "https://www.example.co.uk/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url, resolvedUrl))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithResolvedUrlAndTabMatchesResolvedUrlThenTabIsNotAdded() =
+        runTest {
+            val url = "https://example.com/"
+            val resolvedUrl = "https://www.example.co.uk/"
+
+            fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url, resolvedUrl))
+            fakeTabRepository.add(resolvedUrl)
+
+            testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+            fakeTabRepository.flowTabs.test {
+                val tabs = awaitItem()
+                awaitComplete()
+
+                assertTrue(tabs.size == 1)
+                assertTrue(tabs.last().url == resolvedUrl)
+            }
+        }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithResolvedUrlAndTabMatchesBothUrlsThenTabIsNotAdded() = runTest {
+        val url = "https://www.example.co.uk/"
+        val resolvedUrl = "https://www.example.co.uk/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url, resolvedUrl))
+        fakeTabRepository.add(resolvedUrl)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == resolvedUrl)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNonWwwSubdomainThenTabIsAdded() = runTest {
+        val url = "https://blog.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNonWwwSubdomainAndTabExistsThenTabIsNotAdded() = runTest {
+        val url = "https://blog.example.com/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        fakeTabRepository.add(url)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithNoSubdomainAndTabWithDifferentSubdomainExistsThenTabIsAdded() =
+        runTest {
+            val noSubdomainUrl = "https://example.com/"
+            val subdomainUrl = "https://blog.example.com/"
+
+            fakeDataStore.setShowOnAppLaunchOption(SpecificPage(noSubdomainUrl))
+            fakeTabRepository.add(subdomainUrl)
+
+            testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+            fakeTabRepository.flowTabs.test {
+                val tabs = awaitItem()
+                awaitComplete()
+
+                assertTrue(tabs.size == 2)
+                assertTrue(tabs.last().url == noSubdomainUrl)
+            }
+        }
+
+    @Test
+    fun whenOptionIsSpecificUrlWithDifferentPortThenTabIsAdded() = runTest {
+        val url = "https://example.com:8080/"
+
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == url)
+        }
+    }
+
+    // handleAfterInactivityOption tests
+
+    @Test
+    fun whenIdleAndLastOpenedTabIsRealPageThenReturnsLutTreatmentAndPreservesCallback() = runTest {
+        val plugin: BrowserInteractionsPlugin = mock()
+        fakeDataStore.setShowOnAppLaunchOption(LastOpenedTab)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "https://example.com", position = 0)
+        whenever(browserInteractionsPlugins.getPlugins()).thenReturn(listOf(plugin))
+
+        val result = testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.isEmpty())
+        }
+        assertEquals(
+            ShowOnAppLaunchResult(
+                destinationUrl = "https://example.com",
+                treatment = AfterIdleTreatment.LUT,
+            ),
+            result,
+        )
+        verify(plugin).onLutShownAfterIdle()
+    }
+
+    @Test
+    fun whenIdleAndNewTabPageIsCreatedThenReturnsNtpTreatmentAndPreservesTrigger() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        val result = testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "")
+        }
+        assertEquals(
+            ShowOnAppLaunchResult(
+                destinationUrl = null,
+                treatment = AfterIdleTreatment.NTP,
+                landingTabId = "1",
+            ),
+            result,
+        )
+        verify(ntpAfterIdleManager).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenIdleAndNewTabPageIsAlreadyVisibleThenReturnsNoTreatmentAndPreservesNoTrigger() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = null, position = 0)
+
+        val result = testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        assertEquals(
+            ShowOnAppLaunchResult(
+                destinationUrl = null,
+                treatment = null,
+            ),
+            result,
+        )
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenIdleAndSpecificPageSelectedThenReturnsDestinationWithoutTreatment() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage("https://example.com/"))
+
+        val result = testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "https://example.com/")
+        }
+        assertEquals(
+            ShowOnAppLaunchResult(
+                destinationUrl = "https://example.com/",
+                treatment = null,
+                landingTabId = "1",
+            ),
+            result,
+        )
+        verify(browserInteractionsPlugins, never()).getPlugins()
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenColdStartCreatesNewTabPageThenReturnsNoTreatment() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        val result = testee.handleAfterInactivityOption(wasIdle = false, currentMode = BrowserMode.REGULAR)
+
+        assertEquals(
+            ShowOnAppLaunchResult(
+                destinationUrl = null,
+                treatment = null,
+                landingTabId = "1",
+            ),
+            result,
+        )
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    // onIdleReturnTriggered notification tests
+
+    @Test
+    fun whenInactivityWasIdleTrueAndOptionNewTabPageAndSelectedTabHasUrlThenIdleReturnIsNotified() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "https://example.com", position = 0)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenInactivityWasIdleTrueAndOptionNewTabPageAndSelectedTabIsAlreadyNtpThenIdleReturnNotNotified() = runTest {
+        // When the user is already on an NTP, no new tab is added — and we deliberately don't
+        // call onIdleReturnTriggered(): NtpAfterIdleManager has preserved the prior session's
+        // classification across the background, and a stale pending flag here would leak onto
+        // the next NTP shown (e.g. a manually-opened new tab).
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = null, position = 0)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenInactivityWasIdleFalseAndOptionNewTabPageThenIdleReturnNotNotified() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAfterInactivityOption(wasIdle = false, currentMode = BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenInactivityOptionLastOpenedTabThenIdleReturnNotNotified() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(LastOpenedTab)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenInactivityOptionSpecificPageThenIdleReturnNotNotified() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage("https://example.com/"))
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenAppLaunchOptionHandledOutsideInactivityPathThenIdleReturnNotNotified() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    // autofill idle return flag tests
+
+    @Test
+    fun whenInactivityWithThresholdAlwaysAndNewTabPageThenAutofillFlagSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(0L)
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement).setIdleReturnTriggered("new_tab_page")
+    }
+
+    @Test
+    fun whenInactivityWithThresholdAlwaysAndSpecificPageThenAutofillFlagSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(0L)
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage("https://example.com/"))
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement).setIdleReturnTriggered("specific_page")
+    }
+
+    @Test
+    fun whenInactivityWithThresholdAlwaysAndLastOpenedTabThenAutofillFlagNotSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(0L)
+        fakeDataStore.setShowOnAppLaunchOption(LastOpenedTab)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement, never()).setIdleReturnTriggered(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun whenInactivityWithThresholdNonZeroAndNewTabPageThenAutofillFlagNotSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(300L)
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement, never()).setIdleReturnTriggered(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun whenInactivityWithThresholdNullAndNewTabPageThenAutofillFlagNotSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(null)
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement, never()).setIdleReturnTriggered(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun whenInactivityWithThresholdAlwaysAndNewTabPageButAlreadyOnNtpThenAutofillFlagNotSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(0L)
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "", position = 0)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement, never()).setIdleReturnTriggered(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun whenAppLaunchOptionNotFromInactivityThenAutofillFlagNotSet() = runTest {
+        whenever(settingsDataStore.userSelectedIdleThresholdSeconds).thenReturn(0L)
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        verify(systemAutofillEngagement, never()).setIdleReturnTriggered(org.mockito.kotlin.any())
+    }
+
+    // handleResolvedUrlStorage tests
+
+    @Test
+    fun whenConditionsMatchThenResolvedUrlIsStored() = runTest {
+        val url = "https://example.com/"
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        val tabId = fakeDataStore.showOnAppLaunchTabId!!
+
+        testee.handleResolvedUrlStorage(
+            currentUrl = "https://www.example.com/",
+            isRootOfTab = true,
+            tabId = tabId,
+        )
+
+        assertEquals("https://www.example.com/", fakeDataStore.resolvedPageUrl)
+    }
+
+    @Test
+    fun whenCurrentUrlIsNullThenResolvedUrlIsNotStored() = runTest {
+        val url = "https://example.com/"
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        val tabId = fakeDataStore.showOnAppLaunchTabId!!
+
+        testee.handleResolvedUrlStorage(
+            currentUrl = null,
+            isRootOfTab = true,
+            tabId = tabId,
+        )
+
+        assertNull(fakeDataStore.resolvedPageUrl)
+    }
+
+    @Test
+    fun whenNotRootOfTabThenResolvedUrlIsNotStored() = runTest {
+        val url = "https://example.com/"
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        val tabId = fakeDataStore.showOnAppLaunchTabId!!
+
+        testee.handleResolvedUrlStorage(
+            currentUrl = "https://www.example.com/",
+            isRootOfTab = false,
+            tabId = tabId,
+        )
+
+        assertNull(fakeDataStore.resolvedPageUrl)
+    }
+
+    @Test
+    fun whenTabIdDoesNotMatchThenResolvedUrlIsNotStored() = runTest {
+        val url = "https://example.com/"
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage(url))
+        testee.handleAppLaunchOption(BrowserMode.REGULAR)
+
+        testee.handleResolvedUrlStorage(
+            currentUrl = "https://www.example.com/",
+            isRootOfTab = true,
+            tabId = "wrong-tab-id",
+        )
+
+        assertNull(fakeDataStore.resolvedPageUrl)
+    }
+
+    @Test
+    fun whenFireModeAndOptionIsNewTabPageInactivityThenAddsFireTabWithoutTriggeringHatch() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeFireTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "f1", url = "https://example.com", position = 0)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.FIRE)
+
+        fakeFireTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "")
+        }
+        assertTrue(fakeTabRepository.flowTabs.firstOrNull()?.isEmpty() == true)
+        verify(ntpAfterIdleManager, never()).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenRegularModeAndOptionIsNewTabPageInactivityThenTriggersHatchAndAddsRegularTab() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(NewTabPage)
+        (fakeTabRepository as FakeTabRepository).selectedTab =
+            TabEntity(tabId = "1", url = "https://example.com", position = 0)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.REGULAR)
+
+        fakeTabRepository.flowTabs.test {
+            val tabs = awaitItem()
+            awaitComplete()
+            assertTrue(tabs.size == 1)
+            assertTrue(tabs.last().url == "")
+        }
+        verify(ntpAfterIdleManager).onIdleReturnTriggered()
+    }
+
+    @Test
+    fun whenFireModeAndOptionIsSpecificPageThenNoOp() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(SpecificPage("https://example.com"))
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.FIRE)
+
+        assertTrue(fakeFireTabRepository.flowTabs.firstOrNull()?.isEmpty() == true)
+        assertTrue(fakeTabRepository.flowTabs.firstOrNull()?.isEmpty() == true)
+    }
+
+    @Test
+    fun whenFireModeAndOptionIsLastOpenedTabThenNoOp() = runTest {
+        fakeDataStore.setShowOnAppLaunchOption(LastOpenedTab)
+
+        testee.handleAfterInactivityOption(wasIdle = true, currentMode = BrowserMode.FIRE)
+
+        verify(browserInteractionsPlugins, never()).getPlugins()
+        assertTrue(fakeFireTabRepository.flowTabs.firstOrNull()?.isEmpty() == true)
+        assertTrue(fakeTabRepository.flowTabs.firstOrNull()?.isEmpty() == true)
+    }
+
+    private class FakeTabRepository : TabRepository {
+
+        private val tabs = mutableMapOf<Int, String>()
+
+        override suspend fun select(tabId: String) = Unit
+
+        override suspend fun add(
+            url: String?,
+            skipHome: Boolean,
+        ): String {
+            tabs[tabs.size + 1] = url ?: ""
+            return tabs.size.toString()
+        }
+
+        override suspend fun getTabId(url: String): String? {
+            return tabs.values.firstOrNull { it.contains(url) }
+        }
+
+        override val flowTabs: Flow<List<TabEntity>> = flowOf(tabs).map {
+            it.map { (id, url) -> TabEntity(tabId = id.toString(), url = url, position = id) }
+        }
+
+        override val liveTabs: LiveData<List<TabEntity>>
+            get() = TODO("Not yet implemented")
+        override val childClosedTabs: SharedFlow<String>
+            get() = TODO("Not yet implemented")
+        override val flowDeletableTabs: Flow<List<TabEntity>>
+            get() = TODO("Not yet implemented")
+        override val liveSelectedTab: LiveData<TabEntity>
+            get() = TODO("Not yet implemented")
+        override val flowSelectedTab: Flow<TabEntity?>
+            get() = TODO("Not yet implemented")
+        override val tabSwitcherData: Flow<TabSwitcherData>
+            get() = TODO("Not yet implemented")
+
+        override suspend fun getTab(tabId: String): TabEntity? {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun addDefaultTab(): String {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun addFromSourceTab(
+            url: String?,
+            skipHome: Boolean,
+            sourceTabId: String,
+        ): String {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun addNewTabAfterExistingTab(
+            url: String?,
+            tabId: String,
+        ) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun update(
+            tabId: String,
+            site: Site?,
+        ) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun updateTabPosition(
+            from: Int,
+            to: Int,
+        ) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun updateTabLastAccess(tabId: String) {
+            TODO("Not yet implemented")
+        }
+
+        override fun retrieveSiteData(tabId: String): MutableLiveData<Site> {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun delete(tab: TabEntity) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun markDeletable(tab: TabEntity) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun markDeletable(tabIds: List<String>) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun undoDeletable(tab: TabEntity) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun undoDeletable(tabIds: List<String>, moveActiveTabToEnd: Boolean) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun deleteTabs(tabIds: List<String>) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun purgeDeletableTabs() {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun getDeletableTabIds(): List<String> {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun deleteTabAndSelectSource(tabId: String) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun deleteAll() {
+            TODO("Not yet implemented")
+        }
+
+        var selectedTab: TabEntity? = null
+
+        override suspend fun getSelectedTab(): TabEntity? {
+            return selectedTab
+        }
+
+        override suspend fun getLastAccessedTab(): TabEntity? {
+            TODO("Not yet implemented")
+        }
+
+        override val flowLastAccessedTab: Flow<TabEntity?>
+            get() = TODO("Not yet implemented")
+
+        override fun updateTabPreviewImage(
+            tabId: String,
+            fileName: String?,
+        ) {
+            TODO("Not yet implemented")
+        }
+
+        override fun updateTabFavicon(
+            tabId: String,
+            fileName: String?,
+        ) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun selectByUrlOrNewTab(url: String) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun setIsUserNew(isUserNew: Boolean) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun setTabLayoutType(layoutType: LayoutType) {
+            TODO("Not yet implemented")
+        }
+
+        override suspend fun getTabs(): List<TabEntity> {
+            TODO("Not yet implemented")
+        }
+
+        override fun getOpenTabCount(): Int {
+            TODO("Not yet implemented")
+        }
+
+        override fun countTabsAccessedWithinRange(
+            accessOlderThan: Long,
+            accessNotMoreThan: Long?,
+        ): Int {
+            TODO("Not yet implemented")
+        }
+    }
+}

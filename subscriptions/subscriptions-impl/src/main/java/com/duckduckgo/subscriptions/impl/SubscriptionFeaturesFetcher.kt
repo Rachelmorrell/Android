@@ -1,0 +1,96 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.subscriptions.impl
+
+import androidx.lifecycle.LifecycleOwner
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.subscriptions.api.model.Entitlement
+import com.duckduckgo.subscriptions.impl.SubscriptionsConstants.ADVANCED_SUBSCRIPTION
+import com.duckduckgo.subscriptions.impl.SubscriptionsConstants.BASIC_SUBSCRIPTION
+import com.duckduckgo.subscriptions.impl.billing.PlayBillingManager
+import com.duckduckgo.subscriptions.impl.repository.AuthRepository
+import com.duckduckgo.subscriptions.impl.services.SubscriptionsCachedService
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
+import logcat.logcat
+import javax.inject.Inject
+
+@ContributesIntoSet(
+    scope = AppScope::class,
+    binding = binding<MainProcessLifecycleObserver>(),
+)
+class SubscriptionFeaturesFetcher @Inject constructor(
+    @AppCoroutineScope private val appCoroutineScope: CoroutineScope,
+    private val playBillingManager: PlayBillingManager,
+    private val subscriptionsCachedService: SubscriptionsCachedService,
+    private val authRepository: AuthRepository,
+    private val subscriptionsFeature: SubscriptionsFeature,
+) : MainProcessLifecycleObserver {
+
+    override fun onCreate(owner: LifecycleOwner) {
+        super.onCreate(owner)
+        appCoroutineScope.launch {
+            try {
+                fetchSubscriptionFeatures()
+            } catch (e: Exception) {
+                logcat { "Failed to fetch subscription features" }
+            }
+        }
+    }
+
+    private suspend fun fetchSubscriptionFeatures() {
+        playBillingManager.productsFlow
+            .firstOrNull() { it.isNotEmpty() }
+            ?.filter {
+                if (subscriptionsFeature.fetchProTierEntitlements().isEnabled()) {
+                    it.productId == BASIC_SUBSCRIPTION || it.productId == ADVANCED_SUBSCRIPTION
+                } else {
+                    it.productId == BASIC_SUBSCRIPTION
+                }
+            }
+            ?.flatMap { it.subscriptionOfferDetails ?: emptyList() }
+            ?.map { it.basePlanId }
+            ?.distinct()
+            ?.forEach { basePlanId ->
+                runCatching {
+                    if (subscriptionsFeature.tierMessagingEnabled().isEnabled()) {
+                        val features = subscriptionsCachedService.featuresV2(basePlanId).features[basePlanId] ?: emptyList()
+                        logcat { "fetchSubscriptionFeatures: Subscription features for base plan $basePlanId fetched: $features" }
+                        if (features.isNotEmpty()) {
+                            val entitlements = features.map { Entitlement(name = it.name, product = it.product) }.toSet()
+                            authRepository.setFeaturesV2(basePlanId, entitlements)
+                        }
+                    } else {
+                        val features = subscriptionsCachedService.features(basePlanId).features
+                        logcat { "fetchSubscriptionFeatures: Subscription features for base plan $basePlanId fetched: $features" }
+                        if (features.isNotEmpty()) {
+                            authRepository.setFeatures(basePlanId, features.toSet())
+                        }
+                    }
+                }.onFailure {
+                    logcat {
+                        "fetchSubscriptionFeatures: Failed to fetch features for base plan $basePlanId: ${it.message}"
+                    }
+                }
+            }
+    }
+}

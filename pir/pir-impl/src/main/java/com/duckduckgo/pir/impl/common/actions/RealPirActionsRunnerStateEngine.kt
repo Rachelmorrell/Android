@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl.common.actions
+
+import com.duckduckgo.app.di.AppCoroutineScope
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.pir.impl.common.BrokerStepsParser.BrokerStep
+import com.duckduckgo.pir.impl.common.PirJob.RunType
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.Event
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.PirStageStatus
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.SideEffect
+import com.duckduckgo.pir.impl.common.actions.PirActionsRunnerStateEngine.State
+import com.duckduckgo.pir.impl.models.ProfileQuery
+import com.duckduckgo.pir.impl.pixels.PirStage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import logcat.LogPriority.ERROR
+import logcat.logcat
+
+class RealPirActionsRunnerStateEngine(
+    private val eventHandlers: PluginPoint<EventHandler>,
+    @AppCoroutineScope private val coroutineScope: CoroutineScope,
+    dispatcherProvider: DispatcherProvider,
+    runType: RunType,
+    brokerStep: BrokerStep,
+    profileQuery: ProfileQuery,
+) : PirActionsRunnerStateEngine {
+    private var engineState: State = State(
+        runType = runType,
+        brokerStep = brokerStep,
+        profileQuery = profileQuery,
+        stageStatus = PirStageStatus(
+            currentStage = PirStage.OTHER,
+            stageStartMs = 0L,
+        ),
+    )
+    private val sideEffectFlow = MutableSharedFlow<SideEffect>(
+        replay = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    private val eventsFlow = MutableSharedFlow<Event>(
+        replay = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    private val engineScope = CoroutineScope(coroutineScope.coroutineContext + Job())
+
+    init {
+        engineScope.launch(dispatcherProvider.io()) {
+            eventsFlow.collect {
+                handleEvent(it)
+            }
+        }
+    }
+
+    override val sideEffect: Flow<SideEffect> = sideEffectFlow.asSharedFlow()
+
+    override fun dispatch(event: Event) {
+        engineScope.launch {
+            eventsFlow.emit(event)
+        }
+    }
+
+    override fun close() {
+        engineScope.cancel()
+    }
+
+    private suspend fun handleEvent(newEvent: Event) {
+        val eventHandler = eventHandlers.getPlugins().firstOrNull { it.event.isInstance(newEvent) }
+        if (eventHandler == null) {
+            logcat { "PIR-ENGINE($this): Unable to handle event $newEvent" }
+            return
+        }
+
+        logcat { "PIR-ENGINE($this): $newEvent dispatched to $eventHandler" }
+
+        val next = try {
+            eventHandler.invoke(engineState, newEvent)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // A failing handler must not escape the collector, as that cancels the engine scope and takes down
+            // the whole process. End the run instead so the runner and its WebView are released.
+            logcat(ERROR) { "PIR-ENGINE($this): $eventHandler failed to handle $newEvent: $e" }
+            sideEffectFlow.emit(SideEffect.CompleteExecution)
+            return
+        }
+
+        logcat { "PIR-ENGINE($this): Event resulted to state: ${next.nextState}" }
+        logcat { "PIR-ENGINE($this): Event resulted to event: ${next.nextEvent}" }
+        logcat { "PIR-ENGINE($this): Event resulted to sideeffect: ${next.sideEffect}" }
+
+        if (engineState.stageStatus != next.nextState.stageStatus) {
+            logcat { "PIR-STAGE($this): ${next.nextState.stageStatus}" }
+        }
+        engineState = next.nextState
+
+        next.sideEffect?.let {
+            logcat { "PIR-ENGINE($this): Emitting side effect: $it" }
+            sideEffectFlow.emit(it)
+        }
+
+        next.nextEvent?.let {
+            logcat { "PIR-ENGINE($this): Dispatching event: $it" }
+            eventsFlow.emit(next.nextEvent)
+        }
+    }
+}

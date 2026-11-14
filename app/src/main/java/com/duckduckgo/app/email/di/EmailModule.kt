@@ -17,67 +17,23 @@
 package com.duckduckgo.app.email.di
 
 import android.content.Context
-import androidx.lifecycle.LifecycleObserver
-import androidx.work.WorkManager
-import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
-import com.duckduckgo.app.di.AppCoroutineScope
-import com.duckduckgo.app.email.AppEmailManager
-import com.duckduckgo.app.email.EmailInjector
-import com.duckduckgo.app.email.EmailInjectorJs
-import com.duckduckgo.app.email.EmailManager
-import com.duckduckgo.app.email.api.EmailService
 import com.duckduckgo.app.email.db.EmailDataStore
 import com.duckduckgo.app.email.db.EmailEncryptedSharedPreferences
-import com.duckduckgo.app.email.waitlist.AppWaitlistCodeFetcher
-import com.duckduckgo.app.email.waitlist.WaitlistCodeFetcher
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.notification.NotificationSender
-import com.duckduckgo.app.notification.model.WaitlistCodeNotification
 import com.duckduckgo.app.statistics.pixels.Pixel
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
-import kotlinx.coroutines.CoroutineScope
-import javax.inject.Singleton
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class EmailModule {
-
-    @Singleton
-    @Provides
-    fun providesEmailManager(emailService: EmailService, emailDataStore: EmailDataStore, dispatcherProvider: DispatcherProvider, @AppCoroutineScope appCoroutineScope: CoroutineScope): EmailManager {
-        return AppEmailManager(emailService, emailDataStore, dispatcherProvider, appCoroutineScope)
-    }
-
-    @Provides
-    fun providesEmailInjector(emailManager: EmailManager, duckDuckGoUrlDetector: DuckDuckGoUrlDetector, dispatcherProvider: DispatcherProvider): EmailInjector {
-        return EmailInjectorJs(emailManager, duckDuckGoUrlDetector, dispatcherProvider)
-    }
 
     @Provides
     fun providesEmailDataStore(
         context: Context,
         pixel: Pixel,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
     ): EmailDataStore {
-        return EmailEncryptedSharedPreferences(context, pixel, appCoroutineScope)
+        return EmailEncryptedSharedPreferences(context, pixel)
     }
-
-    @Singleton
-    @Provides
-    fun providesWaitlistCodeFetcher(
-        workManager: WorkManager,
-        emailManager: EmailManager,
-        notification: WaitlistCodeNotification,
-        notificationSender: NotificationSender,
-        dispatcherProvider: DispatcherProvider,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
-    ): WaitlistCodeFetcher {
-        return AppWaitlistCodeFetcher(workManager, emailManager, notification, notificationSender, dispatcherProvider, appCoroutineScope)
-    }
-
-    @Provides
-    @Singleton
-    @IntoSet
-    fun providesWaitlistCodeFetcherObserver(waitlistCodeFetcher: WaitlistCodeFetcher): LifecycleObserver = waitlistCodeFetcher
 }

@@ -1,0 +1,307 @@
+package com.duckduckgo.sync.store
+
+import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.duckduckgo.common.utils.DispatcherProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+/**
+ * Distinct type for the scoped password (SP) so it can't be silently swapped with the account's primary key.
+ */
+@JvmInline
+value class ScopedPassword(val raw: String)
+
+/**
+ * Cached public half of the account-wide `account_info` protected key (RSA-OAEP-256 JWK components).
+ */
+data class AccountInfoPublicKey(val keyId: String, val modulus: String, val exponent: String)
+
+interface SyncStore {
+    var syncingDataEnabled: Boolean
+    var userId: String?
+    var deviceName: String?
+    var deviceId: String?
+    var token: String?
+    var primaryKey: String?
+    var secretKey: String?
+
+    /** Which access credential this device authenticated with ("ddg" or "3party"). */
+    var credentialId: String?
+
+    /** Scoped password (SP primary key) for the 3party credential. Only present when a 3party credential exists. */
+    var scopedPassword: ScopedPassword?
+
+    /** Cached public key for the account's `account_info` protected key, once registered. */
+    var accountInfoPublicKey: AccountInfoPublicKey?
+
+    /**
+     * The `userId` this device last completed the unified-device-list migration for, or null if it never has.
+     * Keyed by user so a different account (via switch or re-signin) migrates afresh; [clearAll] wipes it on sign-out.
+     */
+    var unifiedDeviceListMigratedForUserId: String?
+
+    /**
+     * Number of devices on the sync account as last written, persisted across restarts. [clearAll] resets it to 0.
+     */
+    var connectedDevicesCount: Int
+
+    /**
+     * Emits [connectedDevicesCount] now and again whenever it changes.
+     */
+    fun connectedDevicesCountFlow(): Flow<Int>
+
+    fun isEncryptionSupported(): Boolean
+
+    fun isSignedInFlow(): Flow<Boolean>
+
+    fun isSignedIn(): Boolean
+
+    fun storeCredentials(
+        userId: String,
+        deviceId: String,
+        deviceName: String,
+        primaryKey: String,
+        secretKey: String,
+        token: String,
+    )
+
+    fun clearAll()
+}
+
+class SyncSharedPrefsStore
+constructor(
+    private val sharedPrefsProv: SharedPrefsProvider,
+    private val appCoroutineScope: CoroutineScope,
+    private val dispatcherProvider: DispatcherProvider,
+) : SyncStore {
+
+    private val encryptedPreferences: SharedPreferences? by lazy { encryptedPreferences() }
+
+    private val isSignedInStateFlow: MutableSharedFlow<Boolean> = MutableSharedFlow(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    init {
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            isSignedInStateFlow.emit(isSignedIn())
+        }
+    }
+
+    @Synchronized
+    private fun encryptedPreferences(): SharedPreferences? {
+        return sharedPrefsProv.getEncryptedSharedPrefs(FILENAME)
+    }
+
+    override var userId: String?
+        get() = encryptedPreferences?.getString(KEY_USER_ID, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_USER_ID)
+                } else {
+                    putString(KEY_USER_ID, value)
+                }
+            }
+        }
+
+    override var deviceName: String?
+        get() = encryptedPreferences?.getString(KEY_DEVICE_NAME, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_DEVICE_NAME)
+                } else {
+                    putString(KEY_DEVICE_NAME, value)
+                }
+            }
+        }
+
+    override var deviceId: String?
+        get() = encryptedPreferences?.getString(KEY_DEVICE_ID, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_DEVICE_ID)
+                } else {
+                    putString(KEY_DEVICE_ID, value)
+                }
+            }
+        }
+
+    override var token: String?
+        get() = encryptedPreferences?.getString(KEY_TOKEN, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_TOKEN)
+                } else {
+                    putString(KEY_TOKEN, value)
+                }
+            }
+        }
+
+    override var primaryKey: String?
+        get() = encryptedPreferences?.getString(KEY_PK, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_PK)
+                } else {
+                    putString(KEY_PK, value)
+                }
+            }
+        }
+
+    override var syncingDataEnabled: Boolean
+        get() = encryptedPreferences?.getBoolean(KEY_SYNCING_DATA_ENABLED, true) ?: true
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                putBoolean(KEY_SYNCING_DATA_ENABLED, value)
+            }
+        }
+
+    override var secretKey: String?
+        get() = encryptedPreferences?.getString(KEY_SK, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_SK)
+                } else {
+                    putString(KEY_SK, value)
+                }
+            }
+        }
+
+    override var credentialId: String?
+        get() = encryptedPreferences?.getString(KEY_CREDENTIAL_ID, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) remove(KEY_CREDENTIAL_ID) else putString(KEY_CREDENTIAL_ID, value)
+            }
+        }
+
+    override var scopedPassword: ScopedPassword?
+        get() = encryptedPreferences?.getString(KEY_SCOPED_PASSWORD, null)?.let(::ScopedPassword)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) remove(KEY_SCOPED_PASSWORD) else putString(KEY_SCOPED_PASSWORD, value.raw)
+            }
+        }
+
+    override var accountInfoPublicKey: AccountInfoPublicKey?
+        get() {
+            val keyId = encryptedPreferences?.getString(KEY_ACCOUNT_INFO_KID, null) ?: return null
+            val modulus = encryptedPreferences?.getString(KEY_ACCOUNT_INFO_MODULUS, null) ?: return null
+            val exponent = encryptedPreferences?.getString(KEY_ACCOUNT_INFO_EXPONENT, null) ?: return null
+            return AccountInfoPublicKey(keyId, modulus, exponent)
+        }
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_ACCOUNT_INFO_KID)
+                    remove(KEY_ACCOUNT_INFO_MODULUS)
+                    remove(KEY_ACCOUNT_INFO_EXPONENT)
+                } else {
+                    putString(KEY_ACCOUNT_INFO_KID, value.keyId)
+                    putString(KEY_ACCOUNT_INFO_MODULUS, value.modulus)
+                    putString(KEY_ACCOUNT_INFO_EXPONENT, value.exponent)
+                }
+            }
+        }
+
+    override var unifiedDeviceListMigratedForUserId: String?
+        get() = encryptedPreferences?.getString(KEY_UNIFIED_DEVICE_LIST_MIGRATED_USER_ID, null)
+        set(value) {
+            encryptedPreferences?.edit(commit = true) {
+                if (value == null) {
+                    remove(KEY_UNIFIED_DEVICE_LIST_MIGRATED_USER_ID)
+                } else {
+                    putString(KEY_UNIFIED_DEVICE_LIST_MIGRATED_USER_ID, value)
+                }
+            }
+        }
+
+    override fun connectedDevicesCountFlow(): Flow<Int> {
+        val flow = callbackFlow {
+            val preferences = encryptedPreferences
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                // A null key means the preferences were cleared.
+                if (key == null || key == KEY_CONNECTED_DEVICES_COUNT) trySend(Unit)
+            }
+            preferences?.registerOnSharedPreferenceChangeListener(listener)
+            send(Unit)
+            awaitClose { preferences?.unregisterOnSharedPreferenceChangeListener(listener) }
+        }
+        return flow
+            .map { connectedDevicesCount }
+            .distinctUntilChanged()
+            .flowOn(dispatcherProvider.io())
+    }
+
+    override var connectedDevicesCount: Int
+        get() = encryptedPreferences?.getInt(KEY_CONNECTED_DEVICES_COUNT, 0) ?: 0
+        set(value) {
+            encryptedPreferences?.edit(commit = true) { putInt(KEY_CONNECTED_DEVICES_COUNT, value) }
+        }
+
+    override fun isEncryptionSupported(): Boolean = encryptedPreferences != null
+
+    override fun isSignedInFlow(): Flow<Boolean> = isSignedInStateFlow
+
+    override fun isSignedIn() = !primaryKey.isNullOrEmpty() && !userId.isNullOrEmpty()
+
+    override fun storeCredentials(
+        userId: String,
+        deviceId: String,
+        deviceName: String,
+        primaryKey: String,
+        secretKey: String,
+        token: String,
+    ) {
+        this.userId = userId
+        this.deviceId = deviceId
+        this.deviceName = deviceName
+        this.token = token
+        this.primaryKey = primaryKey
+        this.secretKey = secretKey
+
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            isSignedInStateFlow.emit(true)
+        }
+    }
+
+    override fun clearAll() {
+        // Listeners aren't told about keys dropped by clear(), so we remove the count on its own first
+        // to let connectedDevicesCountFlow() collectors see the reset.
+        encryptedPreferences?.edit(commit = true) { remove(KEY_CONNECTED_DEVICES_COUNT) }
+        encryptedPreferences?.edit(commit = true) { clear() }
+        appCoroutineScope.launch(dispatcherProvider.io()) {
+            isSignedInStateFlow.emit(false)
+        }
+    }
+
+    companion object {
+        private const val FILENAME = "com.duckduckgo.sync.store.v1"
+        private const val KEY_USER_ID = "KEY_USER_ID"
+        private const val KEY_DEVICE_ID = "KEY_DEVICE_ID"
+        private const val KEY_DEVICE_NAME = "KEY_DEVICE_NAME"
+        private const val KEY_TOKEN = "KEY_TOKEN"
+        private const val KEY_SYNCING_DATA_ENABLED = "KEY_SYNCING_DATA_ENABLED"
+        private const val KEY_PK = "KEY_PK"
+        private const val KEY_SK = "KEY_SK"
+        private const val KEY_CREDENTIAL_ID = "KEY_CREDENTIAL_ID"
+        private const val KEY_SCOPED_PASSWORD = "KEY_SCOPED_PASSWORD"
+        private const val KEY_ACCOUNT_INFO_KID = "KEY_ACCOUNT_INFO_KID"
+        private const val KEY_ACCOUNT_INFO_MODULUS = "KEY_ACCOUNT_INFO_MODULUS"
+        private const val KEY_ACCOUNT_INFO_EXPONENT = "KEY_ACCOUNT_INFO_EXPONENT"
+        private const val KEY_UNIFIED_DEVICE_LIST_MIGRATED_USER_ID = "KEY_UNIFIED_DEVICE_LIST_MIGRATED_USER_ID"
+        private const val KEY_CONNECTED_DEVICES_COUNT = "KEY_CONNECTED_DEVICES_COUNT"
+    }
+}

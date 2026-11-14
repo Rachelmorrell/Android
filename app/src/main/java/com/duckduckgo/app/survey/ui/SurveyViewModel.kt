@@ -16,64 +16,77 @@
 
 package com.duckduckgo.app.survey.ui
 
-import android.os.Build
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.duckduckgo.app.browser.BuildConfig
-import com.duckduckgo.app.global.DefaultDispatcherProvider
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.SingleLiveEvent
+import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserChangedSurveyManager
 import com.duckduckgo.app.global.install.AppInstallStore
 import com.duckduckgo.app.global.install.daysInstalled
-import com.duckduckgo.app.global.plugins.view_model.ViewModelFactoryPlugin
 import com.duckduckgo.app.statistics.store.StatisticsDataStore
-import com.duckduckgo.app.survey.db.SurveyDao
+import com.duckduckgo.app.survey.api.SurveyRepository
 import com.duckduckgo.app.survey.model.Survey
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesMultibinding
+import com.duckduckgo.app.survey.ui.SurveyActivity.Companion.SurveySource
+import com.duckduckgo.app.usage.app.AppDaysUsedRepository
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.codegen.annotations.ContributesViewModel
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.SingleLiveEvent
+import com.duckduckgo.di.scopes.ActivityScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import javax.inject.Provider
 
-class SurveyViewModel(
-    private val surveyDao: SurveyDao,
+@ContributesViewModel(ActivityScope::class)
+class SurveyViewModel @Inject constructor(
     private val statisticsStore: StatisticsDataStore,
     private val appInstallStore: AppInstallStore,
-    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider()
+    private val appBuildConfig: AppBuildConfig,
+    private val dispatchers: DispatcherProvider,
+    private val appDaysUsedRepository: AppDaysUsedRepository,
+    private val surveyRepository: SurveyRepository,
 ) : ViewModel() {
 
     sealed class Command {
         class LoadSurvey(val url: String) : Command()
-        object ShowError : Command()
-        object ShowSurvey : Command()
-        object Close : Command()
+        data object ShowError : Command()
+        data object ShowSurvey : Command()
+        data object Close : Command()
     }
 
     val command: SingleLiveEvent<Command> = SingleLiveEvent()
     private lateinit var survey: Survey
+    private lateinit var source: SurveySource
+    private lateinit var lastActiveDay: String
     private var didError = false
 
-    fun start(survey: Survey) {
+    fun start(survey: Survey, source: SurveySource) {
         val url = survey.url ?: return
         this.survey = survey
-        command.value = Command.LoadSurvey(addSurveyParameters(url))
+        this.source = source
+        viewModelScope.launch {
+            lastActiveDay = when (source) {
+                SurveySource.IN_APP -> appDaysUsedRepository.getLastActiveDay()
+                SurveySource.PUSH -> appDaysUsedRepository.getPreviousActiveDay() ?: appDaysUsedRepository.getLastActiveDay()
+            }
+            command.value = Command.LoadSurvey(addSurveyParameters(url))
+        }
     }
 
     private fun addSurveyParameters(url: String): String {
-        return url.toUri()
+        val urlBuilder = url.toUri()
             .buildUpon()
             .appendQueryParameter(SurveyParams.ATB, statisticsStore.atb?.version ?: "")
             .appendQueryParameter(SurveyParams.ATB_VARIANT, statisticsStore.variant)
             .appendQueryParameter(SurveyParams.DAYS_INSTALLED, "${appInstallStore.daysInstalled()}")
-            .appendQueryParameter(SurveyParams.ANDROID_VERSION, "${Build.VERSION.SDK_INT}")
-            .appendQueryParameter(SurveyParams.APP_VERSION, BuildConfig.VERSION_NAME)
-            .appendQueryParameter(SurveyParams.MANUFACTURER, Build.MANUFACTURER)
-            .appendQueryParameter(SurveyParams.MODEL, Build.MODEL)
-            .build()
-            .toString()
+            .appendQueryParameter(SurveyParams.ANDROID_VERSION, "${appBuildConfig.sdkInt}")
+            .appendQueryParameter(SurveyParams.APP_VERSION, appBuildConfig.versionName)
+            .appendQueryParameter(SurveyParams.MANUFACTURER, appBuildConfig.manufacturer)
+            .appendQueryParameter(SurveyParams.MODEL, appBuildConfig.model)
+            .appendQueryParameter(SurveyParams.SOURCE, source.name.lowercase())
+            .appendQueryParameter(SurveyParams.LAST_ACTIVE_DATE, lastActiveDay)
+
+        return urlBuilder.build().toString()
     }
 
     fun onSurveyFailedToLoad() {
@@ -89,12 +102,15 @@ class SurveyViewModel(
 
     fun onSurveyCompleted() {
         survey.status = Survey.Status.DONE
-        viewModelScope.launch() {
+        surveyRepository.clearSurveyNotification()
+        viewModelScope.launch {
             withContext(dispatchers.io() + NonCancellable) {
-                surveyDao.update(survey)
+                surveyRepository.updateSurvey(survey)
             }
-            withContext(dispatchers.main()) {
-                command.value = Command.Close
+            if (survey.surveyId !in DefaultBrowserChangedSurveyManager.SURVEY_IDS) {
+                withContext(dispatchers.main()) {
+                    command.value = Command.Close
+                }
             }
         }
     }
@@ -111,21 +127,7 @@ class SurveyViewModel(
         const val APP_VERSION = "ddgv"
         const val MANUFACTURER = "man"
         const val MODEL = "mo"
-    }
-}
-
-@ContributesMultibinding(AppObjectGraph::class)
-class SurveyViewModelFactory @Inject constructor(
-    private val surveyDao: Provider<SurveyDao>,
-    private val statisticsStore: Provider<StatisticsDataStore>,
-    private val appInstallStore: Provider<AppInstallStore>
-) : ViewModelFactoryPlugin {
-    override fun <T : ViewModel?> create(modelClass: Class<T>): T? {
-        with(modelClass) {
-            return when {
-                isAssignableFrom(SurveyViewModel::class.java) -> (SurveyViewModel(surveyDao.get(), statisticsStore.get(), appInstallStore.get()) as T)
-                else -> null
-            }
-        }
+        const val LAST_ACTIVE_DATE = "da"
+        const val SOURCE = "src"
     }
 }

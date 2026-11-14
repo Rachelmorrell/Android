@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              tools:context=".feature.VpnInternalSettingsActivity">
+
+    <include
+            android:id="@+id/includeToolbar"
+            layout="@layout/include_default_toolbar"/>
+
+    <ScrollView
+            android:id="@+id/contentScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:ignore="Overdraw">
+
+        <LinearLayout
+                android:id="@+id/vpnSettingsContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+            <com.duckduckgo.common.ui.view.InfoPanel
+                    android:id="@+id/settings_info"
+                    style="@style/Widget.DuckDuckGo.InfoPanel"
+                    android:layout_margin="@dimen/keyline_4"
+                    app:panelBackground="@drawable/info_panel_alert_background"
+                    app:panelDrawable="@drawable/ic_exclamation_yellow_16"
+                    app:panelText="Turn AppTP ON to be able to configure this settings"/>
+
+            <!-- Section Trackers -->
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingBottom="0dp"/>
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:id="@+id/sectionTrackersTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Trackers"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/exceptionRules"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="App/Tracker exception rules"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/delete_tracking_history"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Delete Tracking History"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/force_update_blocklist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="🔄 Force Update Blocklist"/>
+
+            <!-- Section Protection -->
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingBottom="0dp"/>
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:id="@+id/sectionAppProtection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="App Protections"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/protectAllApps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Protect all apps"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/unprotectAllApps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Unprotect all apps" />
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/restoreDefaultAppProtections"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Restore default protections"/>
+
+            <!-- Section Logging -->
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingBottom="0dp"/>
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:id="@+id/sectionTrackersLogging"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Logging"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/debug_logging_toggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="VPN Debug Logging"
+                    app:showSwitch="true"/>
+
+            <!-- Section Diagnostics -->
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingBottom="0dp"/>
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                    android:id="@+id/sectionDiagnosticsTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Diagnostics"/>
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                    android:id="@+id/apptp_bugreport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="Generate AppTP bugreport"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

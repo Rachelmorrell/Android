@@ -1,0 +1,444 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.fire.wideevents
+
+import android.annotation.SuppressLint
+import com.duckduckgo.app.fire.wideevents.DataClearingWideEvent.EntryPoint
+import com.duckduckgo.app.settings.clear.FireClearOption
+import com.duckduckgo.app.statistics.wideevents.CleanupPolicy.OnProcessStart
+import com.duckduckgo.app.statistics.wideevents.FlowStatus
+import com.duckduckgo.app.statistics.wideevents.WideEventClient
+import com.duckduckgo.app.statistics.wideevents.WideEventDefinition
+import com.duckduckgo.app.statistics.wideevents.WideEventDefinition.Version
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.feature.toggles.api.FakeFeatureToggleFactory
+import com.duckduckgo.feature.toggles.api.Toggle
+import kotlinx.coroutines.test.runTest
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.Mockito
+import org.mockito.kotlin.*
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+class DataClearingWideEventTest {
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    private val wideEventClient: WideEventClient = mock()
+
+    // Spelled out rather than referencing the production constant, so a wrong constant still fails.
+    private val expectedDurationBuckets = setOf(
+        1.seconds,
+        2.seconds,
+        3.seconds,
+        4.seconds,
+        5.seconds,
+        10.seconds,
+        30.seconds,
+        1.minutes,
+        5.minutes,
+        10.minutes,
+    )
+
+    @SuppressLint("DenyListedApi")
+    private val androidBrowserConfigFeature: AndroidBrowserConfigFeature =
+        FakeFeatureToggleFactory
+            .create(AndroidBrowserConfigFeature::class.java)
+            .apply { sendDataClearingWideEvent().setRawStoredState(Toggle.State(true)) }
+
+    private lateinit var dataClearingWideEvent: DataClearingWideEventImpl
+
+    @Before
+    fun setup() {
+        dataClearingWideEvent = DataClearingWideEventImpl(
+            wideEventClient = wideEventClient,
+            androidBrowserConfigFeature = androidBrowserConfigFeature,
+            dispatchers = coroutineRule.testDispatcherProvider,
+        )
+    }
+
+    @Test
+    fun `start starts a new flow with entry point and clear options`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(123L))
+
+        val clearOptions = setOf(FireClearOption.TABS, FireClearOption.DATA)
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, clearOptions, browserMode = BrowserMode.REGULAR)
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "single_tab_fire_dialog",
+            metadata = mapOf("clear_options" to "tabs,data", "browser_mode" to "regular"),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+        verify(wideEventClient).intervalStart(
+            wideEventId = 123L,
+            key = "total_duration_ms_bucketed",
+            buckets = expectedDurationBuckets,
+        )
+    }
+
+    @Test
+    fun `start with browserMode includes browser_mode in metadata`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(125L))
+
+        dataClearingWideEvent.start(EntryPoint.APP_SHORTCUT, setOf(FireClearOption.TABS), browserMode = BrowserMode.FIRE)
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "app_shortcut",
+            metadata = mapOf("clear_options" to "tabs", "browser_mode" to "fire"),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+    }
+
+    @Test
+    fun `start with tabType and tabCount includes bucketed values in metadata`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(127L))
+
+        dataClearingWideEvent.start(
+            EntryPoint.ALL_TABS_BURN,
+            setOf(FireClearOption.TABS),
+            browserMode = BrowserMode.REGULAR,
+            tabType = DataClearingWideEvent.TabType.AI,
+            tabCount = 13,
+        )
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "single_tab_fire_dialog",
+            metadata = mapOf(
+                "clear_options" to "tabs",
+                "browser_mode" to "regular",
+                "tab_type" to "ai",
+                "tab_count" to "11-20",
+            ),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+    }
+
+    @Test
+    fun `start buckets tab counts using the shared tab_count boundaries`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(128L))
+
+        listOf(0 to "1", 1 to "1", 2 to "2-5", 10 to "6-10", 81 to "81+", 200 to "81+").forEach { (count, bucket) ->
+            dataClearingWideEvent.start(
+                EntryPoint.ALL_TABS_BURN,
+                emptySet(),
+                browserMode = BrowserMode.REGULAR,
+                tabCount = count,
+            )
+
+            verify(wideEventClient, atLeastOnce()).flowStart(
+                name = "data-clearing",
+                flowEntryPoint = "single_tab_fire_dialog",
+                metadata = mapOf("clear_options" to "", "browser_mode" to "regular", "tab_count" to bucket),
+                cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+                samplingProbability = 0.05f,
+                definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+            )
+        }
+    }
+
+    @Test
+    fun `start with empty clear options sets empty metadata value`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(456L))
+
+        dataClearingWideEvent.start(EntryPoint.APP_SHORTCUT, emptySet(), browserMode = BrowserMode.REGULAR)
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "app_shortcut",
+            metadata = mapOf("clear_options" to "", "browser_mode" to "regular"),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+    }
+
+    @Test
+    fun `start with duckai chats option includes duckai_chats in metadata`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(789L))
+
+        val clearOptions = setOf(FireClearOption.DUCKAI_CHATS)
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, clearOptions, browserMode = BrowserMode.REGULAR)
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "single_tab_fire_dialog",
+            metadata = mapOf("clear_options" to "duckai_chats", "browser_mode" to "regular"),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+    }
+
+    @Test
+    fun `start with single tab fire dialog entry point sends correct flow entry point`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(124L))
+
+        val clearOptions = setOf(FireClearOption.TABS, FireClearOption.DATA, FireClearOption.DUCKAI_CHATS)
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, clearOptions, browserMode = BrowserMode.REGULAR)
+
+        verify(wideEventClient).flowStart(
+            name = "data-clearing",
+            flowEntryPoint = "single_tab_fire_dialog",
+            metadata = mapOf("clear_options" to "tabs,data,duckai_chats", "browser_mode" to "regular"),
+            cleanupPolicy = OnProcessStart(ignoreIfIntervalTimeoutPresent = false),
+            samplingProbability = 0.05f,
+            definition = WideEventDefinition(version = Version(minor = 1, patch = 0)),
+        )
+        verify(wideEventClient).intervalStart(
+            wideEventId = 124L,
+            key = "total_duration_ms_bucketed",
+            buckets = expectedDurationBuckets,
+        )
+    }
+
+    @Test
+    fun `start resets existing flow before starting new one`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(1L))
+            .thenReturn(Result.success(2L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.start(EntryPoint.APP_SHORTCUT, setOf(FireClearOption.DATA), browserMode = BrowserMode.REGULAR)
+
+        verify(wideEventClient).flowFinish(wideEventId = 1L, status = FlowStatus.Unknown)
+    }
+
+    @Test
+    fun `stepSuccess sends successful step`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(500L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).flowStep(
+            wideEventId = 500L,
+            stepName = "web_storage_clear_success",
+            success = true,
+        )
+    }
+
+    @Test
+    fun `stepSuccess with different steps sends correct step names`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(501L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEBVIEW_DEFAULT_CLEAR)
+
+        verify(wideEventClient).flowStep(
+            wideEventId = 501L,
+            stepName = "webview_default_clear_success",
+            success = true,
+        )
+    }
+
+    @Test
+    fun `stepFailure sends failed step with error class`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(600L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.DATA), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.stepFailure(DataClearingFlowStep.APP_CACHE_CLEAR, IllegalStateException("error"))
+
+        verify(wideEventClient).flowStep(
+            wideEventId = 600L,
+            stepName = "app_cache_clear_success",
+            success = false,
+            metadata = mapOf("app_cache_clear_error" to "IllegalStateException"),
+        )
+    }
+
+    @Test
+    fun `finishSuccess ends interval and finishes flow with success`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(700L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.finishSuccess()
+
+        verify(wideEventClient).intervalEnd(wideEventId = 700L, key = "total_duration_ms_bucketed")
+        verify(wideEventClient).flowFinish(wideEventId = 700L, status = FlowStatus.Success)
+    }
+
+    @Test
+    fun `finishSuccess clears cached flow id`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(701L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.finishSuccess()
+
+        reset(wideEventClient)
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(emptyList()))
+
+        // After cache is cleared, should call getFlowIds again
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).getFlowIds("data-clearing")
+    }
+
+    @Test
+    fun `finishFailure ends interval and finishes flow with failure`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(800L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.finishFailure(RuntimeException("failure"))
+
+        verify(wideEventClient).intervalEnd(wideEventId = 800L, key = "total_duration_ms_bucketed")
+        verify(wideEventClient).flowFinish(
+            wideEventId = 800L,
+            status = FlowStatus.Failure(reason = "RuntimeException"),
+        )
+    }
+
+    @Test
+    fun `finishFailure with a reason finishes flow with that reason`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(802L))
+
+        dataClearingWideEvent.start(EntryPoint.SINGLE_TAB_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.finishFailure("feature_not_supported")
+
+        verify(wideEventClient).intervalEnd(wideEventId = 802L, key = "total_duration_ms_bucketed")
+        verify(wideEventClient).flowFinish(
+            wideEventId = 802L,
+            status = FlowStatus.Failure(reason = "feature_not_supported"),
+        )
+    }
+
+    @Test
+    fun `finishFailure clears cached flow id`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(801L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.finishFailure(IllegalArgumentException("error"))
+
+        reset(wideEventClient)
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(emptyList()))
+
+        // After cache is cleared, should call getFlowIds again
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).getFlowIds("data-clearing")
+    }
+
+    @Test
+    fun `getCurrentFlowId returns cached flow id`() = runTest {
+        whenever(wideEventClient.flowStart(any(), anyOrNull(), any(), any(), any(), any()))
+            .thenReturn(Result.success(900L))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        verify(wideEventClient).getFlowIds(any())
+        Mockito.clearInvocations(wideEventClient)
+
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEBVIEW_APP_WEBVIEW_CLEAR)
+
+        // getFlowIds should not be called because flow id is cached from start
+        verify(wideEventClient, never()).getFlowIds(any())
+    }
+
+    @Test
+    fun `getCurrentFlowId fetches from client when not cached`() = runTest {
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(listOf(901L)))
+
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).getFlowIds("data-clearing")
+        verify(wideEventClient).flowStep(
+            wideEventId = 901L,
+            stepName = "web_storage_clear_success",
+            success = true,
+        )
+    }
+
+    @Test
+    fun `getCurrentFlowId returns last flow id when multiple exist`() = runTest {
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(listOf(100L, 200L, 300L)))
+
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).flowStep(
+            wideEventId = 300L,
+            stepName = "web_storage_clear_success",
+            success = true,
+        )
+    }
+
+    @Test
+    fun `no flow id available results in no step interactions`() = runTest {
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(emptyList()))
+
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+
+        verify(wideEventClient).getFlowIds("data-clearing")
+        verifyNoMoreInteractions(wideEventClient)
+    }
+
+    @Test
+    fun `no flow id available results in no finish interactions`() = runTest {
+        whenever(wideEventClient.getFlowIds(any()))
+            .thenReturn(Result.success(emptyList()))
+
+        dataClearingWideEvent.finishSuccess()
+
+        verify(wideEventClient).getFlowIds("data-clearing")
+        verifyNoMoreInteractions(wideEventClient)
+    }
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun `feature disabled results in no interactions`() = runTest {
+        androidBrowserConfigFeature.sendDataClearingWideEvent().setRawStoredState(Toggle.State(false))
+
+        dataClearingWideEvent.start(EntryPoint.ALL_TABS_BURN, setOf(FireClearOption.TABS), browserMode = BrowserMode.REGULAR)
+        dataClearingWideEvent.stepSuccess(DataClearingFlowStep.WEB_STORAGE_CLEAR)
+        dataClearingWideEvent.stepFailure(DataClearingFlowStep.WEB_STORAGE_CLEAR, RuntimeException("error"))
+        dataClearingWideEvent.finishSuccess()
+        dataClearingWideEvent.finishFailure(RuntimeException("error"))
+
+        verifyNoInteractions(wideEventClient)
+    }
+}

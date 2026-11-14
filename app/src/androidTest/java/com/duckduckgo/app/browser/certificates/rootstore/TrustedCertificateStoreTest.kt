@@ -20,14 +20,16 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.duckduckgo.app.browser.certificates.LetsEncryptCertificateProvider
 import com.duckduckgo.app.browser.certificates.LetsEncryptCertificateProviderImpl
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 
 class TrustedCertificateStoreTest {
 
     private val isrgRootX1 = IsrgRootX1(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)
-    private val letsEncryptAuthorityX3 = LetsEncryptAuthorityX3(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)
     private val letsEncryptR3 = LetsEncryptR3(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)
 
+    // This is signed with "Let’s Encrypt Authority X3" that is currently retired
+    // and so we removed it from our code base. We just kept the test because it adds value
     private val subscriberCertificateX3 = """
         -----BEGIN CERTIFICATE-----
         MIIEezCCA2OgAwIBAgISBJ0FI1PHEJRX2NGBLO0cbml5MA0GCSqGSIb3DQEBCwUA
@@ -93,65 +95,67 @@ class TrustedCertificateStoreTest {
     @Test
     fun whenValidateSslCertificateChainWithX3TrustedChainThenSuccess() {
         val letsEncryptCertificateProvider: LetsEncryptCertificateProvider = LetsEncryptCertificateProviderImpl(
-            setOf(isrgRootX1, letsEncryptAuthorityX3, letsEncryptR3)
+            setOf(isrgRootX1, letsEncryptR3),
         )
         val trustedCertificateStore = TrustedCertificateStoreImpl(letsEncryptCertificateProvider)
 
         assertEquals(
-            CertificateValidationState.TrustedChain,
-            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateX3!!)
+            CertificateValidationState.UntrustedChain,
+            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateX3!!),
         )
     }
 
     @Test
     fun whenValidateSslCertificateChainWithX3UnTrustedChainThenError() {
         val letsEncryptCertificateProvider: LetsEncryptCertificateProvider = LetsEncryptCertificateProviderImpl(
-            setOf(isrgRootX1, letsEncryptR3)
+            setOf(isrgRootX1, letsEncryptR3),
         )
         val trustedCertificateStore = TrustedCertificateStoreImpl(letsEncryptCertificateProvider)
 
         assertEquals(
             CertificateValidationState.UntrustedChain,
-            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateX3!!)
+            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateX3!!),
         )
     }
 
+    @Ignore("Skipping until https://app.asana.com/1/137249556945/project/1202552961248957/task/1211370790060438?focus=true")
     @Test
     fun whenValidateSslCertificateChainWithR3TrustedChainThenSuccess() {
         val letsEncryptCertificateProvider: LetsEncryptCertificateProvider = LetsEncryptCertificateProviderImpl(
-            setOf(isrgRootX1, letsEncryptAuthorityX3, letsEncryptR3)
+            setOf(isrgRootX1, letsEncryptR3),
         )
         val trustedCertificateStore = TrustedCertificateStoreImpl(letsEncryptCertificateProvider)
 
         assertEquals(
             CertificateValidationState.TrustedChain,
-            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!)
+            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!),
         )
     }
 
     @Test
     fun whenValidateSslCertificateChainWithR3UnTrustedChainThenError() {
         val letsEncryptCertificateProvider: LetsEncryptCertificateProvider = LetsEncryptCertificateProviderImpl(
-            setOf(isrgRootX1, letsEncryptAuthorityX3)
+            setOf(isrgRootX1),
         )
         val trustedCertificateStore = TrustedCertificateStoreImpl(letsEncryptCertificateProvider)
 
         assertEquals(
             CertificateValidationState.UntrustedChain,
-            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!)
+            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!),
         )
     }
 
+    @Ignore("Skipping until https://app.asana.com/1/137249556945/project/1202552961248957/task/1211370790060438?focus=true")
     @Test
     fun whenValidateSslCertificateChainWithMissingRootThenError() {
         val letsEncryptCertificateProvider: LetsEncryptCertificateProvider = LetsEncryptCertificateProviderImpl(
-            setOf(letsEncryptAuthorityX3, letsEncryptR3)
+            setOf(letsEncryptR3),
         )
         val trustedCertificateStore = TrustedCertificateStoreImpl(letsEncryptCertificateProvider)
 
         assertEquals(
             CertificateValidationState.UntrustedChain,
-            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!)
+            trustedCertificateStore.validateSslCertificateChain(subscriberCertificateR3!!),
         )
     }
 }

@@ -16,31 +16,33 @@
 
 package com.duckduckgo.app.di
 
-import com.duckduckgo.app.httpsupgrade.api.HttpsUpgradeDataDownloader
 import com.duckduckgo.app.job.AppConfigurationDownloader
 import com.duckduckgo.app.job.ConfigurationDownloader
 import com.duckduckgo.app.surrogates.api.ResourceSurrogateListDownloader
 import com.duckduckgo.app.survey.api.SurveyDownloader
 import com.duckduckgo.app.trackerdetection.api.TrackerDataDownloader
-import dagger.Module
-import dagger.Provides
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.httpsupgrade.api.HttpsUpgradeDataDownloader
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
 
-@Module
-open class AppConfigurationDownloaderModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object AppConfigurationDownloaderModule {
 
     @Provides
-    open fun appConfigurationDownloader(
+    fun appConfigurationDownloader(
         trackerDataDownloader: TrackerDataDownloader,
         httpsUpgradeDataDownloader: HttpsUpgradeDataDownloader,
         resourceSurrogateDownloader: ResourceSurrogateListDownloader,
-        surveyDownloader: SurveyDownloader
+        surveyDownloader: SurveyDownloader,
     ): ConfigurationDownloader {
-
         return AppConfigurationDownloader(
             trackerDataDownloader,
             httpsUpgradeDataDownloader,
             resourceSurrogateDownloader,
-            surveyDownloader
+            surveyDownloader,
         )
     }
 }

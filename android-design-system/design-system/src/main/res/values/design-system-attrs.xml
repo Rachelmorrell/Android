@@ -1,0 +1,40 @@
+<!--
+  ~ Copyright (c) 2018 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<resources>
+
+    <attr name="cardViewStyle" format="reference"/>
+    <attr name="daxSwitchStyle" format="reference"/>
+
+    <attr name="autocompleteListItemHorizontalPadding" format="dimension"/>
+    <attr name="autocompleteListItemStartPadding" format="dimension"/>
+    <attr name="autocompleteListItemEndPadding" format="dimension"/>
+    <attr name="autocompleteListItemIconMargin" format="dimension"/>
+    <attr name="autocompleteListItemWithoutTrailIconEndPadding" format="dimension"/>
+    <attr name="autocompleteListItemVerticalPadding" format="dimension"/>
+
+    <attr name="cookiesAnimationRadius" format="dimension"/>
+    <attr name="cookiesAnimationHeight" format="dimension"/>
+
+    <attr name="daxIconTabSwitcher" format="reference"/>
+    <attr name="daxDrawableTabPlaceholderPreview" format="reference"/>
+    <attr name="daxDrawableFireWindowPhone" format="reference"/>
+
+    <attr name="daxOmnibarThemeOverlay" format="reference"/>
+    <attr name="daxInputModeCardThemeOverlay" format="reference"/>
+    <attr name="daxInputModeCardDarkFireThemeOverlay" format="reference"/>
+
+</resources>

@@ -17,30 +17,46 @@
 package com.duckduckgo.app.browser.cookies
 
 import android.net.Uri
-import android.webkit.CookieManager
 import android.webkit.WebView
 import androidx.core.net.toUri
 import com.duckduckgo.app.browser.cookies.db.AuthCookieAllowedDomainEntity
 import com.duckduckgo.app.browser.cookies.db.AuthCookiesAllowedDomainsRepository
-import kotlinx.coroutines.Dispatchers
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.utils.DefaultDispatcherProvider
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.cookies.api.CookieManagerProvider
+import com.duckduckgo.cookies.api.ThirdPartyCookieNames
+import com.duckduckgo.duckchat.api.DuckAiHostProvider
 import kotlinx.coroutines.withContext
-import timber.log.Timber
+import logcat.logcat
 
 interface ThirdPartyCookieManager {
-    suspend fun processUriForThirdPartyCookies(webView: WebView, uri: Uri)
+    suspend fun processUriForThirdPartyCookies(
+        webView: WebView,
+        uri: Uri,
+        browserMode: BrowserMode,
+    )
+
     suspend fun clearAllData()
 }
 
 class AppThirdPartyCookieManager(
-    private val cookieManager: CookieManager,
-    private val authCookiesAllowedDomainsRepository: AuthCookiesAllowedDomainsRepository
+    private val cookieManagerProvider: CookieManagerProvider,
+    private val authCookiesAllowedDomainsRepository: AuthCookiesAllowedDomainsRepository,
+    private val thirdPartyCookieNames: ThirdPartyCookieNames,
+    duckAiHostProvider: DuckAiHostProvider,
+    private val dispatchers: DispatcherProvider = DefaultDispatcherProvider(),
 ) : ThirdPartyCookieManager {
 
-    override suspend fun processUriForThirdPartyCookies(webView: WebView, uri: Uri) {
+    override suspend fun processUriForThirdPartyCookies(
+        webView: WebView,
+        uri: Uri,
+        browserMode: BrowserMode,
+    ) {
         if (uri.host == GOOGLE_ACCOUNTS_HOST) {
             addHostToList(uri)
         } else {
-            processThirdPartyCookiesSetting(webView, uri)
+            processThirdPartyCookiesSetting(webView, uri, browserMode)
         }
     }
 
@@ -48,16 +64,21 @@ class AppThirdPartyCookieManager(
         authCookiesAllowedDomainsRepository.deleteAll(hostsThatAlwaysRequireThirdPartyCookies)
     }
 
-    private suspend fun processThirdPartyCookiesSetting(webView: WebView, uri: Uri) {
+    private suspend fun processThirdPartyCookiesSetting(
+        webView: WebView,
+        uri: Uri,
+        browserMode: BrowserMode,
+    ) {
         val host = uri.host ?: return
         val domain = authCookiesAllowedDomainsRepository.getDomain(host)
-        withContext(Dispatchers.Main) {
-            if (domain != null && hasUserIdCookie()) {
-                Timber.d("Cookies enabled for $uri")
-                cookieManager.setAcceptThirdPartyCookies(webView, true)
+        withContext(dispatchers.main()) {
+            // Allow third-party cookies for domains that need cross-domain functionality
+            if (hostsThatAlwaysRequireThirdPartyCookies.contains(host) || (domain != null && hasExcludedCookieName(browserMode))) {
+                logcat { "Cookies enabled for $uri" }
+                cookieManagerProvider.forMode(browserMode)?.setAcceptThirdPartyCookies(webView, true)
             } else {
-                Timber.d("Cookies disabled for $uri")
-                cookieManager.setAcceptThirdPartyCookies(webView, false)
+                logcat { "Cookies disabled for $uri" }
+                cookieManagerProvider.forMode(browserMode)?.setAcceptThirdPartyCookies(webView, false)
             }
             domain?.let { deleteHost(it) }
         }
@@ -69,7 +90,7 @@ class AppThirdPartyCookieManager(
     }
 
     private suspend fun addHostToList(uri: Uri) {
-        val ssDomain = uri.getQueryParameter(SS_DOMAIN)
+        val ssDomain = uri.getQueryParameter(SS_DOMAIN_PARAM) ?: uri.getQueryParameter(APP_DOMAIN_PARAM)
         val accessType = uri.getQueryParameter(RESPONSE_TYPE)
         ssDomain?.let {
             if (accessType?.contains(CODE) == false) {
@@ -80,20 +101,22 @@ class AppThirdPartyCookieManager(
         }
     }
 
-    private fun hasUserIdCookie(): Boolean {
-        return cookieManager.getCookie(GOOGLE_ACCOUNTS_URL)?.split(";")?.firstOrNull {
-            it.contains(USER_ID_COOKIE)
+    private fun hasExcludedCookieName(browserMode: BrowserMode): Boolean {
+        return cookieManagerProvider.forMode(browserMode)?.getCookie(GOOGLE_ACCOUNTS_URL)?.split(";")?.firstOrNull {
+            thirdPartyCookieNames.hasExcludedCookieName(it)
         } != null
     }
 
+    // duck.ai needs third-party cookies for cross-domain migration between duckduckgo.com and duck.ai
+    private val hostsThatAlwaysRequireThirdPartyCookies: List<String> = listOf("home.nest.com", duckAiHostProvider.getHost(), "duckduckgo.com")
+
     // See https://app.asana.com/0/1125189844152671/1200029737431978 for mor context about the below values
     companion object {
-        private const val SS_DOMAIN = "ss_domain"
+        private const val SS_DOMAIN_PARAM = "ss_domain"
+        private const val APP_DOMAIN_PARAM = "app_domain"
         private const val RESPONSE_TYPE = "response_type"
         private const val CODE = "code"
-        const val USER_ID_COOKIE = "user_id"
         const val GOOGLE_ACCOUNTS_URL = "https://accounts.google.com"
         const val GOOGLE_ACCOUNTS_HOST = "accounts.google.com"
-        val hostsThatAlwaysRequireThirdPartyCookies = listOf("home.nest.com")
     }
 }

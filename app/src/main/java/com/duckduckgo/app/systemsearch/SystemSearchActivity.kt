@@ -21,51 +21,100 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.text.Spanned
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
+import androidx.core.content.ContextCompat
+import androidx.core.text.toSpannable
 import androidx.core.view.isVisible
+import androidx.core.view.postDelayed
+import androidx.core.widget.NestedScrollView
+import androidx.lifecycle.Lifecycle.State.STARTED
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.duckduckgo.app.bookmarks.model.SavedSite
-import com.duckduckgo.app.bookmarks.ui.EditSavedSiteDialogFragment
 import com.duckduckgo.app.browser.BrowserActivity
 import com.duckduckgo.app.browser.R
-import com.duckduckgo.app.browser.autocomplete.BrowserAutoCompleteSuggestionsAdapter
+import com.duckduckgo.app.browser.R.string
 import com.duckduckgo.app.browser.databinding.ActivitySystemSearchBinding
-import com.duckduckgo.app.browser.databinding.IncludeQuickAccessItemsBinding
 import com.duckduckgo.app.browser.favicon.FaviconManager
-import com.duckduckgo.app.browser.favorites.FavoritesQuickAccessAdapter
-import com.duckduckgo.app.browser.favorites.FavoritesQuickAccessAdapter.Companion.QUICK_ACCESS_ITEM_MAX_SIZE_DP
-import com.duckduckgo.app.browser.favorites.QuickAccessDragTouchItemListener
-import com.duckduckgo.app.browser.omnibar.OmnibarScrolling
+import com.duckduckgo.app.browser.mode.SystemSearchExternal
+import com.duckduckgo.app.browser.newtab.FavoritesQuickAccessAdapter
+import com.duckduckgo.app.browser.newtab.FavoritesQuickAccessAdapter.Companion.QUICK_ACCESS_GRID_MAX_COLUMNS
+import com.duckduckgo.app.browser.newtab.FavoritesQuickAccessAdapter.Companion.QUICK_ACCESS_ITEM_MAX_SIZE_DP
+import com.duckduckgo.app.browser.newtab.QuickAccessDragTouchItemListener
+import com.duckduckgo.app.browser.omnibar.applyAddressBarRebrandRadius
 import com.duckduckgo.app.fire.DataClearerForegroundAppRestartPixel
-import com.duckduckgo.app.global.DuckDuckGoActivity
-import com.duckduckgo.app.global.view.TextChangedWatcher
-import com.duckduckgo.app.global.view.html
-import com.duckduckgo.mobile.android.ui.view.*
 import com.duckduckgo.app.pixels.AppPixelName
+import com.duckduckgo.app.pixels.AppReturnPixelSender
+import com.duckduckgo.app.pixels.LaunchSourceValues
+import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.*
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.AutocompleteItemRemoved
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.ClearInputText
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.DeleteFavoriteConfirmation
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.DeleteSavedSiteConfirmation
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.DismissKeyboard
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.EditQuery
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchBrowser
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchBrowserAndSwitchToTab
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchDeviceApplication
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchDuckAiVoiceChat
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchDuckDuckGo
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.LaunchEditDialog
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.ShowAppNotFoundMessage
+import com.duckduckgo.app.systemsearch.SystemSearchViewModel.Command.ShowRemoveSearchSuggestionDialog
 import com.duckduckgo.app.tabs.ui.GridViewColumnCalculator
-import com.duckduckgo.mobile.android.ui.viewbinding.viewBinding
+import com.duckduckgo.browser.api.autocomplete.AutoComplete.AutoCompleteSuggestion
+import com.duckduckgo.browser.ui.autocomplete.BrowserAutoCompleteSuggestionsAdapter
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.DuckDuckGoActivity
+import com.duckduckgo.common.ui.view.KeyboardAwareEditText
+import com.duckduckgo.common.ui.view.addBottomShadow
+import com.duckduckgo.common.ui.view.dialog.TextAlertDialogBuilder
+import com.duckduckgo.common.ui.view.hideKeyboard
+import com.duckduckgo.common.ui.view.showKeyboard
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.common.utils.KeyboardVisibilityUtil
+import com.duckduckgo.common.utils.edgetoedge.EdgeToEdgeHandler
+import com.duckduckgo.common.utils.extensions.html
+import com.duckduckgo.common.utils.extensions.showKeyboard
+import com.duckduckgo.common.utils.text.TextChangedWatcher
+import com.duckduckgo.di.scopes.ActivityScope
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import com.duckduckgo.savedsites.api.models.SavedSite
+import com.duckduckgo.savedsites.impl.dialogs.EditSavedSiteDialogFragment
+import com.duckduckgo.voice.api.VoiceSearchAvailability
+import com.duckduckgo.voice.api.VoiceSearchLauncher
+import com.duckduckgo.voice.api.VoiceSearchLauncher.Source.WIDGET
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import logcat.LogPriority.VERBOSE
+import logcat.logcat
 import javax.inject.Inject
+import com.duckduckgo.mobile.android.R as CommonR
 
+@InjectWith(ActivityScope::class)
 class SystemSearchActivity : DuckDuckGoActivity() {
-
     @Inject
     lateinit var pixel: Pixel
 
     @Inject
-    lateinit var omnibarScrolling: OmnibarScrolling
+    lateinit var dataClearerForegroundAppRestartPixel: DataClearerForegroundAppRestartPixel
 
     @Inject
-    lateinit var dataClearerForegroundAppRestartPixel: DataClearerForegroundAppRestartPixel
+    lateinit var appReturnPixelSender: AppReturnPixelSender
 
     @Inject
     lateinit var faviconManager: FaviconManager
@@ -73,60 +122,210 @@ class SystemSearchActivity : DuckDuckGoActivity() {
     @Inject
     lateinit var gridViewColumnCalculator: GridViewColumnCalculator
 
+    @Inject
+    lateinit var voiceSearchLauncher: VoiceSearchLauncher
+
+    @Inject
+    lateinit var voiceSearchAvailability: VoiceSearchAvailability
+
+    @Inject
+    lateinit var settingsDataStore: SettingsDataStore
+
+    @Inject
+    lateinit var edgeToEdgeHandler: EdgeToEdgeHandler
+
     private val viewModel: SystemSearchViewModel by bindViewModel()
     private val binding: ActivitySystemSearchBinding by viewBinding()
-    private lateinit var quickAccessItemsBinding: IncludeQuickAccessItemsBinding
     private lateinit var autocompleteSuggestionsAdapter: BrowserAutoCompleteSuggestionsAdapter
-    private lateinit var deviceAppSuggestionsAdapter: DeviceAppSuggestionsAdapter
     private lateinit var quickAccessAdapter: FavoritesQuickAccessAdapter
     private lateinit var itemTouchHelper: ItemTouchHelper
+
+    private var nestedScrollViewPosition: Int = 0
+    private var nestedScrollViewRestorePosition: Int = 0
+
+    /**
+     * The launch source resolved from a genuinely new [Intent] delivery (fresh launch or [onNewIntent]),
+     * consumed by the next [onResume]. Not re-derived from [getIntent] on every resume, since the widget
+     * extras it carries are sticky and would otherwise be misread as a fresh widget open on a plain
+     * Recents return.
+     */
+    private var pendingLaunchSource: String? = null
 
     private val systemSearchOnboarding
         get() = binding.includeSystemSearchOnboarding
 
-    private val omnibarTextInput
-        get() = binding.omnibarTextInput
+    private lateinit var omnibarTextInput: KeyboardAwareEditText
+    private lateinit var voiceSearch: ImageView
+    private lateinit var clearTextButton: ImageView
+    private lateinit var shadowContainer: MaterialCardView
+    private lateinit var inputContainer: MaterialCardView
+    private lateinit var logo: ImageView
+    private lateinit var duckAi: ImageView
+    private lateinit var omnibarDivider: View
 
-    private val textChangeWatcher = object : TextChangedWatcher() {
-        override fun afterTextChanged(editable: Editable) {
-            showOmnibar()
-            viewModel.userUpdatedQuery(omnibarTextInput.text.toString())
+    @Inject
+    lateinit var duckChat: DuckChat
+
+    private val textChangeWatcher =
+        object : TextChangedWatcher() {
+            override fun afterTextChanged(editable: Editable) {
+                binding.content.scrollTo(0, 0)
+                val searchQuery = omnibarTextInput.text.toString()
+                clearTextButton.isVisible = searchQuery.isNotEmpty()
+                viewModel.userUpdatedQuery(omnibarTextInput.text.toString())
+            }
+        }
+
+    private fun configureViewReferences(isOmnibarAtTop: Boolean) {
+        omnibarTextInput = if (isOmnibarAtTop) binding.omnibarTextInput else binding.omnibarTextInputBottom
+        voiceSearch = if (isOmnibarAtTop) binding.voiceSearchButton else binding.voiceSearchButtonBottom
+        clearTextButton = if (isOmnibarAtTop) binding.clearTextButton else binding.clearTextButtonBottom
+        shadowContainer = if (isOmnibarAtTop) binding.omniBarContainerShadow else binding.omniBarContainerShadowBottom
+        inputContainer = if (isOmnibarAtTop) binding.omniBarContainer else binding.omniBarContainerBottom
+        applyAddressBarRebrandRadius(
+            isEnabled = appBrandDesignUpdateToggles.addressBar().isEnabled(),
+            rebrandRadius = resources.getDimension(CommonR.dimen.rebrandInputRadius),
+            legacyRadius = resources.getDimension(CommonR.dimen.largeShapeCornerRadius),
+            shadowContainer,
+            inputContainer,
+        )
+        logo = if (isOmnibarAtTop) binding.logo else binding.logoBottom
+        duckAi = if (isOmnibarAtTop) binding.aiChatIconMenu else binding.aiChatIconMenuBottom
+        omnibarDivider = if (isOmnibarAtTop) binding.verticalDivider else binding.verticalDividerBottom
+    }
+
+    /**
+     * One inset listener per view (each apply* replaces any prior listener on that view), and only on
+     * the views that survive [configureOmnibar] (which removes the unused omnibar app bar):
+     * - top omnibar: sides -> rootView, status -> appBarLayout, nav + IME -> content (scrolling list)
+     * - bottom omnibar: status -> content; sides + nav + IME -> rootView bottom margin (single combined
+     *   listener - rootView can't take both [EdgeToEdgeHandler.applyHorizontalSystemBarInsets] and
+     *   [EdgeToEdgeHandler.applyNavigationBarInsetsAsMargin] separately, the second would drop the first),
+     *   so the whole root (including the fixed-height appBarLayoutBottom) rises above the keyboard/gesture
+     *   nav - padding the fixed-height bar directly would just squeeze its content instead of moving it
+     */
+    private fun configureEdgeToEdgeInsets(isOmnibarAtTop: Boolean) {
+        if (isOmnibarAtTop) {
+            edgeToEdgeHandler.applyHorizontalSystemBarInsets(binding.rootView)
+            edgeToEdgeHandler.applyStatusBarInsets(binding.appBarLayout)
+            edgeToEdgeHandler.applyScrollableNavigationBarInsets(binding.content)
+        } else {
+            edgeToEdgeHandler.applyStatusBarInsets(binding.content)
+            edgeToEdgeHandler.applyHorizontalInsetsAndNavigationBarMargin(binding.rootView)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dataClearerForegroundAppRestartPixel.registerIntent(intent)
-        quickAccessItemsBinding = IncludeQuickAccessItemsBinding.bind(binding.root)
+        enableTransparentEdgeToEdge()
         setContentView(binding.root)
+
+        configureViewReferences(viewModel.isOmnibarAtTop)
+        configureOmnibar(viewModel.isOmnibarAtTop)
+        configureEdgeToEdgeInsets(viewModel.isOmnibarAtTop)
         configureObservers()
+        configureFlowCollectors()
         configureOnboarding()
         configureAutoComplete()
-        configureDeviceAppSuggestions()
         configureDaxButton()
-        configureOmnibar()
         configureTextInput()
         configureQuickAccessGrid()
+        configureVoiceSearch()
+        configureDuckAi()
 
         if (savedInstanceState == null) {
-            intent?.let { sendLaunchPixels(it) }
+            intent?.let {
+                pendingLaunchSource = resolveLaunchSource(it)
+                sendLaunchPixels(it)
+                if (launchedFromAssist(it)) {
+                    handleDigitalAssistIntent()
+                } else {
+                    handleVoiceSearchLaunch(it)
+                }
+            }
+        }
+
+        shadowContainer.addBottomShadow(
+            shadowSizeDp = 12f,
+            offsetYDp = 3f,
+            insetDp = 3f,
+            shadowColor = ContextCompat.getColor(this, CommonR.color.background_omnibar_shadow),
+        )
+
+        viewModel.setLaunchedFromSearchOnlyWidget(launchedFromSearchOnlyWidget(intent))
+
+        showKeyboard(omnibarTextInput)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        appReturnPixelSender.fireIfNeeded(pendingLaunchSource ?: LaunchSourceValues.OTHER)
+        pendingLaunchSource = null
+
+        if (viewModel.hasOmnibarTypeChanged) {
+            recreate()
         }
     }
 
-    override fun onNewIntent(newIntent: Intent?) {
-        super.onNewIntent(newIntent)
-        dataClearerForegroundAppRestartPixel.registerIntent(newIntent)
+    private fun resolveLaunchSource(intent: Intent): String =
+        if (launchedFromAnyWidget(intent)) LaunchSourceValues.WIDGET else LaunchSourceValues.OTHER
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingLaunchSource = resolveLaunchSource(intent)
+        dataClearerForegroundAppRestartPixel.registerIntent(intent)
         viewModel.resetViewState()
-        newIntent?.let { sendLaunchPixels(it) }
+        viewModel.setLaunchedFromSearchOnlyWidget(launchedFromSearchOnlyWidget(intent))
+        sendLaunchPixels(intent)
+        if (launchedFromAssist(intent)) {
+            handleDigitalAssistIntent()
+            return
+        }
+        handleVoiceSearchLaunch(intent)
     }
 
     private fun sendLaunchPixels(intent: Intent) {
         when {
             launchedFromAssist(intent) -> pixel.fire(AppPixelName.APP_ASSIST_LAUNCH)
-            launchedFromWidget(intent) -> pixel.fire(AppPixelName.APP_WIDGET_LAUNCH)
+            launchedFromWidget(intent) || launchedFromSearchOnlyWidget(intent) -> pixel.fire(AppPixelName.APP_WIDGET_LAUNCH)
             launchedFromSearchWithFavsWidget(intent) -> pixel.fire(AppPixelName.APP_FAVORITES_SEARCHBAR_WIDGET_LAUNCH)
             launchedFromNotification(intent) -> pixel.fire(AppPixelName.APP_NOTIFICATION_LAUNCH)
             launchedFromSystemSearchBox(intent) -> pixel.fire(AppPixelName.APP_SYSTEM_SEARCH_BOX_LAUNCH)
+        }
+    }
+
+    private fun handleVoiceSearchLaunch(intent: Intent) {
+        if (launchVoice(intent)) {
+            voiceSearchLauncher.launch(this)
+        }
+    }
+
+    private fun handleDigitalAssistIntent() {
+        viewModel.onDigitalAssistOpened()
+    }
+
+    private fun configureFlowCollectors() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(STARTED) {
+                launch {
+                    viewModel.suggestionsViewState.collectLatest {
+                        renderResultsViewState(it)
+                    }
+                }
+                launch {
+                    viewModel.omnibarViewState.collectLatest {
+                        renderOmnibarState(it)
+                    }
+                }
+                launch {
+                    viewModel.favoritesViewState.collectLatest {
+                        renderQuickAccessItems(it)
+                    }
+                }
+            }
         }
     }
 
@@ -135,26 +334,13 @@ class SystemSearchActivity : DuckDuckGoActivity() {
             this,
             {
                 it?.let { renderOnboardingViewState(it) }
-            }
-        )
-        viewModel.resultsViewState.observe(
-            this,
-            {
-                when (it) {
-                    is SystemSearchViewModel.Suggestions.SystemSearchResultsViewState -> {
-                        renderResultsViewState(it)
-                    }
-                    is SystemSearchViewModel.Suggestions.QuickAccessItems -> {
-                        renderQuickAccessItems(it)
-                    }
-                }
-            }
+            },
         )
         viewModel.command.observe(
             this,
             {
                 processCommand(it)
-            }
+            },
         )
     }
 
@@ -169,62 +355,103 @@ class SystemSearchActivity : DuckDuckGoActivity() {
 
     private fun configureAutoComplete() {
         binding.autocompleteSuggestions.layoutManager = LinearLayoutManager(this)
-        autocompleteSuggestionsAdapter = BrowserAutoCompleteSuggestionsAdapter(
-            immediateSearchClickListener = {
-                viewModel.userSubmittedAutocompleteResult(it.phrase)
-            },
-            editableSearchClickListener = {
-                viewModel.onUserSelectedToEditQuery(it.phrase)
-            }
-        )
+        autocompleteSuggestionsAdapter =
+            BrowserAutoCompleteSuggestionsAdapter(
+                immediateSearchClickListener = {
+                    viewModel.userSubmittedAutocompleteResult(it)
+                },
+                editableSearchClickListener = {
+                    viewModel.onUserSelectedToEditQuery(it.phrase)
+                },
+                autoCompleteDeleteClickListener = {
+                    viewModel.onUserRequestedToDeleteAutocompleteItem(it)
+                },
+                omnibarType = settingsDataStore.omnibarType,
+            )
         binding.autocompleteSuggestions.adapter = autocompleteSuggestionsAdapter
-    }
-
-    private fun configureDeviceAppSuggestions() {
-        binding.deviceAppSuggestions.layoutManager = LinearLayoutManager(this)
-        deviceAppSuggestionsAdapter = DeviceAppSuggestionsAdapter {
-            viewModel.userSelectedApp(it)
+        lifecycleScope.launch {
+            autocompleteSuggestionsAdapter.setDeleteButtonVisible(viewModel.isAutocompleteHistoryDeleteButtonEnabled())
         }
-        binding.deviceAppSuggestions.adapter = deviceAppSuggestionsAdapter
+
+        binding.content.setOnScrollChangeListener(
+            NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
+                nestedScrollViewPosition = scrollY
+            },
+        )
     }
 
     private fun configureQuickAccessGrid() {
-        val quickAccessRecyclerView = quickAccessItemsBinding.quickAccessRecyclerView
+        val quickAccessRecyclerView = binding.quickAccessRecyclerView
         val numOfColumns = gridViewColumnCalculator.calculateNumberOfColumns(QUICK_ACCESS_ITEM_MAX_SIZE_DP, QUICK_ACCESS_GRID_MAX_COLUMNS)
         val layoutManager = GridLayoutManager(this, numOfColumns)
         quickAccessRecyclerView.layoutManager = layoutManager
-        quickAccessAdapter = FavoritesQuickAccessAdapter(
-            this, faviconManager,
-            { viewHolder -> itemTouchHelper.startDrag(viewHolder) },
-            { viewModel.onQuickAccesItemClicked(it) },
-            { viewModel.onEditQuickAccessItemRequested(it) },
-            { viewModel.onDeleteQuickAccessItemRequested(it) }
-        )
-        itemTouchHelper = ItemTouchHelper(
-            QuickAccessDragTouchItemListener(
-                quickAccessAdapter,
-                object : QuickAccessDragTouchItemListener.DragDropListener {
-                    override fun onListChanged(listElements: List<FavoritesQuickAccessAdapter.QuickAccessFavorite>) {
-                        viewModel.onQuickAccessListChanged(listElements)
-                    }
-                }
+        quickAccessAdapter =
+            FavoritesQuickAccessAdapter(
+                this,
+                faviconManager,
+                { viewHolder -> itemTouchHelper.startDrag(viewHolder) },
+                { viewModel.onQuickAccessItemClicked(it) },
+                { viewModel.onEditQuickAccessItemRequested(it) },
+                { viewModel.onDeleteQuickAccessItemRequested(it) },
+                { viewModel.onDeleteSavedSiteRequested(it) },
             )
-        )
+        itemTouchHelper =
+            ItemTouchHelper(
+                QuickAccessDragTouchItemListener(
+                    quickAccessAdapter,
+                    object : QuickAccessDragTouchItemListener.DragDropListener {
+                        override fun onListChanged(listElements: List<FavoritesQuickAccessAdapter.QuickAccessFavorite>) {
+                            viewModel.onQuickAccessListChanged(listElements)
+                        }
+                    },
+                ),
+            )
 
         itemTouchHelper.attachToRecyclerView(quickAccessRecyclerView)
         quickAccessRecyclerView.adapter = quickAccessAdapter
-        val sidePadding = gridViewColumnCalculator.calculateSidePadding(QUICK_ACCESS_ITEM_MAX_SIZE_DP, numOfColumns)
-        quickAccessRecyclerView.setPadding(sidePadding, 8.toPx(), sidePadding, 8.toPx())
     }
 
     private fun configureDaxButton() {
-        binding.logo.setOnClickListener {
+        logo.setOnClickListener {
             viewModel.userTappedDax()
         }
     }
 
-    private fun configureOmnibar() {
-        binding.resultsContent.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateScroll() }
+    private fun configureOmnibar(isOmnibarAtTop: Boolean) {
+        if (isOmnibarAtTop) {
+            binding.rootView.removeView(binding.appBarLayoutBottom)
+        } else {
+            binding.rootView.removeView(binding.appBarLayout)
+        }
+        viewModel.onOmnibarConfigured(settingsDataStore.omnibarType)
+    }
+
+    private fun configureVoiceSearch() {
+        voiceSearchLauncher.registerResultsCallback(this, this, WIDGET) {
+            if (it is VoiceSearchLauncher.Event.VoiceRecognitionSuccess) {
+                when (val result = it.result) {
+                    is VoiceSearchLauncher.VoiceRecognitionResult.SearchResult -> {
+                        viewModel.onVoiceSearchResult(result.query)
+                    }
+
+                    is VoiceSearchLauncher.VoiceRecognitionResult.DuckAiResult -> {
+                        viewModel.onDuckAiRequested(result.query, DuckChatEntryPoint.SYSTEM_SEARCH, voice = true)
+                    }
+                }
+            } else if (it is VoiceSearchLauncher.Event.VoiceSearchDisabled) {
+                viewModel.onVoiceSearchStateChanged()
+            }
+        }
+        voiceSearch.setOnClickListener {
+            omnibarTextInput.hideKeyboard()
+            voiceSearchLauncher.launch(this)
+        }
+    }
+
+    fun configureDuckAi() {
+        duckAi.setOnClickListener {
+            viewModel.onDuckAiRequested(omnibarTextInput.text.toString(), DuckChatEntryPoint.SYSTEM_SEARCH)
+        }
     }
 
     private fun showEditSavedSiteDialog(savedSite: SavedSite) {
@@ -233,42 +460,31 @@ class SystemSearchActivity : DuckDuckGoActivity() {
         dialog.listener = viewModel
     }
 
-    private fun updateScroll() {
-        val results = binding.results
-        val scrollable = binding.resultsContent.height > (results.height - results.paddingTop - results.paddingBottom)
-        if (scrollable) {
-            omnibarScrolling.enableOmnibarScrolling(binding.toolbarContainer)
-        } else {
-            showOmnibar()
-            omnibarScrolling.disableOmnibarScrolling(binding.toolbarContainer)
-        }
-    }
-
     private fun configureTextInput() {
         omnibarTextInput.setOnEditorActionListener(
             TextView.OnEditorActionListener { _, actionId, keyEvent ->
-                if (actionId == EditorInfo.IME_ACTION_GO || keyEvent?.keyCode == KeyEvent.KEYCODE_ENTER) {
+                if ((keyEvent == null && actionId == EditorInfo.IME_ACTION_GO) ||
+                    (keyEvent?.keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN)
+                ) {
                     viewModel.userSubmittedQuery(omnibarTextInput.text.toString())
                     return@OnEditorActionListener true
                 }
                 false
-            }
+            },
         )
 
         omnibarTextInput.removeTextChangedListener(textChangeWatcher)
         omnibarTextInput.addTextChangedListener(textChangeWatcher)
-        binding.clearTextButton.setOnClickListener { viewModel.userRequestedClear() }
+        clearTextButton.setOnClickListener { viewModel.userRequestedClear() }
     }
 
     private fun renderOnboardingViewState(viewState: SystemSearchViewModel.OnboardingViewState) {
         if (viewState.visible) {
             systemSearchOnboarding.onboarding.visibility = View.VISIBLE
-            binding.results.elevation = 0.0f
             systemSearchOnboarding.checkmarks.visibility = if (viewState.expanded) View.VISIBLE else View.GONE
             refreshOnboardingToggleText(viewState.expanded)
         } else {
             systemSearchOnboarding.onboarding.visibility = View.GONE
-            binding.results.elevation = resources.getDimension(R.dimen.systemSearchResultsElevation)
         }
     }
 
@@ -278,14 +494,24 @@ class SystemSearchActivity : DuckDuckGoActivity() {
     }
 
     private fun renderResultsViewState(viewState: SystemSearchViewModel.Suggestions.SystemSearchResultsViewState) {
-        binding.deviceLabel.isVisible = viewState.appResults.isNotEmpty()
         autocompleteSuggestionsAdapter.updateData(viewState.autocompleteResults.query, viewState.autocompleteResults.suggestions)
-        deviceAppSuggestionsAdapter.updateData(viewState.appResults)
+        binding.autocompleteSuggestions.isVisible = !viewState.autocompleteResults.suggestions.isEmpty()
+    }
+
+    private fun renderOmnibarState(viewState: SystemSearchViewModel.OmnibarViewState) {
+        voiceSearch.isVisible = viewState.isVoiceSearchButtonVisible
+        clearTextButton.isVisible = viewState.isClearButtonVisible
+        duckAi.isVisible = viewState.isDuckAiButtonVisible
+        omnibarDivider.isVisible = viewState.isButtonDividerVisible
     }
 
     private fun renderQuickAccessItems(it: SystemSearchViewModel.Suggestions.QuickAccessItems) {
-        quickAccessAdapter.submitList(it.favorites)
-        quickAccessItemsBinding.quickAccessRecyclerView.visibility = View.VISIBLE
+        binding.topOutlineStroke.isVisible = it.favorites.isNotEmpty()
+        binding.bottomOutlineStroke.isVisible = it.favorites.isNotEmpty()
+        binding.quickAccessRecyclerView.isVisible = it.favorites.isNotEmpty()
+        if (it.favorites.isNotEmpty()) {
+            quickAccessAdapter.submitList(it.favorites)
+        }
     }
 
     private fun processCommand(command: SystemSearchViewModel.Command) {
@@ -295,31 +521,113 @@ class SystemSearchActivity : DuckDuckGoActivity() {
                 omnibarTextInput.setText("")
                 omnibarTextInput.addTextChangedListener(textChangeWatcher)
             }
+
             is LaunchDuckDuckGo -> {
                 launchDuckDuckGo()
             }
+
             is LaunchBrowser -> {
-                launchBrowser(command)
+                launchBrowser(command.query)
             }
+
+            is LaunchBrowserAndSwitchToTab -> {
+                launchBrowser(command.query, command.tabId)
+            }
+
             is LaunchDeviceApplication -> {
                 launchDeviceApp(command)
             }
+
             is ShowAppNotFoundMessage -> {
                 Toast.makeText(this, R.string.systemSearchAppNotFound, LENGTH_SHORT).show()
             }
+
             is DismissKeyboard -> {
                 omnibarTextInput.hideKeyboard()
             }
+
             is EditQuery -> {
                 editQuery(command.query)
             }
+
             is LaunchEditDialog -> {
                 showEditSavedSiteDialog(command.savedSite)
             }
+
+            is DeleteFavoriteConfirmation -> {
+                confirmDeleteFavorite(command.savedSite)
+            }
+
             is DeleteSavedSiteConfirmation -> {
                 confirmDeleteSavedSite(command.savedSite)
             }
+
+            is ShowRemoveSearchSuggestionDialog -> {
+                showRemoveSearchSuggestionDialog(command.suggestion)
+            }
+
+            AutocompleteItemRemoved -> autocompleteItemRemoved()
+
+            SystemSearchViewModel.Command.ExitSearch -> finish()
+
+            LaunchDuckAiVoiceChat -> {
+                duckChat.openVoiceDuckChat(DuckChatEntryPoint.DIGITAL_ASSISTANT)
+                finish()
+            }
         }
+    }
+
+    private fun showRemoveSearchSuggestionDialog(suggestion: AutoCompleteSuggestion) {
+        storeAutocompletePosition()
+        hideKeyboardDelayed()
+
+        TextAlertDialogBuilder(this)
+            .setTitle(R.string.autocompleteRemoveItemTitle)
+            .setCancellable(true)
+            .setPositiveButton(R.string.autocompleteRemoveItemRemove)
+            .setNegativeButton(R.string.autocompleteRemoveItemCancel)
+            .addEventListener(
+                object : TextAlertDialogBuilder.EventListener() {
+                    override fun onPositiveButtonClicked() {
+                        viewModel.onRemoveSearchSuggestionConfirmed(suggestion, omnibarTextInput.text.toString())
+                    }
+
+                    override fun onNegativeButtonClicked() {
+                        showKeyboardAndRestorePosition()
+                    }
+
+                    override fun onDialogCancelled() {
+                        showKeyboardAndRestorePosition()
+                    }
+                },
+            ).show()
+    }
+
+    private fun storeAutocompletePosition() {
+        nestedScrollViewRestorePosition = nestedScrollViewPosition
+    }
+
+    private fun autocompleteItemRemoved() {
+        showKeyboardAndRestorePosition()
+    }
+
+    private fun showKeyboardAndRestorePosition() {
+        val rootView = omnibarTextInput.rootView
+        val keyboardVisibilityUtil = KeyboardVisibilityUtil(rootView)
+        keyboardVisibilityUtil.addKeyboardVisibilityListener {
+            binding.content.scrollTo(0, nestedScrollViewRestorePosition)
+        }
+        showKeyboardDelayed()
+    }
+
+    private fun showKeyboardDelayed() {
+        logcat(VERBOSE) { "Keyboard now showing" }
+        omnibarTextInput.postDelayed(KEYBOARD_DELAY) { omnibarTextInput.showKeyboard() }
+    }
+
+    private fun hideKeyboardDelayed() {
+        logcat(VERBOSE) { "Keyboard now hiding" }
+        omnibarTextInput.postDelayed(KEYBOARD_DELAY) { omnibarTextInput.hideKeyboard() }
     }
 
     private fun editQuery(query: String) {
@@ -327,79 +635,129 @@ class SystemSearchActivity : DuckDuckGoActivity() {
         omnibarTextInput.setSelection(query.length)
     }
 
+    private fun confirmDeleteFavorite(savedSite: SavedSite) {
+        confirmDelete(savedSite, getString(string.favoriteDeleteConfirmationMessage).toSpannable()) {
+            viewModel.deleteFavoriteSnackbarDismissed(it)
+        }
+    }
+
     private fun confirmDeleteSavedSite(savedSite: SavedSite) {
-        val message = getString(R.string.bookmarkDeleteConfirmationMessage, savedSite.title).html(this)
-        Snackbar.make(
-            binding.root,
-            message,
-            Snackbar.LENGTH_LONG
-        ).setAction(R.string.fireproofWebsiteSnackbarAction) {
-            viewModel.insertQuickAccessItem(savedSite)
-        }.show()
+        confirmDelete(savedSite, getString(com.duckduckgo.saved.sites.impl.R.string.bookmarkDeleteConfirmationMessage, savedSite.title).html(this)) {
+            viewModel.deleteSavedSiteSnackbarDismissed(it)
+        }
+    }
+
+    private fun confirmDelete(
+        savedSite: SavedSite,
+        message: Spanned,
+        onDeleteSnackbarDismissed: (SavedSite) -> Unit,
+    ) {
+        Snackbar
+            .make(
+                binding.root,
+                message,
+                Snackbar.LENGTH_LONG,
+            ).setAction(R.string.fireproofWebsiteSnackbarAction) {
+                viewModel.undoDelete(savedSite)
+            }.addCallback(
+                object : BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                    override fun onDismissed(
+                        transientBottomBar: Snackbar?,
+                        event: Int,
+                    ) {
+                        if (event != DISMISS_EVENT_ACTION) {
+                            onDeleteSnackbarDismissed(savedSite)
+                        }
+                    }
+                },
+            ).show()
     }
 
     private fun launchDuckDuckGo() {
-        startActivity(BrowserActivity.intent(this))
+        startActivity(BrowserActivity.intent(this, launchSource = SystemSearchExternal, interstitialScreen = true))
         finish()
     }
 
-    private fun launchBrowser(command: LaunchBrowser) {
-        startActivity(BrowserActivity.intent(this, command.query))
+    private fun launchBrowser(
+        query: String,
+        openExistingTabId: String? = null,
+    ) {
+        startActivity(
+            BrowserActivity.intent(
+                context = this,
+                launchSource = SystemSearchExternal,
+                queryExtra = query,
+                interstitialScreen = true,
+                openExistingTabId = openExistingTabId,
+            ),
+        )
         finish()
     }
 
     private fun launchDeviceApp(command: LaunchDeviceApplication) {
         try {
-            startActivity(command.deviceApp.launchIntent)
+            startActivity(command.deviceAppSuggestion.launchIntent)
             finish()
         } catch (error: ActivityNotFoundException) {
-            viewModel.appNotFound(command.deviceApp)
+            viewModel.appNotFound(command.deviceAppSuggestion)
         }
     }
 
-    private fun showOmnibar() {
-        binding.results.scrollTo(0, 0)
-        binding.appBarLayout.setExpanded(true)
-    }
+    private fun launchedFromSystemSearchBox(intent: Intent): Boolean = intent.action == NEW_SEARCH_ACTION
 
-    private fun launchedFromSystemSearchBox(intent: Intent): Boolean {
-        return intent.action == NEW_SEARCH_ACTION
-    }
+    private fun launchedFromAssist(intent: Intent): Boolean = intent.action == Intent.ACTION_ASSIST
 
-    private fun launchedFromAssist(intent: Intent): Boolean {
-        return intent.action == Intent.ACTION_ASSIST
-    }
+    private fun launchedFromAnyWidget(intent: Intent): Boolean =
+        launchedFromWidget(intent) || launchedFromSearchOnlyWidget(intent) || launchedFromSearchWithFavsWidget(intent)
 
-    private fun launchedFromWidget(intent: Intent): Boolean {
-        return intent.getBooleanExtra(WIDGET_SEARCH_EXTRA, false)
-    }
+    private fun launchedFromWidget(intent: Intent): Boolean = intent.getBooleanExtra(WIDGET_SEARCH_EXTRA, false)
 
-    private fun launchedFromSearchWithFavsWidget(intent: Intent): Boolean {
-        return intent.getBooleanExtra(WIDGET_SEARCH_WITH_FAVS_EXTRA, false)
-    }
+    private fun launchedFromSearchOnlyWidget(intent: Intent): Boolean = intent.getBooleanExtra(WIDGET_SEARCH_ONLY_EXTRA, false)
 
-    private fun launchedFromNotification(intent: Intent): Boolean {
-        return intent.getBooleanExtra(NOTIFICATION_SEARCH_EXTRA, false)
-    }
+    private fun launchedFromSearchWithFavsWidget(intent: Intent): Boolean = intent.getBooleanExtra(WIDGET_SEARCH_WITH_FAVS_EXTRA, false)
+
+    private fun launchedFromNotification(intent: Intent): Boolean = intent.getBooleanExtra(NOTIFICATION_SEARCH_EXTRA, false)
+
+    private fun launchVoice(intent: Intent): Boolean = intent.getBooleanExtra(WIDGET_SEARCH_LAUNCH_VOICE, false)
 
     companion object {
         const val NOTIFICATION_SEARCH_EXTRA = "NOTIFICATION_SEARCH_EXTRA"
         const val WIDGET_SEARCH_EXTRA = "WIDGET_SEARCH_EXTRA"
+        const val WIDGET_SEARCH_ONLY_EXTRA = "WIDGET_SEARCH_ONLY_EXTRA"
         const val WIDGET_SEARCH_WITH_FAVS_EXTRA = "WIDGET_SEARCH_WITH_FAVS_EXTRA"
+        const val WIDGET_SEARCH_LAUNCH_VOICE = "WIDGET_SEARCH_LAUNCH_VOICE"
         const val NEW_SEARCH_ACTION = "com.duckduckgo.mobile.android.NEW_SEARCH"
-        private const val QUICK_ACCESS_GRID_MAX_COLUMNS = 6
+        private const val KEYBOARD_DELAY = 200L
 
-        fun fromWidget(context: Context): Intent {
+        fun fromWidget(
+            context: Context,
+            launchVoice: Boolean = false,
+        ): Intent {
             val intent = Intent(context, SystemSearchActivity::class.java)
             intent.putExtra(WIDGET_SEARCH_EXTRA, true)
             intent.putExtra(NOTIFICATION_SEARCH_EXTRA, false)
+            intent.putExtra(WIDGET_SEARCH_LAUNCH_VOICE, launchVoice)
             return intent
         }
 
-        fun fromFavWidget(context: Context): Intent {
+        fun fromSearchOnlyWidget(
+            context: Context,
+            launchVoice: Boolean = false,
+        ): Intent {
+            val intent = Intent(context, SystemSearchActivity::class.java)
+            intent.putExtra(WIDGET_SEARCH_ONLY_EXTRA, true)
+            intent.putExtra(WIDGET_SEARCH_LAUNCH_VOICE, launchVoice)
+            return intent
+        }
+
+        fun fromFavWidget(
+            context: Context,
+            launchVoice: Boolean = false,
+        ): Intent {
             val intent = Intent(context, SystemSearchActivity::class.java)
             intent.putExtra(WIDGET_SEARCH_WITH_FAVS_EXTRA, true)
             intent.putExtra(NOTIFICATION_SEARCH_EXTRA, false)
+            intent.putExtra(WIDGET_SEARCH_LAUNCH_VOICE, launchVoice)
             return intent
         }
 
@@ -407,6 +765,7 @@ class SystemSearchActivity : DuckDuckGoActivity() {
             val intent = Intent(context, SystemSearchActivity::class.java)
             intent.putExtra(WIDGET_SEARCH_EXTRA, false)
             intent.putExtra(NOTIFICATION_SEARCH_EXTRA, true)
+            intent.putExtra(WIDGET_SEARCH_LAUNCH_VOICE, false)
             return intent
         }
     }

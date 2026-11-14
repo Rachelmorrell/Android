@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <!-- DRM Permission -->
+    <string name="drmSitePermissionDialogTitle" instruction="Placeholder is the name of a website">\"%1$s\" haluaa avata DRM-ohjelmiston (Digital Rights Management).</string>
+    <string name="drmSitePermissionDialogSubtitle" instruction="Placeholder is the name of a website">Jos valitset \"Estä\", sivustolla olevia videoita ei ehkä voida toistaa, mutta %1$s ei voi käyttää DRM-ohjelmiston tarjoamia laitetunnisteita. Voit hallita lupia milloin vain asetuksissa. <annotation type="drm_learn_more_link">Lue lisää</annotation></string>
+    <string name="drmSiteDialogAllowAlways">Aina</string>
+    <string name="drmSiteDialogAllowOnce">Vain tässä istunnossa</string>
+    <string name="drmSiteDialogDenyAlways">Kiellä aina</string>
+    <string name="drmSiteDialogDenyOnce">Kiellä tässä istunnossa</string>
+
+    <!-- Location Permission -->
+    <string name="sitePermissionsLocationDialogTitle" instruction="Placeholder is a website">\"%1$s\" haluaa käyttää sijaintiasi</string>
+    <string name="sitePermissionsDialogRememberMeCheckBox">Muista valintani</string>
+    <string name="preciseLocationDDGDialogSubtitle">Käytämme anonyymiä sijaintia pelkästään tarjotaksemme parempia tuloksia lähempää sijaintiasi. Voit hallita yksittäisille sivustoille antamiasi sijaintilupia asetuksista.</string>
+    <string name="preciseLocationSiteDialogSubtitle">Voit hallita yksittäisille sivustoille antamiasi sijaintilupia asetuksista.</string>
+    <string name="systemPermissionDialogLocationDeniedTitle">Salli DuckDuckGon pyytää sijainnin käyttöoikeutta tällä laitteella</string>
+    <string name="systemPermissionDialogLocationDeniedContent">Sivustot voivat käyttää sijaintiasi vain, jos sallit DuckDuckGon pyytää sen käyttöoikeutta.</string>
+    <string name="sitePermissionsLocationDeniedSnackBarMessage">Salli DuckDuckGon pyytää sijainnin käyttöoikeutta</string>
+
+    <!-- Site Permission -->
+    <string name="settingsSitePermissions">Sivuston käyttöoikeudet</string>
+    <string name="sitePermissionsMicAndCameraDialogSubtitle">Voit hallita yksittäisille sivustoille antamiasi mikrofonin ja kameran käyttöoikeuksia asetuksista.</string>
+    <string name="sitePermissionsMicDialogSubtitle">Voit hallita yksittäisille sivustoille antamiasi mikrofonin käyttöoikeuksia asetuksista.</string>
+    <string name="sitePermissionsCameraDialogSubtitle">Voit hallita yksittäisille sivustoille antamiasi kameran käyttöoikeuksia asetuksista.</string>
+    <string name="sitePermissionsMicAndCameraDialogTitle" instruction="Placeholder is a website">\"%1$s\" haluaa käyttää kameraa ja mikrofonia</string>
+    <string name="sitePermissionsMicDialogTitle" instruction="Placeholder is a website">\"%1$s\" haluaa käyttää mikrofonia</string>
+    <string name="sitePermissionsCameraDialogTitle" instruction="Placeholder is a website">\"%1$s\" haluaa käyttää kameraa</string>
+    <string name="sitePermissionsDialogContent">Hallitse myönnettyjä käyttöoikeuksia asetuksissa</string>
+    <string name="sitePermissionsDialogDenyButton">Estä</string>
+    <string name="sitePermissionsDialogAllowButton">Salli</string>
+    <string name="sitePermissionsCameraAndMicDeniedSnackBarMessage">Salli DuckDuckGon pyytää kameran ja mikrofonin käyttöoikeutta</string>
+    <string name="sitePermissionsCameraDeniedSnackBarMessage">Salli DuckDuckGon pyytää kameran käyttöoikeutta</string>
+    <string name="sitePermissionsMicDeniedSnackBarMessage">Salli DuckDuckGon pyytää mikrofonin käyttöoikeutta</string>
+    <string name="sitePermissionsDeniedSnackBarAction">Salli</string>
+    <string name="systemPermissionDialogCameraDeniedTitle">Salli DuckDuckGon pyytää kameran käyttöoikeutta tällä laitteella</string>
+    <string name="systemPermissionDialogCameraDeniedContent">Sivustot voivat käyttää kameraa vain, jos sallit DuckDuckGon pyytää sen käyttöoikeutta.</string>
+    <string name="systemPermissionDialogAudioDeniedTitle">Salli DuckDuckGon pyytää mikrofonin käyttöoikeutta tällä laitteella</string>
+    <string name="systemPermissionDialogAudioDeniedContent">Sivustot voivat käyttää mikrofoniasi vain, jos sallit DuckDuckGon pyytää sen käyttöoikeutta.</string>
+    <string name="systemPermissionDialogCameraAndAudioDeniedTitle">Salli DuckDuckGon pyytää kameran ja mikrofonin käyttöoikeutta tällä laitteella</string>
+    <string name="systemPermissionDialogCameraAndAudioDeniedContent">Sivustot voivat käyttää kameraa ja mikrofonia vain, jos annat DuckDuckGon pyytää niiden käyttöoikeutta.</string>
+    <string name="systemPermissionsDeniedDialogPositiveButton">Avaa asetukset</string>
+    <string name="systemPermissionsDeniedDialogNegativeButton">Peruuta</string>
+    <string name="duckAiMicPermissionDeniedSnackBarMessage">Mikrofonin käyttöoikeus tarvitaan äänitoimintoja varten</string>
+    <string name="duckAiMicPermissionDeniedDialogTitle">DuckDuckGo tarvitsee mikrofonisi käyttöoikeuden</string>
+    <string name="duckAiMicPermissionDeniedDialogContent">Mikrofonin käyttöoikeudet tarvitaan, jos haluat käyttää äänikeskustelua Duck.ai:ssa</string>
+
+    <string name="sitePermissionsSettingsDescription">Käyttämäsi sivustot saattavat pyytää pääsyä laitteesi sijaintiin, kameraan, mikrofoniin tai DRM-ohjelmistoon (Digital Rights Management). Ne eivät voi käyttää tietoja, ellet myönnä niille erillistä käyttöoikeutta.</string>
+    <string name="sitePermissionsSettingsEnablePermissionTitle">Salli kaikkien sivustojen pyytää:</string>
+    <string name="sitePermissionsSettingsLocation">Sijainti</string>
+    <string name="sitePermissionsSettingsCamera">Kamera</string>
+    <string name="sitePermissionsSettingsMicrophone">Mikrofoni</string>
+    <string name="sitePermissionsSettingsAllowedSitesTitle">Hallitse sivustoja</string>
+    <string name="sitePermissionsSettingsEmptyText">Ei vielä yhtään sivustoa</string>
+    <string name="sitePermissionsRemoveAllWebsitesSnackbarText">Käyttöoikeudet poistettu kaikilta sivustoilta</string>
+    <string name="permissionPerWebsiteText" instruction="Placeholder is the name of a website">Oikeudet: %1$s </string>
+    <string name="permissionsPerWebsiteAskSetting">Kysy joka kerta</string>
+    <string name="permissionsPerWebsiteDenySetting">Estä</string>
+    <string name="permissionsPerWebsiteAllowSetting">Salli</string>
+    <string name="permissionsPerWebsiteAskDisabledSetting">Poistettu käytöstä kaikilla sivustoilla</string>
+    <string name="permissionsPerWebsiteSelectorDialogTitle" instruction="%1$s is the name of a permissions and %2$s is the name of a website, i.e. Camera permission for example.com">%1$s: käyttöoikeus – lupa %2$s</string>
+
+    <!-- Tiered permission dialog -->
+    <string name="sitePermissionsDialogAllowWhileUsingSiteButton" instruction="Button granting a website a permission for every visit, until the user changes it">Salli sivustoa käytettäessä</string>
+    <string name="sitePermissionsDialogAllowThisTimeButton" instruction="Button granting a website a permission for the current visit only">Salli tällä kertaa</string>
+    <string name="sitePermissionsDialogNeverAllowButton" instruction="Button refusing a website a permission for every visit, until the user changes it">Älä koskaan salli</string>
+    <string name="sitePermissionsTieredLocationDialogTitle" instruction="Placeholder is a website">\"%1$s\"-verkkosivusto haluaa käyttää sijaintiasi</string>
+    <string name="sitePermissionsTieredDdgLocationDialogTitle" instruction="Placeholder is a website">\"%1$s\" haluaa käyttää sijaintiasi</string>
+    <string name="sitePermissionsTieredDdgLocationDialogSubtitle">Anonymisoimme sijaintisi ja käytämme sitä tarjotaksemme parempia tuloksia lähempää sinua.</string>
+    <string name="sitePermissionsTieredCameraDialogTitle" instruction="Placeholder is a website">\"%1$s\"-verkkosivusto haluaa käyttää kameraasi</string>
+    <string name="sitePermissionsTieredMicDialogTitle" instruction="Placeholder is a website">Sivusto \"%1$s\" haluaa käyttää mikrofonia</string>
+    <string name="sitePermissionsTieredMicAndCameraDialogTitle" instruction="Placeholder is a website">\"%1$s\"-verkkosivusto haluaa käyttää kameraasi ja mikrofoniasi</string>
+    <string name="sitePermissionsTieredThirdPartyLocationDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" haluaa käyttää sijaintiasi tällä verkkosivustolla</string>
+    <string name="sitePermissionsTieredThirdPartyCameraDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" haluaa käyttää kameraasi tällä verkkosivustolla</string>
+    <string name="sitePermissionsTieredThirdPartyMicDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" haluaa käyttää mikrofoniasi tällä verkkosivustolla</string>
+    <string name="sitePermissionsTieredThirdPartyMicAndCameraDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" haluaa käyttää kameraasi ja mikrofoniasi tällä verkkosivustolla</string>
+    <string name="sitePermissionsTieredThirdPartyDrmDialogTitle" instruction="Placeholder is a third-party website embedded in the website the user is visiting">\"%1$s\" haluaa käyttää DRM-ohjelmistoasi (Digital Rights Management) tällä verkkosivustolla</string>
+    <string name="sitePermissionsTieredDrmDialogSubtitle">Jos et salli, sivustolla olevia videoita ei ehkä voida toistaa, mutta tämä sivusto ei voi käyttää DRM-ohjelmiston tarjoamia laitetunnisteita.</string>
+
+    <!-- Reminder dialog -->
+    <string name="sitePermissionsDialogChangePermissionsButton" instruction="Button opening the DuckDuckGo permission settings in the Android system settings app">Muuta käyttöoikeuksia</string>
+    <string name="sitePermissionsTieredSystemDeniedLocationTitle">DuckDuckGo tarvitsee sijaintisi käyttöoikeuden</string>
+    <string name="sitePermissionsTieredSystemDeniedLocationContent">Sijainnin käyttöoikeudet tarvitaan, jos haluat käyttää sijaintiominaisuuksia tällä sivustolla.</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraTitle">DuckDuckGo tarvitsee kamerasi käyttöoikeuden</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraContent">Kameran käyttöoikeudet tarvitaan, jos haluat käyttää kameratoimintoja tällä sivustolla.</string>
+    <string name="sitePermissionsTieredSystemDeniedMicTitle">DuckDuckGo tarvitsee mikrofonisi käyttöoikeuden</string>
+    <string name="sitePermissionsTieredSystemDeniedMicContent">Mikrofonin käyttöoikeudet tarvitaan, jos haluat käyttää mikrofonitoimintoja tällä sivustolla.</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraAndMicTitle">DuckDuckGo tarvitsee kamerasi ja mikrofonisi käyttöoikeuden</string>
+    <string name="sitePermissionsTieredSystemDeniedCameraAndMicContent">Kameran ja mikrofonin käyttöoikeudet tarvitaan, jos haluat käyttää kamera- ja mikrofonitoimintoja tällä sivustolla.</string>
+
+    <!-- Denial snackbar -->
+    <string name="sitePermissionsTieredLocationDeniedSnackBarMessage">DuckDuckGo ei voinut jakaa sijaintia tämän sivuston kanssa</string>
+    <string name="sitePermissionsTieredCameraDeniedSnackBarMessage">DuckDuckGo ei voinut antaa kameran käyttöoikeutta tälle sivustolle</string>
+    <string name="sitePermissionsTieredMicDeniedSnackBarMessage">DuckDuckGo ei voinut antaa mikrofonin käyttöoikeutta tälle sivustolle</string>
+    <string name="sitePermissionsTieredCameraAndMicDeniedSnackBarMessage">DuckDuckGo ei voinut antaa kameran ja mikrofonin käyttöoikeutta tälle sivustolle</string>
+
+    <!-- Permission settings redesign -->
+    <string name="permissionSettingsAlwaysAllow" instruction="Permission setting option: the site gets the permission without asking">Salli aina</string>
+    <string name="permissionSettingsAskEachTime" instruction="Permission setting option: the site has to ask for the permission every time">Kysy joka kerta</string>
+    <string name="permissionSettingsLocationDialogTitle">Salli sivustojen pyytää sijaintilupaa</string>
+    <string name="permissionSettingsLocationDialogMessage">Jos valitset “Älä koskaan salli”, et voi käyttää sivustoilla tiettyjä ominaisuuksia, kuten karttojen reittiohjeet tai lähellä olevat kaupat.</string>
+    <string name="permissionSettingsCameraDialogTitle">Salli sivustojen pyytää kameran käyttöoikeutta</string>
+    <string name="permissionSettingsCameraDialogMessage">Jos valitset “Älä koskaan salli”, et voi käyttää sivustoilla tiettyjä ominaisuuksia, kuten videokeskustelut.</string>
+    <string name="permissionSettingsMicrophoneDialogTitle">Salli sivustojen pyytää mikrofonin käyttöoikeutta</string>
+    <string name="permissionSettingsMicrophoneDialogMessage">Jos valitset “Älä koskaan salli”, et voi käyttää ominaisuuksia, kuten puhekeskustelut sivustoilla.</string>
+    <string name="permissionSettingsDrmDialogTitle">Salli sivustojen pyytää digitaalisten oikeuksien hallintaa (DRM)</string>
+    <string name="permissionSettingsDrmTitle" instruction="Name of a permission setting for playing protected video content">Digitaalisten oikeuksien hallinta (DRM)</string>
+    <string name="permissionsPerWebsiteRedesignHeader" instruction="Placeholder is the name of a website">Käyttöoikeudet sivustolle %1$s</string>
+    <string name="permissionsPerWebsiteRemovePermissions" instruction="Button that removes all saved permissions for the website shown on the screen">Poista käyttöoikeudet</string>
+    <string name="permissionsRemovedForSiteSnackbar" instruction="Placeholder is the name of a website">Käyttöoikeudet poistettu sivustolta &lt;b&gt;%1$s&lt;/b&gt;</string>
+    <string name="permissionsRemovedForAllSitesSnackbar">Käyttöoikeudet poistettu kaikilta sivustoilta</string>
+    <string name="permissionSettingsDrmDialogMessage">Jos valitset “Älä koskaan salli”, sivustolla olevia videoita ei ehkä voida toistaa.</string>
+
+</resources>

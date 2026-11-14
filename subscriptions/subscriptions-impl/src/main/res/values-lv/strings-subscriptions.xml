@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Atcelt</string>
+    <string name="ok">Labi</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">DuckDuckGo abonements</string>
+    <string name="manageEmail">Pārvaldīt e-pastu</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Atpakaļ uz iestatījumiem</string>
+    <string name="somethingWentWrong">Kaut kas notika nepareizi</string>
+    <string name="somethingWentWrongDescription">Google Play nevarēja apstrādāt tavu pirkumu. Lūdzu, mēģini vēlreiz vēlāk.</string>
+    <string name="youAreSet">Viss ir gatavs.</string>
+    <string name="viewPlans">Skatīt plānus</string>
+    <string name="subscriptionNotFound">Abonements nav atrasts</string>
+    <string name="subscriptionNotFoundDescription">Ar šo Google Play kontu saistītais abonements vairs nav aktīvs.</string>
+    <string name="purchaseRestored">Tavi pirkumi ir atjaunoti.</string>
+    <string name="restoreSubscriptionTitle">Pievieno savu abonementu šai ierīcei</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Pievieno ar Google Play kontu</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Atjauno abonementu Android ierīcēs, izmantojot savu Google Play kontu.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Atjaunot pirkumu</string>
+    <string name="restoreSubscriptionEmailTitle">Pievieno, izmantojot e-pastu</string>
+    <string name="restoreSubscriptionEmailDescription">Saisti e-pasta adresi ar savu abonementu, lai pievienotu to šai ierīcei.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Sākt darbu</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Noņemt abonementu</string>
+    <string name="subscriptionRemoved">Tavs abonements ir noņemts no šīs ierīces</string>
+    <string name="removeFromDevice">Vai noņemt no šīs ierīces?</string>
+    <string name="removeFromDeviceDescription">Šajā ierīcē vairs nevarēsi piekļūt savam abonementam. Tas neatcels tavu abonementu, un tas paliks aktīvs citās tavās ierīcēs.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Tavs mēneša abonements %1$s šajā datumā: %2$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Tavs gada abonements %1$s šajā datumā: %2$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Tavs abonements beidzās šajā datumā: %1$s.</string>
+    <string name="monthlySubscription">Mēneša abonements</string>
+    <string name="yearlySubscription">Gada abonements</string>
+    <string name="renews">atjaunojas</string>
+    <string name="expires">beidzas</string>
+    <string name="activateOnOtherDevices">Pievieno savu abonementu citām ierīcēm</string>
+    <string name="addToDevicePrimaryText">Pievienot ierīcei</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Pievieno savu abonementu citām ierīcēm, izmantojot Google Play vai piesaistot e-pasta adresi.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">Izmanto iepriekš norādīto e-pasta adresi, lai pievienotu abonementu citām ierīcēm DuckDuckGo lietotnē. Iet uz Iestatījumi &gt; Abonementu iestatījumi &gt; Man ir abonements.</string>
+    <string name="editEmailPrimaryText">Rediģēt e-pasta adresi</string>
+    <string name="learnMore">Uzzināt vairāk</string>
+    <string name="privacyProFaq">Nepieciešama palīdzība saistībā ar abonēšanu?</string>
+    <string name="privacyProFaqSecondary">Saņem atbildes uz bieži uzdotiem jautājumiem vai sazinies ar abonēšanas atbalsta dienestu mūsu palīdzības lapās. Funkciju pieejamība atšķiras atkarībā no valsts.</string>
+    <string name="subscriptionStatusSubscribed">Abonēts</string>
+    <string name="privacyPolicyAndTermsOfService">Privātuma politika un Pakalpojumu sniegšanas noteikumi</string>
+    <string name="subscriptionStatusFreeTrial">Bezmaksas izmēģinājuma periods ir aktīvs</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tavs bezmaksas izmēģinājuma periods beidzas %1$s un tajā dienā automātiski pārvēršas par ikmēneša maksas abonementu.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tavs bezmaksas izmēģinājuma periods beidzas %1$s un tajā pašā dienā automātiski pārvēršas par par gada maksas abonementu.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Tava bezmaksas izmēģinājuma versija beidzas %1$s un tā netiks pārvērsta par maksas abonementu.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Abonementa iestatījumi</string>
+    <string name="subscriptionSettingSubscribe">Aizsargā savu savienojumu un identitāti ar vienu abonementu.</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Abonenti saņem mūsu VPN, Personal Information Removal un Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Abonenti saņem mūsu VPN un Identity Theft Restoration.</string>
+
+    <string name="subscriptionSettingGet">Abonē DuckDuckGo</string>
+    <string name="subscriptionSettingTryFreeTrial">Izmēģini bez maksas</string>
+    <string name="subscriptionSettingRestore">Man ir abonements</string>
+    <string name="subscriptionSettingExpired">Tavs DuckDuckGo abonements ir beidzies.</string>
+    <string name="subscriptionSettingExpiredViewPlans">Skatīt plānus</string>
+    <string name="subscriptionSettingSectionSubscription">Abonements</string>
+    <string name="subscriptionSettingRemoveFromDevice">Noņemt no šīs ierīces</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Palīdzība un atbalsts</string>
+    <string name="subscriptionSettingSendFeedback">Sūtīt atsauksmi</string>
+    <string name="subscriptionSettingActivating">Notiek aktivizēšana</string>
+    <string name="subscriptionSettingManagePlan">Pārvaldīt maksājumu</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Viss ir gatavs.</string>
+    <string name="purchaseCompletedText">Tavs pirkums bija veiksmīgs.</string>
+    <string name="purchaseRecoveredText">Tev jau bija abonements, un mēs to tev atguvām.</string>
+    <string name="purchaseErrorTitle">Kaut kas notika nepareizi</string>
+    <string name="purchaseError">Mums ir problēmas ar savienojuma izveidi. Lūdzu, mēģini vēlreiz vēlāk.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Atjaunināt plānu vai atcelt</string>
+    <string name="changePlanDescription">Tavs abonements tika iegādāts Apple App Store veikalā. Lai mainītu plāna vai norēķinu iestatījumus, atver sadaļu Iestatījumi &gt; Apple konts &gt; Abonementi ierīcē, kas pierakstīta tajā pašā Apple kontā, kas izmantots abonementa iegādei.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Atvērt</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Nevar atvērt failu. Pārbaudīt saderīgu lietotni.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Sūtīt atsauksmi</string>
+    <string name="feedbackActionHeader">ATLASĪT KATEGORIJU</string>
+    <string name="feedbackActionReportIssue">Ziņot par problēmu</string>
+    <string name="feedbackActionGeneralFeedback">Vispārīgas atsauksmes</string>
+    <string name="feedbackActionFeatureRequest">Pieprasīt funkciju</string>
+
+    <string name="feedbackGeneralHeader">ATLASĪT KATEGORIJU</string>
+    <string name="feedbackGeneralBrowser">Atsauksmes par pārlūkprogrammu</string>
+    <string name="feedbackGeneralPpro">Privacy Pro</string>
+
+    <string name="feedbackCategoryHeader">ATLASĪT KATEGORIJU</string>
+    <string name="feedbackCategorySubscription">Abonements un maksājumi</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">ATLASĪT KATEGORIJU</string>
+
+    <string name="feedbackSubCategoryVpnConnection">Neizdodas izveidot VPN savienojumu</string>
+    <string name="feedbackSubCategoryVpnSlow">VPN savienojums ir pārāk lēns</string>
+    <string name="feedbackSubCategoryVpnOtherApps">VPN rada problēmas ar citām lietotnēm vai vietnēm</string>
+    <string name="feedbackSubCategoryVpnIot">VPN man neļauj izveidot savienojumu ar vietējo ierīci</string>
+    <string name="feedbackSubCategoryVpnCrash">VPN izraisa pārlūkprogrammas avāriju vai apstāšanos</string>
+    <string name="feedbackSubCategoryVpnOther">Cits</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">Informācija nav pieejama konkrētā vietnē</string>
+    <string name="feedbackSubCategoryPirNotMe">Ieraksti nepieder lietotājam</string>
+    <string name="feedbackSubCategoryPirScanStuck">Skenēšana iestrēgusi</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Noņemšana iestrēgusi</string>
+    <string name="feedbackSubCategoryPirOther">Cits</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Problēma ar piekļuves kodu</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Nevar sazināties ar konsultantu</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Zvans konsultantam nepalīdzēja</string>
+    <string name="feedbackSubCategoryItrOther">Cits</string>
+
+    <string name="feedbackSubCategorySubsOtp">Problēma ar vienreizējo paroli</string>
+    <string name="feedbackSubCategorySubsOther">Kaut kas cits</string>
+
+    <string name="feedbackSubmitVpnHeader">Vai atradi problēmu, kas nav aplūkota mūsu <annotation type="faqs_link">palīdzības centrā</annotation> ? Mēs noteikti gribam par to uzzināt.</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Pastāsti, kas notiek…</string>
+    <string name="feedbackSubmitVpnDisclaimer">"Papildus iepriekš ievadītajai informācijai mēs kopā ar tavām atsauksmēm nosūtām anonimizētu informāciju:\n\n• Vai ir aktīvas noteiktas pārlūkprogrammas funkcijas\n• Apkopoti lietotnes diagnostikas dati (piemēram, kļūdu kodi)\n\nNoklikšķinot uz Iesniegt, tu piekrīti, ka DuckDuckGo var izmantot iesniegto informāciju, lai uzlabotu lietotni."</string>
+    <string name="feedbackSubmitVpnSubmit">Iesniegt</string>
+    <string name="feedbackSubmitCompletedMessage">Paldies! Tava atsauksme ir iesniegta.</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Lūdzu, sniedz atsauksmes…</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Kādu funkciju tu vēlētos redzēt?</string>
+    <string name="feedbackSubmitContactSupport">Vai tev vajadzīga palīdzība? <annotation type="support_link">Sazinies ar atbalsta dienestu</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Abonementi</string>
+    <string name="activitySubscriptionSettings">Abonementa iestatījumi</string>
+    <string name="activityActivateSubscription">Man ir abonements</string>
+    <string name="activitySendFeedback">Sūtīt atsauksmi</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Abonenti saņem mūsu VPN un uzlabotus mākslīgā intelekta modeļus Duck.ai. Personal Information Removal un Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Abonenti saņem mūsu VPN, uzlabotus MI modeļus Duck.ai un Identity Theft Restoration.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Nevaru piekļūt tikai abonentiem paredzētajiem Duck.ai modeļiem.</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Nevaru piekļūt Duck.ai ar savu abonementu citās pārlūkprogrammās.</string>
+    <string name="feedbackSubCategoryDuckAiOther">Citas Duck.ai atsauksmes</string>
+
+    <string name="subscriptionSettingSectionTitle">DuckDuckGo abonements</string>
+    <string name="subscriptionSettingSubscribeSecure">Nodrošini sava Wi-Fi drošību un privāti tērzē ar uzlabotiem mākslīgā intelekta modeļiem</string>
+
+    <string name="feedbackGeneralSubscription">Abonements</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Nevar piekļūt Plus vai Pro līmeņa funkcijām</string>
+    <string name="subscriptionsProUpgradeTitle">Jaunināt uz Pro</string>
+    <string name="subscriptionsProUpgradeMessage">Piekļūsti jaudīgākam MI</string>
+    <string name="subscriptionSettingSectionManageSubscription">Pārvaldīt abonementu</string>
+    <string name="subscriptionSettingViewAllPlans">Skatīt visus plānus</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Pārvaldīt maksājumu vai atcelt</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">Tavs plāns tiks pazemināts uz %1$s šādā datumā: %2$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Tavs plāns tiks jaunināts uz %1$s šādā datumā: %2$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Tavs plāns tiks pazemināts uz %1$s šādā datumā: %2$s.</string>
+    <string name="planNamePlusMonthly">Plus ik mēnesi</string>
+    <string name="planNamePlusYearly">Plus katru gadu</string>
+    <string name="planNameProMonthly">Pro ik mēnesi</string>
+    <string name="planNameProYearly">Pro katru gadu</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Abonementa derīguma termiņš beidzies</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Abonements ir aktīvs</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Atkāpties no līguma</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">Vari atteikties un saņemt pilnu atmaksu līdz %1$s</string>
+    <string name="subscriptionWithdrawDialogTitle">Vai atteikties no abonementa?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">Tavs %1$s abonements tiks nekavējoties izbeigts, un 14 dienu laikā mēs tev atmaksāsim %2$s, izmantojot sākotnējo maksājuma veidu.\n\nVPN, Personal Information Removal un uzlabotie Duck.ai modeļi vairs nedarbosies, tiklīdz apstiprināsi.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Apstiprināt atteikšanos</string>
+    <string name="subscriptionWithdrawDialogKeep">Paturēt abonementu</string>
+    <string name="subscriptionStatusNotSubscribed">Nav abonēts</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">Tu atteicies no abonementa šajā datumā: %1$s.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">Tava %1$s atmaksa tiek apstrādāta.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">Tava atmaksa tiek apstrādāta.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">Mums neizdevās automātiski apstrādāt tavu atteikšanās pieprasījumu. Lūdzu, apmeklē <annotation type="withdrawal_help_link">šo lapu</annotation>, lai pabeigtu atteikšanos.</string>
+
+</resources>

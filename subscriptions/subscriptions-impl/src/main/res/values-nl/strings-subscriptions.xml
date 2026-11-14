@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2023 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="cancel">Annuleren</string>
+    <string name="ok">OK</string>
+    <string name="privacyPro" translatable="false">Privacy Pro</string>
+    <string name="ddg_subscription">DuckDuckGo-abonnement</string>
+    <string name="manageEmail">E-mail beheren</string>
+
+    <!--Restore Subscriptions Activity-->
+    <string name="backToSettings">Terug naar Instellingen</string>
+    <string name="somethingWentWrong">Er is iets misgegaan</string>
+    <string name="somethingWentWrongDescription">Google Play kon je aankoop niet verwerken. Probeer het later opnieuw.</string>
+    <string name="youAreSet">Je bent helemaal klaar.</string>
+    <string name="viewPlans">Abonnementen bekijken</string>
+    <string name="subscriptionNotFound">Abonnement niet gevonden</string>
+    <string name="subscriptionNotFoundDescription">Je abonnement dat aan dit Google Play-account is gekoppeld, is niet langer actief.</string>
+    <string name="purchaseRestored">Je aankopen zijn hersteld.</string>
+    <string name="restoreSubscriptionTitle">Voeg je abonnement toe aan dit apparaat</string>
+    <string name="restoreSubscriptionGooglePlayTitle">Toevoegen via Google Play-account</string>
+    <string name="restoreSubscriptionGooglePlayDescription">Herstel je abonnement op Android-apparaten met je Google Play-account.</string>
+    <string name="restoreSubscriptionGooglePlayGetStarted">Aankoop herstellen</string>
+    <string name="restoreSubscriptionEmailTitle">Toevoegen via e-mail</string>
+    <string name="restoreSubscriptionEmailDescription">Koppel een e-mailadres aan je abonnement om het aan dit apparaat toe te voegen.</string>
+    <string name="restoreSubscriptionEmailGetStarted">Aan de slag</string>
+
+    <!--Settings Subscriptions Activity-->
+    <string name="removeSubscription">Abonnement verwijderen</string>
+    <string name="subscriptionRemoved">Je abonnement is van dit apparaat verwijderd</string>
+    <string name="removeFromDevice">Verwijderen van dit apparaat?</string>
+    <string name="removeFromDeviceDescription">Je hebt niet langer toegang tot je abonnement op dit apparaat. Je abonnement wordt niet opgezegd en het blijft actief op je andere apparaten.</string>
+    <string name="subscriptionsDataMonthly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Je maandabonnement %1$s op %2$s.</string>
+    <string name="subscriptionsDataYearly" instruction="First placeholder is renews or expires, second is a date in format MMMM dd, yyyy">Je jaarabonnement %1$s op %2$s.</string>
+    <string name="subscriptionsExpiredData" instruction="The placeholder is a date in format MMMM dd, yyyy">Je abonnement is verlopen op %1$s.</string>
+    <string name="monthlySubscription">Maandabonnement</string>
+    <string name="yearlySubscription">Jaarabonnement</string>
+    <string name="renews">wordt verlengd</string>
+    <string name="expires">vervalt</string>
+    <string name="activateOnOtherDevices">Voeg je abonnement toe aan andere apparaten</string>
+    <string name="addToDevicePrimaryText">Toevoegen aan apparaat</string>
+    <string name="addToDeviceSecondaryTextWithoutEmail">Voeg je abonnement toe aan je andere apparaten via Google Play of door een e-mailadres te koppelen.</string>
+    <string name="addToDeviceSecondaryTextWithEmail">Gebruik het e-mailadres hierboven om je abonnement toe te voegen op je andere apparaten in de DuckDuckGo-app. Ga naar Instellingen &gt; Abonnementsinstellingen &gt; Ik heb een abonnement.</string>
+    <string name="editEmailPrimaryText">E-mailadres bewerken</string>
+    <string name="learnMore">Meer informatie</string>
+    <string name="privacyProFaq">Hulp nodig bij je abonnement?</string>
+    <string name="privacyProFaqSecondary">Krijg via onze hulppagina\'s antwoorden op veelgestelde vragen of neem er contact op met de klantenservice voor abonnementen. De beschikbaarheid van functies verschilt per land.</string>
+    <string name="subscriptionStatusSubscribed">Geabonneerd</string>
+    <string name="privacyPolicyAndTermsOfService">Privacybeleid en servicevoorwaarden</string>
+    <string name="subscriptionStatusFreeTrial">Gratis proefversie actief</string>
+    <string name="freeTrialMonthlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Je gratis proefperiode eindigt op %1$s en wordt op die dag automatisch omgezet in een maandelijks betaald abonnement.</string>
+    <string name="freeTrialYearlyActiveSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Je gratis proefperiode eindigt op %1$s en wordt op die dag automatisch omgezet in een jaarlijks betaald abonnement.</string>
+    <string name="freeTrialCancelledSubscriptionsData" instruction="Placeholder is a date in format MMMM dd, yyyy">Je gratis proefperiode eindigt op %1$s en wordt niet omgezet naar een betaald abonnement.</string>
+
+    <!--Settings Subscriptions-->
+    <string name="subscriptionSetting">Abonnementinstellingen</string>
+    <string name="subscriptionSettingSubscribe">Bescherm je verbinding en identiteit met één abonnement.</string>
+
+    <string name="subscriptionSettingSubscribeSubtitle">Abonnees krijgen onze VPN, Personal Information Removal en Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeSubtitleRow">Abonnees krijgen onze VPN en Identity Theft Restoration.</string>
+
+    <string name="subscriptionSettingGet">Abonneren op DuckDuckGo</string>
+    <string name="subscriptionSettingTryFreeTrial">Probeer gratis</string>
+    <string name="subscriptionSettingRestore">Ik heb een abonnement</string>
+    <string name="subscriptionSettingExpired">Je DuckDuckGo-abonnement is verlopen</string>
+    <string name="subscriptionSettingExpiredViewPlans">Abonnementen bekijken</string>
+    <string name="subscriptionSettingSectionSubscription">Abonnement</string>
+    <string name="subscriptionSettingRemoveFromDevice">Verwijderen van dit apparaat</string>
+    <string name="subscriptionSettingSectionHelpAndSupport">Hulp en ondersteuning</string>
+    <string name="subscriptionSettingSendFeedback">Verstuur feedback</string>
+    <string name="subscriptionSettingActivating">Bezig met activeren</string>
+    <string name="subscriptionSettingManagePlan">Betaling beheren</string>
+
+    <!--Purchase Subscriptions-->
+    <string name="purchaseCompletedTitle">Je bent klaar.</string>
+    <string name="purchaseCompletedText">Je aankoop is geslaagd.</string>
+    <string name="purchaseRecoveredText">Je had al een abonnement en dat hebben we voor je hersteld.</string>
+    <string name="purchaseErrorTitle">Er is iets misgegaan</string>
+    <string name="purchaseError">Er zijn problemen met de verbinding. Probeer het later opnieuw.</string>
+
+    <!-- PIR Settings-->
+
+    <!-- ITR Settings-->
+    <string name="itrSettingTitle" translatable="false">Identity Theft Restoration</string>
+
+    <!-- Change Plan -->
+    <string name="changePlanTitle">Plan bijwerken of annuleren</string>
+    <string name="changePlanDescription">Je abonnement is aangeschaft via de Apple App Store. Om je abonnement of factureringsinstellingen te wijzigen, ga je naar \'Instellingen\' &gt; \'Apple-account\' &gt; \'Abonnementen\' op een apparaat dat is aangemeld bij hetzelfde Apple-account waarmee je het abonnement hebt gekocht.</string>
+
+    <string name="downloadsDownloadFinishedActionName">Openen</string>
+    <string name="downloadsCannotOpenFileErrorMessage">Kan bestand niet openen. Kijk of er een compatibele app is.</string>
+
+    <!-- Feedback -->
+    <string name="feedbackTitle">Verstuur feedback</string>
+    <string name="feedbackActionHeader">SELECTEER EEN CATEGORIE</string>
+    <string name="feedbackActionReportIssue">Een probleem melden</string>
+    <string name="feedbackActionGeneralFeedback">Algemene feedback</string>
+    <string name="feedbackActionFeatureRequest">Een functie aanvragen</string>
+
+    <string name="feedbackGeneralHeader">SELECTEER EEN CATEGORIE</string>
+    <string name="feedbackGeneralBrowser">Browserfeedback</string>
+    <string name="feedbackGeneralPpro">Privacy Pro</string>
+
+    <string name="feedbackCategoryHeader">SELECTEER EEN CATEGORIE</string>
+    <string name="feedbackCategorySubscription">Abonnementen en betalingen</string>
+    <string name="feedbackCategoryVpn">VPN</string>
+    <string name="feedbackCategoryPir" translatable="false">Personal Information Removal</string>
+    <string name="feedbackCategoryItr" translatable="false">Identity Theft Restoration</string>
+    <string name="feedbackSubCategoryHeader">SELECTEER EEN CATEGORIE</string>
+
+    <string name="feedbackSubCategoryVpnConnection">De VPN kan geen verbinding maken</string>
+    <string name="feedbackSubCategoryVpnSlow">De VPN-verbinding is te traag</string>
+    <string name="feedbackSubCategoryVpnOtherApps">De VPN veroorzaakt problemen met andere apps of websites</string>
+    <string name="feedbackSubCategoryVpnIot">De VPN laat me geen verbinding maken met een lokaal apparaat</string>
+    <string name="feedbackSubCategoryVpnCrash">De VPN zorgt ervoor dat de browser crasht of vastloopt</string>
+    <string name="feedbackSubCategoryVpnOther">Anders</string>
+
+    <string name="feedbackSubCategoryPirNothingOnSpecificSite">De info staat niet op de specifieke website</string>
+    <string name="feedbackSubCategoryPirNotMe">De records behoren niet tot de gebruiker</string>
+    <string name="feedbackSubCategoryPirScanStuck">Scan vastgelopen</string>
+    <string name="feedbackSubCategoryPirRemovalStuck">Verwijdering vastgelopen</string>
+    <string name="feedbackSubCategoryPirOther">Anders</string>
+
+    <string name="feedbackSubCategoryItrAccessCode">Probleem met toegangscode</string>
+    <string name="feedbackSubCategoryItrCantContactAdvisor">Ik kan geen contact opnemen met adviseur</string>
+    <string name="feedbackSubCategoryItrAdvisorUnhelpful">Telefoontje naar adviseur hielp niet</string>
+    <string name="feedbackSubCategoryItrOther">Anders</string>
+
+    <string name="feedbackSubCategorySubsOtp">Probleem met eenmalig wachtwoord</string>
+    <string name="feedbackSubCategorySubsOther">Iets anders</string>
+
+    <string name="feedbackSubmitVpnHeader">Heb je een probleem gevonden dat niet in ons <annotation type="faqs_link">helpcentrum</annotation> wordt besproken? We willen er zeker meer over weten.</string>
+    <string name="feedbackSubmitVpnDescriptionHint">Vertel ons wat er aan de hand is …</string>
+    <string name="feedbackSubmitVpnDisclaimer">"Naast de gegevens die je hierboven invult, sturen we ook geanonimiseerde informatie mee met je feedback:\n\n- Of bepaalde browserfuncties actief zijn\n- Samengevoegde app-diagnoses (bijv. foutcodes)\n\nDoor op 'Verzenden' te klikken, ga je ermee akkoord dat DuckDuckGo de ingediende informatie kan gebruiken om de app te verbeteren."</string>
+    <string name="feedbackSubmitVpnSubmit">Verzend</string>
+    <string name="feedbackSubmitCompletedMessage">Dank je wel! Feedback verzonden.</string>
+
+    <string name="feedbackSubmitGeneralDescriptionHint">Deel je feedback met ons …</string>
+    <string name="feedbackSubmitFeatureRequestDescriptionHint">Welke functie wil je zien?</string>
+    <string name="feedbackSubmitContactSupport">Hulp nodig? <annotation type="support_link">Neem contact op met ondersteuning</annotation>.</string>
+
+    <!-- Activity titles -->
+    <string name="activitySubscriptions">Abonnementen</string>
+    <string name="activitySubscriptionSettings">Abonnementinstellingen</string>
+    <string name="activityActivateSubscription">Ik heb een abonnement</string>
+    <string name="activitySendFeedback">Verstuur feedback</string>
+
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitle">Abonnees krijgen onze VPN en geavanceerde AI-modellen in Duck.ai, Personal Information Removal en Identity Theft Restoration.</string>
+    <string name="subscriptionSettingSubscribeWithDuckAiSubtitleRow">Abonnees krijgen onze VPN, geavanceerde AI-modellen in Duck.ai en Identity Theft Restoration.</string>
+
+    <string name="feedbackCategoryDuckAi">Duck.ai</string>
+    <string name="feedbackSubCategoryDuckAiSubscriberModels">Geen toegang tot de alleen voor abonnees beschikbare Duck.ai-modellen</string>
+    <string name="feedbackSubCategoryDuckAiLoginThirdPartyBrowser">Ik kan Duck.ai niet openen met mijn abonnement in andere browsers.</string>
+    <string name="feedbackSubCategoryDuckAiOther">Andere feedback over Duck.ai</string>
+
+    <string name="subscriptionSettingSectionTitle">DuckDuckGo-abonnement</string>
+    <string name="subscriptionSettingSubscribeSecure">Beveilig je wifi en chat privé met geavanceerde AI-modellen</string>
+
+    <string name="feedbackGeneralSubscription">Abonnement</string>
+
+    <!-- Pro tier changes -->
+    <string name="feedbackSubCategorySubsUnableToAccessProFeatures">Toegang tot Plus- of Pro-functies niet mogelijk</string>
+    <string name="subscriptionsProUpgradeTitle">Upgraden naar Pro</string>
+    <string name="subscriptionsProUpgradeMessage">Ontgrendel krachtigere AI</string>
+    <string name="subscriptionSettingSectionManageSubscription">Abonnement beheren</string>
+    <string name="subscriptionSettingViewAllPlans">Bekijk alle abonnementen</string>
+    <string name="subscriptionSettingManagePaymentOrCancel">Betaling beheren of annuleren</string>
+
+    <!-- Pending plan changes -->
+    <string name="subscriptionPendingPlanChangeDowngradePanel" instruction="First placeholder is the Tier name (e.g. Plus, Pro), second is date in short format (month day)">Je abonnement wordt op %2$s gedowngraded naar %1$s.</string>
+    <string name="subscriptionPendingPlanChangeUpgrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Je abonnement wordt op %2$s geüpgraded naar %1$s.</string>
+    <string name="subscriptionPendingPlanChangeDowngrade" instruction="First placeholder is the plan name (e.g. Plus Yearly), third is a date">Je abonnement wordt op %2$s gedowngraded naar %1$s.</string>
+    <string name="planNamePlusMonthly">Plus Maandelijks</string>
+    <string name="planNamePlusYearly">Plus Jaarlijks</string>
+    <string name="planNameProMonthly">Pro Maandelijks</string>
+    <string name="planNameProYearly">Pro per jaar</string>
+    <string name="tierPlusName" translatable="false">PLUS</string>
+    <string name="tierProName" translatable="false">PRO</string>
+
+    <!-- Content Descriptions -->
+    <string name="subscriptionExpiredStatusIconContentDescription">Abonnement is verlopen</string>
+    <string name="subscriptionActiveStatusIconContentDescription">Abonnement actief</string>
+
+    <!-- Right of withdrawal -->
+    <string name="subscriptionSettingWithdraw" instruction="Subscription settings option to use the legal right of withdrawal: cancel the subscription within 14 days of purchase and get a full refund">Overeenkomst herroepen</string>
+    <string name="subscriptionSettingWithdrawDeadline" instruction="Placeholder is the last date the user can withdraw, e.g. October 15, 2026">Je kunt je tot en met %1$s terugtrekken en krijgt het volledige bedrag terug</string>
+    <string name="subscriptionWithdrawDialogTitle">Je abonnement opzeggen?</string>
+    <string name="subscriptionWithdrawDialogMessage" instruction="First placeholder is the subscription tier name, e.g. Plus or Pro. Second placeholder is the refund amount with currency, e.g. €9.99">Je %1$s-abonnement eindigt direct en je krijgt %2$s binnen 14 dagen teruggestort via je oorspronkelijke betaalmethode.\n\nVPN, Personal Information Removal en geavanceerde Duck.ai-modellen werken niet meer zodra je bevestigt.</string>
+    <string name="subscriptionWithdrawDialogConfirm">Opname bevestigen</string>
+    <string name="subscriptionWithdrawDialogKeep">Abonnement behouden</string>
+    <string name="subscriptionStatusNotSubscribed">Niet geabonneerd</string>
+    <string name="subscriptionWithdrawnTitle" instruction="Placeholder is the date the user withdrew from their subscription, e.g. October 6, 2026">Je hebt je op %1$s teruggetrokken.</string>
+    <string name="subscriptionWithdrawnRefund" instruction="Placeholder is the refund amount with currency, e.g. €9.99">Je terugbetaling van %1$s wordt verwerkt.</string>
+    <string name="subscriptionWithdrawnRefundWithoutAmount">Je terugbetaling wordt verwerkt.</string>
+    <string name="subscriptionWithdrawErrorAlert" instruction="Error shown when the withdrawal request fails. The text inside the annotation is a link to a help page">We konden je opzegging niet automatisch verwerken. Ga naar <annotation type="withdrawal_help_link">deze pagina</annotation> om je opzegging af te ronden.</string>
+
+</resources>

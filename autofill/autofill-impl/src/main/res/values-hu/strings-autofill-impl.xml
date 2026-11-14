@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Beállítás a Beállításokban</b></string>
+
+    <string name="saveLoginDialogButtonSave">Jelszó mentése</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Jelszó mentése</string>
+    <string name="saveLoginDialogNotNow">Mentés mellőzése</string>
+    <string name="saveLoginDialogTitle">Mented a jelszavad?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">További lehetőségek</string>
+
+    <string name="useSavedLoginDialogTitle">Mentett jelszót használsz?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">%1$s jelszava</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Webhely jelszava</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">Erről a webhelyről</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">Innen: %1$s</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Jelszó frissítése</string>
+    <string name="updateLoginDialogButtonNotNow">Ne mentse</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Frissíted a felhasználónevet?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Felhasználónév frissítése</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Frissíted \n%1$s jelszavát?</string>
+    <string name="updateLoginUpdatePasswordExplanation">A DuckDuckGo frissíti az eszközödön ezt a tárolt jelszót.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Automatikus kitöltési párbeszédablak bezárása</string>
+
+    <string name="credentialManagementEditUsernameHint">Felhasználónév</string>
+    <string name="credentialManagementEditPasswordHint">Jelszó</string>
+    <string name="credentialManagementEditWebsiteHint">Webhely URL-címe</string>
+    <string name="credentialManagementEditNotesHint">Megjegyzések</string>
+    <string name="credentialManagementEditButtonDelete">Törlés</string>
+    <string name="credentialManagementEditButtonSaveChanges">Módosítások mentése</string>
+    <string name="credentialManagementEditButtonCopyUsername">Felhasználónév másolása</string>
+    <string name="credentialManagementEditButtonCopyPassword">Jelszó másolása</string>
+
+    <string name="credentialManagementViewMenuEdit">Szerkesztés</string>
+    <string name="credentialManagementViewMenuDelete">Törlés</string>
+
+    <string name="credentialManagementSuggestionsLabel">Javasolt</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">A jelszavak automatikus kitöltése nem érhető el, mert az Android WebView verziója elavult vagy nem kompatibilis.</string>
+
+    <string name="autofillManagementSearchClearDescription">Megadott keresés törlése</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Nincs találat erre: „%1$s”</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Mégsem</string>
+    <string name="autofillDeleteLoginDialogDelete">Törlés</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Felhasználónév másolva</string>
+    <string name="autofillManagementPasswordCopied">Jelszó másolva</string>
+
+    <string name="autofill_password_generation_offer_title">A DuckDuckGo által kínált erős jelszót kívánsz használni?</string>
+    <string name="autofill_password_generation_offer_accept">Erős jelszó használata</string>
+    <string name="autofill_password_generation_offer_decline">Saját létrehozása</string>
+
+    <string name="deviceNotSupportedTitle">Az eszköz nem támogatott</string>
+
+    <string name="autofillManagementUndoDeletion">Visszavonás</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Webhely megnyitása</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Deaktiválod a privát Duck-címet?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">A megadott %1$s címre küldött e-maileket többé nem továbbítjuk a postafiókodba.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Deaktiválás</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Újraaktiválod a privát Duck-címet?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">A megadott %1$s címre küldött e-maileket ismét továbbítjuk a postafiókodba.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Újraaktiválás</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Aktív</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Aktiválás…</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Deaktiválva</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Deaktiválás…</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">A cím kezelése átmenetileg nem elérhető.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated.">Az eszközön található Duck-cím kezeléséhez <annotation type="enable_duck_address">engedélyezd az e-mail-védelmet</annotation>.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">E-mail-cím kiválasztása</string>
+    <string name="autofillTooltipUseYourAliasDescription">E-mail-nyomkövetők blokkolása</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Privát Duck-cím létrehozása</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">E-mail-nyomkövetők blokkolása, és a cím elrejtése</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Ez bármikor kikapcsolható a beállításokban.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Mentés folytatása</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Letiltás</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">E-mail elrejtése és\nnyomkövetők blokkolása</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">E-mail védelem</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Hozz létre egy egyedi, véletlenszerű címet, amely eltávolítja a rejtett nyomkövetőket is, és a postafiókodba továbbítja az e-maileket.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">E-mail védelme</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Ne jelenjen meg újra</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Ha most kilépsz, a Duck-címed nem lesz mentve</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Beállítás folytatása</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Kilépés a beállításokból</string>
+
+    <string name="autofillManagementScreenTitle">Jelszavak</string>
+    <string name="autofillManagementScreenTitleNew">Jelszavak és automatikus kitöltés</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Még nincsenek mentett jelszavak</string>
+    <string name="credentialManagementAutofillToggleLabel">Jelszavak mentése és automatikus kitöltése</string>
+    <string name="credentialManagementAutofillSubtitle">A jelszavak titkosítva vannak. Rajtad kívül senki sem láthatja őket, még mi sem. <annotation type="learn_more_link">További tudnivalók</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Jelszókezelő biztonsága</string>
+    <string name="saveLoginDialogSubtitle">Tárold biztonságosan a jelszavaidat az eszközödön a DuckDuckGo Jelszavak és automatikus kitöltés funkciójával.</string>
+    <string name="autofillManagementAddLogin">Jelszó hozzáadása</string>
+    <string name="credentialManagementEditLoginTitleHint">Cím</string>
+    <string name="autofillManagementDeletedConfirmation">Jelszó törölve</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Utolsó frissítés: %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Továbbra is szeretnéd menteni a jelszavakat?</string>
+    <string name="deviceNotSupportedSubtitle">A jelszavak biztonságos tárolásához az eszközödön kell titkosítanunk és tárolnunk azokat. Mivel az eszközöd nem támogatja a titkosított tárhelyet, a jelszavak mentése és automatikus kitöltése nem érhető el.</string>
+    <string name="autofill_password_generation_offer_message">A jelszavakat az eszközöd biztonságosan tárolja.</string>
+    <string name="autofillManagementSearchLogins">Jelszavak keresése</string>
+    <string name="biometric_prompt_title">Jelszavak zárolva</string>
+    <string name="autofill_auth_text_for_access">Oldd fel az eszközt a jelszavakhoz való hozzáféréshez</string>
+    <string name="managementDisabledModeTitle">Zárd le az eszközt a jelszavak mentéséhez</string>
+    <string name="managementDisabledModeSubtitle">A jelszavak védelméhez az eszköz zárolási mintája, PIN-kód vagy biometrikus adatok szükségesek.</string>
+    <string name="credentialManagementEditTitle">Jelszó szerkesztése</string>
+
+    <string name="credentials_limit_warning"><b>A szinkronizálás szünetel</b>\nElérted a jelszavak maximális számát. A szinkronizálás folytatásához törölj néhányat.\n\n<annotation type="manage_logins">Jelszavak kezelése</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Jelszó-szinkronizálás szüneteltetve</b>\nElérted a jelszavak maximális számát. A szinkronizálás folytatásához törölj néhány jelszót.</string>
+    <string name="credentials_invalid_request_warning"><b>Szinkronizálás szüneteltetve</b>\nEgyes jelszavak helytelen formátumúak vagy túl hosszúak, és nem lettek szinkronizálva.<annotation type="manage_logins">Jelszavak kezelése</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Jelszó-szinkronizálás szüneteltetve</b>\nEgyes jelszavak helytelen formátumúak vagy túl hosszúak, és nem lettek szinkronizálva.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Soha ne kérdezzen rá ennél a webhelynél</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Nem, köszönöm</string>
+    <string name="credentialManagementInstructionNeverForThisSite">A kizárt webhelyek visszaállítása esetén a rendszer a jelszavad mentését kéri, amikor legközelebb bejelentkezel ezen webhelyek bármelyikére.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Kizárt webhelyek visszaállítása</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Kizárt webhelyek visszaállítása?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Visszaállítás</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Mégsem</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Minden jelszó törlése</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d jelszó törölve</item>
+        <item quantity="other">%1$d jelszó törölve</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Hitelesítéssel erősítsd meg, hogy minden jelszót törölni szeretnél</string>
+    <string name="autofill_title_text_for_delete_all">Minden jelszó törlése</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">A(z) %1$s webhely jelszava nem szinkronizálható, mert egyik mezője meghaladja a karakterkorlátot.</item>
+        <item quantity="other">A(z) %1$s és %2$d másik webhely jelszavai nem szinkronizálhatók, mert egyes mezőik meghaladják a karakterkorlátot.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Jelszavak kezelése</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">A jelszó törölve lesz erről az eszközről.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">A jelszavad törölve lesz erről az eszközről.</item>
+        <item quantity="other">A jelszavaid törölve lesznek erről az eszközről.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">A jelszó az összes szinkronizált eszközről törölve lesz.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">A jelszavad törölve lesz minden szinkronizált eszközről.</item>
+        <item quantity="other">A jelszavaid törölve lesznek minden szinkronizált eszközről.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Biztosan törlöd ezt a jelszót?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Biztosan törölni szeretnél %1$d jelszót?</item>
+        <item quantity="other">Biztosan törölni szeretnél %1$d jelszót?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Győződj meg róla, hogy továbbra is hozzáférsz a fiókodhoz.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Győződj meg róla, hogy továbbra is hozzáférsz a fiókodhoz.</item>
+        <item quantity="other">Győződj meg róla, hogy továbbra is hozzáférsz a fiókjaidhoz.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Importálhatod a mentett jelszavaidat egy másik böngészőből a DuckDuckGo böngészőjébe.</string>
+
+    <string name="autofillManagementImportPasswords">Jelszavak importálása</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Asztali jelszavak szinkronizálása</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Jelszavak importálásának módja</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Asztali jelszavak szinkronizálásának módja</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">Importálj jelszavakat a DuckDuckGo böngésző asztali verziójába, majd szinkronizáld őket az eszközök között.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Asztali böngésző letöltése</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Mac vagy Windows verziójú DuckDuckGo böngésző letöltése</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Keress privát módon, és blokkold a nyomkövetőket a DuckDuckGo asztali böngészőjével. A letöltéshez nyisd meg ezt a linket a számítógépen.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Szinkronizálás asztali böngészővel</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Importálás az asztali böngészőből:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Nyisd meg Mac vagy Windows rendszeren a DuckDuckGo böngészőt</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Lépj a <b>Beállítások</b> > <b>Jelszavak</b> oldalra]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Válaszd a <b>Jelszavak importálása…</b> lehetőséget, és kövesd az importáláshoz szükséges lépéseket]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">A számítógépre való importálás után beállíthatod a szinkronizálást ezen az eszközön</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Asztali alkalmazás letöltése</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Mac vagy Windows verziójú DuckDuckGo letöltése</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">A számítógépeden lépj a következő lehetőségre:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Automatikus kitöltéssel kapcsolatos probléma jelentése</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Jelentsd névtelenül, hogy az automatikus kitöltés nem működik ezen a webhelyen. Jelszavak megosztására soha nem kerül sor.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Jelented, hogy az automatikus kitöltés nem működik a megnyitni kívánt %1$s webhelyen?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">A DuckDuckGónak küldött jelentések névtelenek, és azokban nem szerepel a felhasználóneved, jelszavad vagy más, személyazonosításra alkalmas adatod.\n\nA jelentés csak a weboldal URL-jét és néhány automatikus kitöltési beállítás állapotát tartalmazza.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Jelentés küldése</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Mégsem</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Köszönjük! A jelentésed segít nekünk abban, hogy a DuckDuckGo mindenki számára jobb élményt nyújthasson.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Főbb jellemzők</string>
+    <string name="onboardingSaveDialogFeature1Title">Zökkenőmentes bejelentkezés</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Nincs szükség a bejelentkezési adatok megjegyzésére.</string>
+    <string name="onboardingSaveDialogFeature2Title">Biztonságos tárhely</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">A jelszavakat a rendszer titkosítja, az eszközön tárolja, és az Androidhoz használt mintával vagy PIN-kóddal zárolja.</string>
+    <string name="onboardingSaveDialogFeature3Title">Eszközök közötti szinkronizálás</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">Végpontok közötti titkosítást használ, és ha készen áll a használatára, egyszerűen beállítható.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">A jelszó mentése bármikor kikapcsolható.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Beállítások megnyitása</string>
+
+    <string name="newTabPageShortcutPasswords">Jelszavak</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Jelszavak importálása</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d jelszó importálva a Google-ból</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d jelszó importálva CSV-fájlból</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Jelszavak importálása a Google-ból</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Jelszavak importálása a Google-ból</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Asztali jelszavak szinkronizálása</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Asztali jelszavak szinkronizálása</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Jelszavak importálása a Google-ból</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">A Google megkérhet, hogy jelentkezz be, vagy a megerősítéshez add meg a jelszavad.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">A készülék kérheti, hogy a megerősítéshez add meg a PIN-kódodat, jelszavadat vagy az eszköz zárolási mintáját.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Importálás a Google-ból</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Válassz egy CSV-fájlt</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Importálás asztali böngészőből</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Importálás a DuckDuckGóba</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Importálás kész</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Megvan</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">A jelszó importálása nem sikerült</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Kihagyott (ismétlődő vagy érvénytelen): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Importált jelszó: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Jelszavak megnyitása</string>
+    <string name="autofill_service_select_password_activity">Mentett jelszó kiválasztása</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Jelszavak és automatikus kitöltés</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Kizárt webhelyek visszaállítása?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">A kizárt webhelyek visszaállítása esetén a rendszer a jelszavad mentését kéri, amikor legközelebb bejelentkezel ezen webhelyek bármelyikére.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Visszaállítás</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Mégsem</string>
+    <string name="autofillSettingsPasswordsEntry">Jelszavak</string>
+    <string name="autofillSettingsAutofillToggleLabel">Rákérdezés a mentésre és automatikus kitöltésre</string>
+    <string name="autofillSettingsAutofillSubtitle">A jelszavak titkosítva vannak. Rajtad kívül senki sem láthatja őket, még mi sem. <annotation type="learn_more_link">További tudnivalók</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Jelszavak importálása</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Jelszavak importálása a Google-ból</string>
+    <string name="autofillSettingsImportFromDesktopSync">Asztali jelszavak szinkronizálása</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Kizárt webhelyek visszaállítása</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Hozd át a jelszavaidat a&lt;br /&gt;Google-ból a DuckDuckGóba</string>
+    <string name="passwords_import_promo_subtitle">Gyorsan és biztonságosan importáld jelszavaidat a DuckDuckGóba. A Google megkérhet, hogy add meg a jelszavad.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Gyorsan és biztonságosan importáld jelszavaidat a DuckDuckGóba. A készülék kérheti, hogy a megerősítéshez add meg a PIN-kódodat, jelszavadat vagy az eszköz zárolási mintáját.</string>
+    <string name="passwords_import_promo_action">Importálás a Google-ból</string>
+    <string name="passwords_import_promo_in_browser_title">Hozd át a jelszavaidat a&lt;br /&gt;Google-ból a DuckDuckGóba</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Importáld a jelszavaidat a Google-ból a DuckDuckGóba</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Ne kérdezzen rá újra</string>
+    <string name="passwords_import_promo_in_settings_title">Jelszavak importálása a Google-ból</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Elrejtés</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Importálás a DuckDuckGóba</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Chrome-ból importálva</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Könyvjelzők importálása a Google-ből</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">A Google megkérhet, hogy jelentkezz be, vagy a megerősítéshez add meg a jelszavad.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Importálás a Google-ból</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Válaszd ki a könyvjelzőfájlt…</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Könyvjelzők importálása</string>
+    <string name="importBookmarksProgressTitle">Importálás a Google-ből…</string>
+    <string name="importBookmarksProgressSubtitle">Ne zárd be ezt a képernyőt, és várj türelemmel – nem fog tovább tartani egy-két percnél.</string>
+    <string name="importBookmarksProgressInfoMessage1">A Google megkérhet, hogy jelentkezz be, vagy a megerősítéshez add meg a jelszavad.</string>
+    <string name="importBookmarksProgressInfoMessage2">Előfordulhat, hogy a Google küld neked egy e-mailt, amelyben megerősíti, hogy a könyvjelzőid exportálásra kerülnek.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Megszakítod az importálást?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Ha most megszakítod, nem lesznek importálva a könyvjelzőid.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Importálás megszakítása</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Folytatás</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">%1$d könyvjelző</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Bezárás</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Hiba történt</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Kérlek, győződj meg róla, hogy csatlakozol az internethez, és próbáld újra.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Importálás kész!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Várj türelemmel – hagyd nyitva ezt az ablakot. Nem fog tovább tartani egy-két percnél.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">A Google megkérhet, hogy add meg a jelszavad.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">A Google küld neked egy e-mailt, amelyben megerősíti, hogy az adataid exportálásra kerültek. Nincs semmi teendőd.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Importálás kész!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Importált könyvjelzők: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Hozd át a jelszavaidat a Google-ból a DuckDuckGóba.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Jelszavak importálása a Google-ból</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Hozd át a könyvjelzőidet a Google-ból a DuckDuckGóba.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Könyvjelzők importálása a Google-ből</string>
+
+</resources>

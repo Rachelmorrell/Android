@@ -1,0 +1,1026 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.browser.newtab
+
+import androidx.lifecycle.LifecycleOwner
+import app.cash.turbine.test
+import com.duckduckgo.app.browser.newtab.NewTabPageViewModel.Command
+import com.duckduckgo.app.browser.remotemessage.CommandActionMapper
+import com.duckduckgo.app.cta.db.DismissedCtaDao
+import com.duckduckgo.app.cta.model.CtaId.ADD_WIDGET
+import com.duckduckgo.app.cta.ui.CtaViewModel
+import com.duckduckgo.app.generalsettings.showonapplaunch.rmf.AfterIdleMessageTriggerProvider
+import com.duckduckgo.app.settings.db.SettingsDataStore
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.ui.view.MessageCta
+import com.duckduckgo.common.utils.playstore.PlayStoreUtils
+import com.duckduckgo.mobile.android.R
+import com.duckduckgo.mobile.android.app.tracking.AppTrackingProtection
+import com.duckduckgo.promptscoordinator.api.PromptExposureReporter
+import com.duckduckgo.promptscoordinator.api.PromptType
+import com.duckduckgo.promptscoordinator.api.PromptsCoordinator
+import com.duckduckgo.remote.messaging.api.Action
+import com.duckduckgo.remote.messaging.api.Content
+import com.duckduckgo.remote.messaging.api.MessageTrigger
+import com.duckduckgo.remote.messaging.api.RemoteMessage
+import com.duckduckgo.remote.messaging.api.RemoteMessageModel
+import com.duckduckgo.remote.messaging.api.Surface
+import com.duckduckgo.remote.messaging.impl.pixels.RemoteMessagingPixelName
+import com.duckduckgo.savedsites.api.SavedSitesRepository
+import com.duckduckgo.savedsites.api.models.SavedSite
+import com.duckduckgo.sync.api.engine.SyncEngine
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoMoreInteractions
+import org.mockito.kotlin.whenever
+
+class NewTabPageViewModelTest {
+
+    @get:Rule
+    var coroutinesTestRule = CoroutineTestRule()
+
+    private var mockLifecycleOwner: LifecycleOwner = mock()
+    private var mockSavedSitesRepository: SavedSitesRepository = mock()
+    private var mockSyncEngine: SyncEngine = mock()
+    private var mockCommandActionMapper: CommandActionMapper = mock()
+    private var mockPlaystoreUtils: PlayStoreUtils = mock()
+    private var mockRemoteMessageModel: RemoteMessageModel = mock()
+    private var mockAfterIdleMessageTriggerProvider: AfterIdleMessageTriggerProvider = mock()
+    private var mockDismissedCtaDao: DismissedCtaDao = mock()
+    private val mockSettingsDataStore: SettingsDataStore = mock()
+    private val mockLowPriorityMessagingModel: LowPriorityMessagingModel = mock()
+    private val mockAppTrackingProtection: AppTrackingProtection = mock()
+    private val pixel: Pixel = mock()
+    private val mockCtaViewModel: CtaViewModel = mock()
+    private val mockPromptsCoordinator: PromptsCoordinator = mock()
+    private val mockPromptExposureReporter: PromptExposureReporter = mock()
+    private val tabNextStepsState = TabNextStepsState()
+
+    private lateinit var testee: NewTabPageViewModel
+
+    @Before
+    fun setUp() = runTest {
+        whenever(mockSavedSitesRepository.getFavorites()).thenReturn(flowOf(emptyList()))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(null))
+        whenever(mockAfterIdleMessageTriggerProvider.activeTrigger()).thenReturn(flowOf(null))
+        whenever(mockAppTrackingProtection.isEnabled()).thenReturn(false)
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(false)
+        whenever(mockDismissedCtaDao.exists(ADD_WIDGET)).thenReturn(false)
+        // Default: the prompt surface is free, so RMF claims are granted.
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(true)
+
+        testee = createTestee()
+    }
+
+    private fun createTestee(
+        showLogo: Boolean = true,
+        browserMode: BrowserMode = BrowserMode.REGULAR,
+    ): NewTabPageViewModel {
+        return NewTabPageViewModel(
+            showDaxLogo = showLogo,
+            tabNextStepsState = tabNextStepsState,
+            dispatchers = coroutinesTestRule.testDispatcherProvider,
+            remoteMessagingModel = mockRemoteMessageModel,
+            afterIdleMessageTriggerProvider = mockAfterIdleMessageTriggerProvider,
+            playStoreUtils = mockPlaystoreUtils,
+            savedSitesRepository = mockSavedSitesRepository,
+            syncEngine = mockSyncEngine,
+            commandActionMapper = mockCommandActionMapper,
+            dismissedCtaDao = mockDismissedCtaDao,
+            settingsDataStore = mockSettingsDataStore,
+            lowPriorityMessagingModel = mockLowPriorityMessagingModel,
+            appTrackingProtection = mockAppTrackingProtection,
+            pixel = pixel,
+            ctaViewModel = mockCtaViewModel,
+            promptsCoordinator = mockPromptsCoordinator,
+            promptExposureReporter = mockPromptExposureReporter,
+            browserMode = browserMode,
+        )
+    }
+
+    @Test
+    fun whenActiveTriggerIsAfterIdleThenObservesMessagesWithThatTrigger() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockAfterIdleMessageTriggerProvider.activeTrigger()).thenReturn(flowOf(MessageTrigger.AFTER_IDLE))
+        // Only the AFTER_IDLE overload returns the message; the no-trigger default (stubbed in setUp) returns
+        // null, so the message surfacing proves the VM threaded AFTER_IDLE into observeActiveMessages.
+        whenever(mockRemoteMessageModel.observeActiveMessages(MessageTrigger.AFTER_IDLE)).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertEquals(remoteMessage, expectMostRecentItem().message)
+        }
+    }
+
+    @Test
+    fun whenPromptSurfaceClaimRefusedThenActiveMessageIsSuppressed() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(false)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertNull(expectMostRecentItem().message)
+        }
+    }
+
+    @Test
+    fun whenPromptSurfaceClaimGrantedThenActiveMessageIsShownAndClaimNotReleased() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertEquals(remoteMessage, expectMostRecentItem().message)
+        }
+        verify(mockPromptsCoordinator, never()).onClaimDone(PromptType.NTP_CARD)
+        verify(mockPromptsCoordinator, never()).onClaimCancelled(PromptType.NTP_CARD)
+    }
+
+    @Test
+    fun whenNextStepsMessageIsActiveAndOnboardingCompleteThenShowNextStepsIsTrue() = runTest {
+        val remoteMessage = aNextStepsMessage()
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        tabNextStepsState.onNewTabPageShownAfterOnboarding()
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            val state = expectMostRecentItem()
+            assertTrue(state.showNextSteps)
+            assertFalse(state.shouldShowLogo)
+        }
+    }
+
+    @Test
+    fun whenNextStepsMessageIsActiveAndOnboardingNotCompleteThenShowNextStepsIsFalse() = runTest {
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertFalse(expectMostRecentItem().showNextSteps)
+        }
+    }
+
+    @Test
+    fun whenNextStepsMessageClaimIsRefusedThenShowNextStepsIsFalseAndLogoIsShown() = runTest {
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        tabNextStepsState.onNewTabPageShownAfterOnboarding()
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(false)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            val state = expectMostRecentItem()
+            assertFalse(state.showNextSteps)
+            assertTrue(state.shouldShowLogo)
+        }
+    }
+
+    @Test
+    fun whenActiveMessageIsNotNextStepsThenShowNextStepsIsFalse() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertFalse(expectMostRecentItem().showNextSteps)
+        }
+    }
+
+    @Test
+    fun whenTabHasNotAllowedNextStepsThenNextStepsAreNotShownOrClaimed() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            val state = expectMostRecentItem()
+            assertFalse(state.showNextSteps)
+            assertNull(state.message)
+        }
+        verify(mockPromptsCoordinator, never()).tryClaim(PromptType.NTP_CARD)
+    }
+
+    @Test
+    fun whenTabAllowsNextStepsAfterPageWasUpdatedThenNextStepsAreShown() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+        testee.onStart(mockLifecycleOwner)
+
+        tabNextStepsState.onNewTabPageShownAfterOnboarding()
+
+        testee.viewState.test {
+            assertTrue(expectMostRecentItem().showNextSteps)
+        }
+    }
+
+    @Test
+    fun whenOnboardingBubbleWasShownInThisTabThenNextStepsAreNotShownOrClaimedAfterOnboarding() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+        tabNextStepsState.onOnboardingBubbleShown()
+        tabNextStepsState.onNewTabPageShownAfterOnboarding()
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            val state = expectMostRecentItem()
+            assertFalse(state.showNextSteps)
+            assertNull(state.message)
+        }
+        verify(mockPromptsCoordinator, never()).tryClaim(PromptType.NTP_CARD)
+    }
+
+    @Test
+    fun whenOnlyTheLastOnboardingDialogIsRecordedThenNextStepsAreShown() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockCtaViewModel.areInContextDaxDialogsCompleted()).thenReturn(false)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(aNextStepsMessage()))
+        tabNextStepsState.onNewTabPageShownAfterOnboarding()
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertTrue(expectMostRecentItem().showNextSteps)
+        }
+    }
+
+    @Test
+    fun whenTabHasNotAllowedNextStepsThenOtherMessagesAreStillShown() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            assertEquals(remoteMessage, expectMostRecentItem().message)
+        }
+    }
+
+    private fun aNextStepsMessage() = RemoteMessage(
+        id = "android_complete_your_setup",
+        content = Content.ActionableItems(titleText = "Complete your setup", listItems = emptyList()),
+        matchingRules = emptyList(),
+        exclusionRules = emptyList(),
+        surfaces = listOf(Surface.NEW_TAB_PAGE),
+    )
+
+    @Test
+    fun whenShownMessageLeavesTheScreenThenClaimIsDone() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val messages = MutableSharedFlow<RemoteMessage?>(replay = 1)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(messages)
+
+        testee.onStart(mockLifecycleOwner)
+        messages.emit(remoteMessage)
+        testee.viewState.test {
+            assertEquals(remoteMessage, expectMostRecentItem().message)
+        }
+
+        // The card is dismissed (user action or remote expiry): the active-message flow emits null.
+        messages.emit(null)
+
+        testee.viewState.test {
+            assertNull(expectMostRecentItem().message)
+        }
+        verify(mockPromptsCoordinator).onClaimDone(PromptType.NTP_CARD)
+    }
+
+    @Test
+    fun whenClaimIsRefusedForAShowingCardThenTheSameCardIsNotNewWhenItReturns() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val messages = MutableSharedFlow<RemoteMessage?>(replay = 1)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(messages)
+
+        testee.onStart(mockLifecycleOwner)
+        messages.emit(remoteMessage)
+        testee.viewState.test {
+            assertTrue(expectMostRecentItem().newMessage)
+        }
+
+        // The surface goes to a modal, so the card is suppressed without RMF ever retracting it.
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(false)
+        messages.emit(remoteMessage)
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertNull(it.message)
+                assertFalse(it.newMessage)
+            }
+        }
+
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(true)
+        messages.emit(remoteMessage)
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(remoteMessage, it.message)
+                assertFalse(it.newMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenCardIsShownRepeatedlyThenItsExposureIsReportedOnce() = runTest {
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val messages = MutableSharedFlow<RemoteMessage?>(replay = 1)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(messages)
+
+        testee.onStart(mockLifecycleOwner)
+        messages.emit(remoteMessage)
+        messages.emit(remoteMessage)
+        testee.viewState.test { expectMostRecentItem() }
+
+        verify(mockPromptExposureReporter).reportNewTabPageCardShown("id1")
+    }
+
+    @Test
+    fun whenCardLeavesTheScreenThenNoExposureIsReportedForTheTransition() = runTest {
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val messages = MutableSharedFlow<RemoteMessage?>(replay = 1)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(messages)
+
+        testee.onStart(mockLifecycleOwner)
+        messages.emit(remoteMessage)
+        messages.emit(null)
+        testee.viewState.test { assertNull(expectMostRecentItem().message) }
+
+        verify(mockPromptExposureReporter).reportNewTabPageCardShown("id1")
+        verifyNoMoreInteractions(mockPromptExposureReporter)
+    }
+
+    @Test
+    fun whenCardIsNotRenderedThenNoExposureIsReported() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        // Home onboarding is incomplete by default, which keeps the card off the page.
+        testee.onStart(mockLifecycleOwner)
+        testee.viewState.test { expectMostRecentItem() }
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(false)
+        createTestee().onStart(mockLifecycleOwner)
+        testee.viewState.test { expectMostRecentItem() }
+
+        verify(mockPromptExposureReporter, never()).reportNewTabPageCardShown(any())
+    }
+
+    @Test
+    fun whenCardIsWaitingForTheSurfaceThenLowPriorityMessageDoesNotTakeTheSlot() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val lowPriorityMessage = LowPriorityMessage.DefaultBrowserMessage(
+            message = MessageCta.Message(
+                topIllustration = R.drawable.mobile_device_default_96,
+                title = "Set as default browser",
+                action = "Set as default",
+                action2 = "Do not ask again",
+            ),
+            onPrimaryAction = {},
+            onSecondaryAction = {},
+            onClose = {},
+            onShown = {},
+        )
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockLowPriorityMessagingModel.getMessage()).thenReturn(lowPriorityMessage)
+        whenever(mockPromptsCoordinator.tryClaim(PromptType.NTP_CARD)).thenReturn(false)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertNull(it.message)
+                assertFalse(it.newMessage)
+                assertNull(it.lowPriorityMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenFireModeThenShowFireTabEmptyStateAndLogoHidden() = runTest {
+        testee = createTestee(browserMode = BrowserMode.FIRE)
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.showFireTabEmptyState)
+                assertFalse(it.shouldShowLogo)
+            }
+        }
+    }
+
+    @Test
+    fun whenRegularModeThenDoesNotShowFireTabEmptyState() = runTest {
+        testee = createTestee(browserMode = BrowserMode.REGULAR)
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.showFireTabEmptyState)
+            }
+        }
+    }
+
+    @Test
+    fun whenViewModelIsInitializedThenViewStateShouldEmitInitialState() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(it.message, remoteMessage)
+                assertTrue(it.favourites?.isEmpty() == true)
+                assertTrue(it.newMessage)
+                assertFalse(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageAvailableAndOnboardingNotCompleteThenMessageNotShown() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(it.message, remoteMessage)
+                assertTrue(it.favourites?.isEmpty() == true)
+                assertTrue(it.newMessage)
+                assertFalse(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageAvailableAndOnboardingCompleteThenMessageShown() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(it.message, remoteMessage)
+                assertTrue(it.favourites?.isEmpty() == true)
+                assertTrue(it.newMessage)
+                assertTrue(it.onboardingComplete)
+                assertNull(it.messageImageFilePath)
+            }
+        }
+    }
+
+    @Test
+    fun whenBubbleDaxDialogsIncompleteAndNoOtherCompletionConditionThenOnboardingNotComplete() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(false)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee = createTestee()
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenHideTipsSetAndBubbleDaxDialogsIncompleteThenOnboardingComplete() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(false)
+        whenever(mockSettingsDataStore.hideTips).thenReturn(true)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee = createTestee()
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenAddWidgetDismissedAndBubbleDaxDialogsIncompleteThenOnboardingComplete() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(false)
+        whenever(mockDismissedCtaDao.exists(ADD_WIDGET)).thenReturn(true)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee = createTestee()
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenBubbleDaxDialogsCompleteThenOnboardingComplete() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee = createTestee()
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageAvailableWithStoredImageAndOnboardingCompleteThenMessageShown() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockRemoteMessageModel.getRemoteMessageImageFile(Surface.NEW_TAB_PAGE)).thenReturn("messageFile")
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(it.message, remoteMessage)
+                assertEquals("messageFile", it.messageImageFilePath)
+                assertTrue(it.favourites?.isEmpty() == true)
+                assertTrue(it.newMessage)
+                assertTrue(it.onboardingComplete)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageShownThenFirePixelAndMarkAsShown() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessageShown()
+
+        verify(mockRemoteMessageModel).onMessageShown(remoteMessage)
+    }
+
+    @Test
+    fun whenRemoteMessageCloseButtonClickedThenFirePixelAndDismiss() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessageCloseButtonClicked()
+
+        verify(mockRemoteMessageModel).onMessageDismissed(remoteMessage)
+        verify(mockRemoteMessageModel).clearMessageImage(Surface.NEW_TAB_PAGE)
+    }
+
+    @Test
+    fun whenRemoteMessagePrimaryButtonClickedThenFirePixelAndDismiss() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        val action = Action.Dismiss
+        whenever(mockRemoteMessageModel.onPrimaryActionClicked(remoteMessage)).thenReturn(Action.Dismiss)
+        whenever(mockCommandActionMapper.asNewTabCommand(action)).thenReturn(NewTabPageViewModel.Command.DismissMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessagePrimaryButtonClicked()
+
+        verify(mockRemoteMessageModel).clearMessageImage(Surface.NEW_TAB_PAGE)
+        testee.commands().test {
+            expectMostRecentItem().also {
+                assertEquals(it, Command.DismissMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageSecondaryButtonClickedThenFirePixelAndDismiss() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        val action = Action.Dismiss
+        whenever(mockRemoteMessageModel.onSecondaryActionClicked(remoteMessage)).thenReturn(Action.Dismiss)
+        whenever(mockCommandActionMapper.asNewTabCommand(action)).thenReturn(NewTabPageViewModel.Command.DismissMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessageSecondaryButtonClicked()
+
+        verify(mockRemoteMessageModel).clearMessageImage(Surface.NEW_TAB_PAGE)
+        testee.commands().test {
+            expectMostRecentItem().also {
+                assertEquals(it, Command.DismissMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageActionButtonClickedThenFirePixelAndDismiss() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        val action = Action.Dismiss
+        whenever(mockRemoteMessageModel.onActionClicked(remoteMessage)).thenReturn(Action.Dismiss)
+        whenever(mockCommandActionMapper.asNewTabCommand(action)).thenReturn(NewTabPageViewModel.Command.DismissMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessageActionButtonClicked()
+
+        verify(mockRemoteMessageModel).clearMessageImage(Surface.NEW_TAB_PAGE)
+        testee.commands().test {
+            expectMostRecentItem().also {
+                assertEquals(it, Command.DismissMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageActionButtonClickedWithShareActionThenImageNotCleared() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        val shareAction = Action.Share("https://example.com", mapOf("title" to "Share Title"))
+        whenever(mockRemoteMessageModel.onActionClicked(remoteMessage)).thenReturn(shareAction)
+        whenever(mockCommandActionMapper.asNewTabCommand(shareAction)).thenReturn(
+            NewTabPageViewModel.Command.SharePromoLinkRMF("https://example.com", "Share Title"),
+        )
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.onMessageActionButtonClicked()
+
+        verify(mockRemoteMessageModel, never()).clearMessageImage(any())
+        testee.commands().test {
+            val command = expectMostRecentItem()
+            assertTrue(command is NewTabPageViewModel.Command.SharePromoLinkRMF)
+        }
+    }
+
+    @Test
+    fun whenOnLowPriorityMessagePrimaryButtonClickedThenGetPrimaryButtonCommandCalledAndCommandSent() = runTest {
+        whenever(mockLowPriorityMessagingModel.getPrimaryButtonCommand()).thenReturn(Command.LaunchDefaultBrowser)
+        testee.onLowPriorityMessagePrimaryButtonClicked()
+
+        verify(mockLowPriorityMessagingModel).getPrimaryButtonCommand()
+        testee.commands().test {
+            expectMostRecentItem().also {
+                assertEquals(it, Command.LaunchDefaultBrowser)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteMessageAvailableAndLowPriorityMessageAvailableThenLowPriorityMessageIsNull() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        val lowPriorityMessage = LowPriorityMessage.DefaultBrowserMessage(
+            message = MessageCta.Message(
+                topIllustration = R.drawable.mobile_device_default_96,
+                title = "Set as default browser",
+                action = "Set as default",
+                action2 = "Do not ask again",
+            ),
+            onPrimaryAction = {},
+            onSecondaryAction = {},
+            onClose = {},
+            onShown = {},
+        )
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockLowPriorityMessagingModel.getMessage()).thenReturn(lowPriorityMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertEquals(remoteMessage, it.message)
+                assertTrue(it.newMessage)
+                assertNull(it.lowPriorityMessage)
+            }
+        }
+    }
+
+    @Test
+    fun whenNoRemoteMessageAvailableAndLowPriorityMessageAvailableThenLowPriorityMessageIsShown() = runTest {
+        val remoteMessage: RemoteMessage? = null
+        val lowPriorityMessage = LowPriorityMessage.DefaultBrowserMessage(
+            message = MessageCta.Message(
+                topIllustration = R.drawable.mobile_device_default_96,
+                title = "Set as default browser",
+                action = "Set as default",
+                action2 = "Do not ask again",
+            ),
+            onPrimaryAction = {},
+            onSecondaryAction = {},
+            onClose = {},
+            onShown = {},
+        )
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockLowPriorityMessagingModel.getMessage()).thenReturn(lowPriorityMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertNull(it.message)
+                assertFalse(it.newMessage)
+                assertEquals(lowPriorityMessage, it.lowPriorityMessage)
+            }
+        }
+    }
+
+    @Test
+    fun `when onboarding finished and logo enabled, then show logo`() = runTest {
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when onboarding finished and logo disabled, then hide logo and report no content`() = runTest {
+        val testeeWithoutLogo = createTestee(showLogo = false)
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testeeWithoutLogo.onStart(mockLifecycleOwner)
+
+        testeeWithoutLogo.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertFalse(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when AppTP enabled, then show logo`() = runTest {
+        whenever(mockAppTrackingProtection.isEnabled()).thenReturn(true)
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.hasContent)
+                assertTrue(it.shouldShowLogo)
+            }
+        }
+    }
+
+    @Test
+    fun `when AppTP enabled and logo disabled, then hide logo`() = runTest {
+        val testeeWithoutLogo = createTestee(showLogo = false)
+        whenever(mockAppTrackingProtection.isEnabled()).thenReturn(true)
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testeeWithoutLogo.onStart(mockLifecycleOwner)
+
+        testeeWithoutLogo.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when onboarding complete and RMF available, then hide logo`() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when favorites available, then hide logo`() = runTest {
+        val favorites = listOf(
+            SavedSite.Favorite("1", "Test", "https://test.com", lastModified = "2024-01-01", 0),
+        )
+        whenever(mockSavedSitesRepository.getFavorites()).thenReturn(flowOf(favorites))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+        whenever(mockAppTrackingProtection.isEnabled()).thenReturn(false)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when favourites loading, then hide logo but still report content`() = runTest {
+        val favouritesFlow = MutableSharedFlow<List<SavedSite.Favorite>>(replay = 0)
+        val remoteMessageFlow = MutableSharedFlow<RemoteMessage?>(replay = 0)
+        whenever(mockSavedSitesRepository.getFavorites()).thenReturn(favouritesFlow)
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(remoteMessageFlow)
+
+        testee = createTestee()
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+                assertNull(it.favourites)
+            }
+        }
+    }
+
+    @Test
+    fun `when low priority message available, then show logo`() = runTest {
+        val lowPriorityMessage = LowPriorityMessage.DefaultBrowserMessage(
+            message = MessageCta.Message(
+                topIllustration = R.drawable.mobile_device_default_96,
+                title = "Set as default browser",
+                action = "Set as default",
+                action2 = "Do not ask again",
+            ),
+            onPrimaryAction = {},
+            onSecondaryAction = {},
+            onClose = {},
+            onShown = {},
+        )
+        whenever(mockLowPriorityMessagingModel.getMessage()).thenReturn(lowPriorityMessage)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when low priority message available and logo disabled, then hide logo`() = runTest {
+        val testeeWithoutLogo = createTestee(showLogo = false)
+        val lowPriorityMessage = LowPriorityMessage.DefaultBrowserMessage(
+            message = MessageCta.Message(
+                topIllustration = R.drawable.mobile_device_default_96,
+                title = "Set as default browser",
+                action = "Set as default",
+                action2 = "Do not ask again",
+            ),
+            onPrimaryAction = {},
+            onSecondaryAction = {},
+            onClose = {},
+            onShown = {},
+        )
+        whenever(mockLowPriorityMessagingModel.getMessage()).thenReturn(lowPriorityMessage)
+
+        testeeWithoutLogo.onStart(mockLifecycleOwner)
+
+        testeeWithoutLogo.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertTrue(it.hasContent)
+            }
+        }
+    }
+
+    @Test
+    fun `when remote message available with MODAL surface then show logo, not the message`() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.MODAL))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.shouldShowLogo)
+                assertNull(it.message)
+            }
+        }
+    }
+
+    @Test
+    fun `when remote message available with NEW_TAB_PAGE surface then show the message, not the logo`() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertFalse(it.shouldShowLogo)
+                assertEquals(remoteMessage, it.message)
+            }
+        }
+    }
+
+    @Test
+    fun `when no remote message available then show the logo`() = runTest {
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(null))
+        whenever(mockCtaViewModel.areBubbleDaxDialogsCompleted()).thenReturn(true)
+
+        testee.onStart(mockLifecycleOwner)
+
+        testee.viewState.test {
+            expectMostRecentItem().also {
+                assertTrue(it.shouldShowLogo)
+                assertNull(it.message)
+            }
+        }
+    }
+
+    @Test
+    fun whenRemoteImageLoadSuccessThenPixelFired() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+        testee.onRemoteImageLoadSuccess()
+
+        verify(pixel).fire(
+            RemoteMessagingPixelName.REMOTE_MESSAGE_IMAGE_LOAD_SUCCESS,
+            mapOf(Pixel.PixelParameter.MESSAGE_SHOWN to "id1"),
+        )
+    }
+
+    @Test
+    fun whenRemoteImageLoadFailedThenPixelFired() = runTest {
+        val remoteMessage = RemoteMessage("id1", Content.Small("", ""), emptyList(), emptyList(), listOf(Surface.NEW_TAB_PAGE))
+        whenever(mockRemoteMessageModel.observeActiveMessages()).thenReturn(flowOf(remoteMessage))
+
+        testee.onStart(mockLifecycleOwner)
+        testee.onRemoteImageLoadFailed()
+
+        verify(pixel).fire(
+            RemoteMessagingPixelName.REMOTE_MESSAGE_IMAGE_LOAD_FAILED,
+            mapOf(Pixel.PixelParameter.MESSAGE_SHOWN to "id1"),
+        )
+    }
+}

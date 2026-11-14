@@ -1,0 +1,76 @@
+/*
+ * Copyright (c) 2023 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.contentscopescripts.impl
+
+import com.duckduckgo.codegen.annotations.ContributesRemoteFeature
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.feature.toggles.api.Toggle.DefaultFeatureValue
+
+@ContributesRemoteFeature(
+    scope = AppScope::class,
+    featureName = "clientContentFeatures",
+)
+interface ContentScopeScriptsFeature {
+    @Toggle.DefaultValue(DefaultFeatureValue.TRUE)
+    fun self(): Toggle
+
+    @Toggle.DefaultValue(DefaultFeatureValue.FALSE)
+    fun useNewWebCompatApis(): Toggle
+
+    @Toggle.DefaultValue(DefaultFeatureValue.FALSE)
+    fun useWebMessageListener(): Toggle
+
+    /**
+     * Kill-switch for the ContentScopeScripts injection performance work.
+     * When enabled, the optimized injection path is used.
+     * @return `true` when the remote config has the global "optimizeContentScopeInjection" clientContentFeatures
+     * sub-feature flag enabled.
+     * If the remote feature is not present defaults to `internal`
+     */
+    @Toggle.DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun optimizeContentScopeInjection(): Toggle
+
+    /**
+     * Kill-switch for the ContentScopeScripts inbound messaging performance work.
+     * When enabled, inbound JS messages are queued and routed off the WebView JavaBridge thread.
+     * @return `true` when the remote config has the global "optimizeContentScopeMessaging" clientContentFeatures
+     * sub-feature flag enabled.
+     * If the remote feature is not present defaults to `internal`
+     */
+    @Toggle.DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun optimizeContentScopeMessaging(): Toggle
+
+    /**
+     * Kill-switch for holding the resolved contentScope experiments between privacy config updates.
+     * @return `true` when the remote config has the global "cacheContentScopeExperiments" clientContentFeatures
+     * sub-feature flag enabled.
+     * If the remote feature is not present defaults to `internal`
+     */
+    @Toggle.DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun cacheContentScopeExperiments(): Toggle
+
+    /**
+     * Kill-switch for checking a domain restricted message against the committed back/forward entry as well as the
+     * WebView url on the legacy messaging path.
+     * @return `true` when the remote config has the global "bridgeOriginCheck" clientContentFeatures
+     * sub-feature flag enabled.
+     * If the remote feature is not present defaults to `true`
+     */
+    @Toggle.DefaultValue(DefaultFeatureValue.TRUE)
+    fun bridgeOriginCheck(): Toggle
+}

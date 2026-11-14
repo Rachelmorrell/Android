@@ -16,23 +16,23 @@
 
 package com.duckduckgo.app.di
 
-import com.duckduckgo.app.CoroutineTestRule
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesTo
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
 @ContributesTo(
-    scope = AppObjectGraph::class,
-    replaces = [CoroutinesModule::class]
+    scope = AppScope::class,
+    replaces = [CoroutinesModule::class],
 )
 class StubCoroutinesModule {
 
     @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     fun providesDispatcherProvider(): DispatcherProvider {
         return CoroutineTestRule().testDispatcherProvider
     }

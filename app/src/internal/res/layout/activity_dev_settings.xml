@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright (c) 2021 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.duckduckgo.app.dev.settings.DevSettingsActivity">
+
+    <include
+        android:id="@+id/includeToolbar"
+        layout="@layout/include_default_toolbar" />
+
+    <ScrollView
+        android:id="@+id/contentScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                android:id="@+id/generalTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenGeneralSection" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                    android:id="@+id/useSandboxSurvey"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/devSettingsUseSandBoxSurvey"
+                    app:showSwitch="true" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/enableAppStartupTrace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devStartupTracing"
+                app:secondaryText="@string/devStartupTracingByline"
+                app:showSwitch="true" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                    android:id="@+id/enableWebContentDebugging"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:primaryText="@string/devEnableWebContentDebuggingTitle"
+                    app:secondaryText="@string/devEnableWebContentDebuggingByline"
+                    app:showSwitch="true"
+            />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/customTabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenCustomTabs"
+                app:secondaryText="@string/devSettingsScreenCustomTabsSubtitle"
+                />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/notifications"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenNotificationsTitle"
+                app:secondaryText="@string/devSettingsScreenNotificationsSubtitle" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/tabs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenTabs"
+                app:secondaryText="@string/devSettingsScreenTabsSubtitle" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/newTabTransitions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenNewTabTransitions"
+                app:secondaryText="@string/devSettingsScreenNewTabTransitionsSubtitle" />
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                android:id="@+id/privacyTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenPrivacySection" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/overridePrivacyRemoteConfigUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenPrivacyRemoteConfigUrlOverride"
+                app:secondaryText="@string/devSettingsScreenPrivacyRemoteConfigUrlOverrideSubtitle"
+                />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/resetTds"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenResetTds"
+                app:secondaryText="@string/devSettingsScreenResetTdsSubtitle"
+                />
+
+            <com.duckduckgo.common.ui.view.divider.HorizontalDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="0dp" />
+
+            <com.duckduckgo.common.ui.view.listitem.SectionHeaderListItem
+                android:id="@+id/userAgentTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenUserAgentSection" />
+
+            <com.duckduckgo.common.ui.view.listitem.OneLineListItem
+                android:id="@+id/overrideUserAgentToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenUserAgentOverride"
+                app:showSwitch="true" />
+
+            <com.duckduckgo.common.ui.view.listitem.TwoLineListItem
+                android:id="@+id/overrideUserAgentSelector"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:primaryText="@string/devSettingsScreenUserAgentSelectorTitle" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

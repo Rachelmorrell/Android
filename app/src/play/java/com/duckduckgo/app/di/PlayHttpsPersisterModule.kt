@@ -17,21 +17,22 @@
 package com.duckduckgo.app.di
 
 import android.content.Context
-import com.duckduckgo.app.global.store.BinaryDataStore
-import com.duckduckgo.app.httpsupgrade.store.HttpsBloomFilterSpecDao
-import com.duckduckgo.app.httpsupgrade.store.HttpsDataPersister
-import com.duckduckgo.app.httpsupgrade.store.HttpsEmbeddedDataPersister
-import com.duckduckgo.di.scopes.AppObjectGraph
+import com.duckduckgo.common.utils.store.BinaryDataStore
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.httpsupgrade.api.HttpsEmbeddedDataPersister
+import com.duckduckgo.httpsupgrade.impl.HttpsDataPersister
+import com.duckduckgo.httpsupgrade.impl.di.HttpsPersisterModule
+import com.duckduckgo.httpsupgrade.store.HttpsBloomFilterSpecDao
 import com.duckduckgo.httpsupgrade.store.PlayHttpsEmbeddedDataPersister
-import com.squareup.anvil.annotations.ContributesTo
 import com.squareup.moshi.Moshi
-import dagger.Module
-import dagger.Provides
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
 
-@Module
+@BindingContainer
 @ContributesTo(
-    scope = AppObjectGraph::class,
-    replaces = [HttpsPersisterModule::class]
+    scope = AppScope::class,
+    replaces = [HttpsPersisterModule::class],
 )
 class PlayHttpsPersisterModule {
 
@@ -41,9 +42,8 @@ class PlayHttpsPersisterModule {
         binaryDataStore: BinaryDataStore,
         httpsBloomSpecDao: HttpsBloomFilterSpecDao,
         context: Context,
-        moshi: Moshi
+        moshi: Moshi,
     ): HttpsEmbeddedDataPersister {
         return PlayHttpsEmbeddedDataPersister(httpsDataPersister, binaryDataStore, httpsBloomSpecDao, context, moshi)
     }
-
 }

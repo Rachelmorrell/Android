@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Nastavitev v nastavitvah</b></string>
+
+    <string name="saveLoginDialogButtonSave">Shrani geslo</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Shrani geslo</string>
+    <string name="saveLoginDialogNotNow">Ne shrani</string>
+    <string name="saveLoginDialogTitle">Želite shraniti svoje geslo?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Več možnosti</string>
+
+    <string name="useSavedLoginDialogTitle">Želite uporabiti shranjeno geslo?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">Geslo za spletno mesto %1$s</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Geslo za spletno mesto</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">S tega spletnega mesta</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">S spletnega mesta %1$s</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Posodobitev gesla</string>
+    <string name="updateLoginDialogButtonNotNow">Ne shrani</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Želite posodobiti uporabniško ime?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Posodobi uporabniško ime</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Želite posodobiti geslo za \n%1$s?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo bo posodobil to shranjeno geslo v vaši napravi.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Zapri pogovorno okno za samodejno izpolnjevanje</string>
+
+    <string name="credentialManagementEditUsernameHint">Uporabniško ime</string>
+    <string name="credentialManagementEditPasswordHint">Geslo</string>
+    <string name="credentialManagementEditWebsiteHint">URL spletnega mesta</string>
+    <string name="credentialManagementEditNotesHint">Opombe</string>
+    <string name="credentialManagementEditButtonDelete">Izbriši</string>
+    <string name="credentialManagementEditButtonSaveChanges">Shrani spremembe</string>
+    <string name="credentialManagementEditButtonCopyUsername">Kopiranje uporabniškega imena</string>
+    <string name="credentialManagementEditButtonCopyPassword">Kopiranje gesla</string>
+
+    <string name="credentialManagementViewMenuEdit">Uredi</string>
+    <string name="credentialManagementViewMenuDelete">Izbriši</string>
+
+    <string name="credentialManagementSuggestionsLabel">Predlagano</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Samodejno izpolnjevanje gesel ni na voljo, ker je vaša različica programa Android WebView zastarela ali nezdružljiva.</string>
+
+    <string name="autofillManagementSearchClearDescription">Počisti vhod iskanja</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Ni rezultatov za »%1$s«</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Prekliči</string>
+    <string name="autofillDeleteLoginDialogDelete">Izbriši</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Uporabniško ime je bilo kopirano</string>
+    <string name="autofillManagementPasswordCopied">Geslo je bilo kopirano</string>
+
+    <string name="autofill_password_generation_offer_title">Želite uporabiti močno geslo od DuckDuckGo?</string>
+    <string name="autofill_password_generation_offer_accept">Uporabi močno geslo</string>
+    <string name="autofill_password_generation_offer_decline">Ustvari svoje</string>
+
+    <string name="deviceNotSupportedTitle">Naprava ni podprta</string>
+
+    <string name="autofillManagementUndoDeletion">Razveljavi</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Odpri spletno mesto</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Želite deaktivirati zasebni naslov Duck Address?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">Elektronska sporočila, poslana na naslov %1$s, ne bodo več posredovana v vaš poštni predal.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Deaktiviraj</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Želite znova aktivirati zasebni naslov Duck Address?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">Elektronska sporočila, poslana na naslov %1$s, bodo znova posredovana v vaš e-poštni predal.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Znova aktiviraj</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Aktivno</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Aktiviranje ...</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Deaktivirano</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Deaktiviranje ...</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Upravljanje tega naslova trenutno ni na voljo.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated."><annotation type="enable_duck_address">Omogočite zaščito elektronske pošte</annotation>, če želite upravljati naslove Duck Addresses v tej napravi.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">Izberite e-poštni naslov</string>
+    <string name="autofillTooltipUseYourAliasDescription">Blokirajte sledilnike e-pošte</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Ustvarjanje zasebnega naslova Duck</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">Blokirajte sledilnike e-pošte in skrijte naslov</string>
+
+    <string name="autofillDisableAutofillPromptMessage">To lahko kadar koli onemogočite v nastavitvah.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Še naprej shranjujte</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Onemogoči</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">Skrijte svojo e-pošto in \nblokirajte sledilnike</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">Zaščita e-pošte</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Ustvarite edinstven, naključen naslov, ki odstrani tudi skrite sledilnike in posreduje e-pošto v vaš e-poštni predal.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">Zaščiti mojo e-pošto</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Ne prikaži več</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Če zaprete zdaj, vaš naslov Duck Address ne bo shranjen</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Nadaljujte nastavitev</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Izhod iz nastavitev</string>
+
+    <string name="autofillManagementScreenTitle">Gesla</string>
+    <string name="autofillManagementScreenTitleNew">Gesla in samodejno izpolnjevanje</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Nobeno geslo še ni shranjeno</string>
+    <string name="credentialManagementAutofillToggleLabel">Shranite in samodejno izpolnite gesla</string>
+    <string name="credentialManagementAutofillSubtitle">Gesla so šifrirana. Nihče razen vas jih ne more videti, niti mi. <annotation type="learn_more_link">Več o tem</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Varnost upravitelja gesel</string>
+    <string name="saveLoginDialogSubtitle">S funkcijo DuckDuckGo Passwords &amp; Autofill varno shranite geslo v napravo.</string>
+    <string name="autofillManagementAddLogin">Dodajte geslo</string>
+    <string name="credentialManagementEditLoginTitleHint">Naslov</string>
+    <string name="autofillManagementDeletedConfirmation">Geslo je izbrisano</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Nazadnje posodobljeno dne %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Ali želite še naprej shranjevati gesla?</string>
+    <string name="deviceNotSupportedSubtitle">Za varno shranjevanje gesel jih moramo šifrirati in shraniti v vaši napravi. Ker vaša naprava ne podpira šifriranega shranjevanja, shranjevanje in samodejno izpolnjevanje gesel nista na voljo.</string>
+    <string name="autofill_password_generation_offer_message">Gesla so varno shranjena v vaši napravi.</string>
+    <string name="autofillManagementSearchLogins">Iskanje gesel</string>
+    <string name="biometric_prompt_title">Gesla so zaklenjena</string>
+    <string name="autofill_auth_text_for_access">Če želite dostopati do gesel, odklenite napravo</string>
+    <string name="managementDisabledModeTitle">Zaščitite svojo napravo, da shranite gesla</string>
+    <string name="managementDisabledModeSubtitle">Za zaščito gesel je potreben vzorec za zaklepanje naprave, koda PIN ali biometrični podatki.</string>
+    <string name="credentialManagementEditTitle">Uredite geslo</string>
+
+    <string name="credentials_limit_warning"><b>Sinhronizacija je začasno zaustavljena</b>\nDosegli ste največje število gesel. Izbrišite jih nekaj, če želite nadaljevati sinhronizacijo.\n\n<annotation type="manage_logins">Upravljanje gesel</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Sinhronizacija gesel je začasno zaustavljena</b>\nDosegli ste največje število gesel. Izbrišite nekaj gesel, če želite nadaljevati sinhronizacijo.</string>
+    <string name="credentials_invalid_request_warning"><b>Sinhronizacija je začasno zaustavljena</b>\nNekatera gesla so napačno oblikovana ali predolga in niso bila sinhronizirana.\n\n<annotation type="manage_logins">Upravljanje gesel</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Sinhronizacija gesel je začasno zaustavljena</b>\nNekatera gesla so napačno oblikovana ali predolga in niso bila sinhronizirana.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Nikoli ne vprašaj za to spletno mesto</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Ne, hvala</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Če ponastavite izključena spletna mesta, boste ob naslednji prijavi na katero koli od teh spletnih mest pozvani, da shranite svojo prijavo.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Ponastavi izključena spletna mesta</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Želite ponastaviti izključena spletna mesta?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Ponastavi</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Prekliči</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Brisanje vseh gesel</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d geslo je bilo izbrisano</item>
+        <item quantity="two">%1$d gesli sta bili izbrisani</item>
+        <item quantity="few">%1$d gesla so bila izbrisana</item>
+        <item quantity="other">%1$d gesel je bilo izbrisanih</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Potrdite, da želite izbrisati vsa gesla</string>
+    <string name="autofill_title_text_for_delete_all">Brisanje vseh gesel</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">Vašega gesla za %1$s ni mogoče sinhronizirati, ker eno od polj presega omejitev števila znakov.</item>
+        <item quantity="two">Vaših gesel za %1$s in za %2$d drugi spletni mesti ni mogoče sinhronizirati, ker nekatera njihova polja presegajo omejitev števila znakov.</item>
+        <item quantity="few">Vaših gesel za %1$s in za %2$d druga spletna mesta ni mogoče sinhronizirati, ker nekatera njihova polja presegajo omejitev števila znakov.</item>
+        <item quantity="other">Vaših gesel za %1$s in za %2$d drugih spletnih mest ni mogoče sinhronizirati, ker nekatera njihova polja presegajo omejitev števila znakov.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Upravljanje gesel</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Vaše geslo bo izbrisano iz te naprave.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Vaše geslo bo izbrisano iz te naprave.</item>
+        <item quantity="two">Vaši gesli bosta izbrisani iz te naprave.</item>
+        <item quantity="few">Vaša gesla bodo izbrisana iz te naprave.</item>
+        <item quantity="other">Vaša gesla bodo izbrisana iz te naprave.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Vaše geslo bo izbrisano iz vseh sinhroniziranih naprav.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Vaše geslo bo izbrisano iz vseh sinhroniziranih naprav.</item>
+        <item quantity="two">Vaši gesli bosta izbrisani iz vseh sinhroniziranih naprav.</item>
+        <item quantity="few">Vaša gesla bodo izbrisana iz vseh sinhroniziranih naprav.</item>
+        <item quantity="other">Vaša gesla bodo izbrisana iz vseh sinhroniziranih naprav.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Ali ste prepričani, da želite izbrisati to geslo?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Ali ste prepričani, da želite izbrisati %1$d geslo?</item>
+        <item quantity="two">Ali ste prepričani, da želite izbrisati %1$d gesli?</item>
+        <item quantity="few">Ali ste prepričani, da želite izbrisati %1$d gesla?</item>
+        <item quantity="other">Ali ste prepričani, da želite izbrisati %1$d gesel?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Prepričajte se, da imate še vedno možnost dostopa do svojega računa.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Prepričajte se, da imate še vedno možnost dostopa do svojega računa.</item>
+        <item quantity="two">Prepričajte se, da imate še vedno možnost dostopa do svojih računov.</item>
+        <item quantity="few">Prepričajte se, da imate še vedno možnost dostopa do svojih računov.</item>
+        <item quantity="other">Prepričajte se, da imate še vedno možnost dostopa do svojih računov.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Shranjena gesla lahko uvozite iz drugega brskalnika v DuckDuckGo.</string>
+
+    <string name="autofillManagementImportPasswords">Uvozi gesla</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Sinhroniziraj gesla za namizje</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Kako uvoziti gesla</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Kako sinhronizirati gesla za namizje</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">V namizni različici brskalnika DuckDuckGo uvozite gesla in jih nato sinhronizirajte med napravami.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Namesti namizni brskalnik</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Prenesite brskalnik DuckDuckGo za računalnike Mac ali Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Brskajte zasebno in blokirajte sledilnike z namiznim brskalnikom DuckDuckGo. Za prenos obiščite to povezavo v računalniku.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Sinhronizacija z namizjem</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Uvoz iz namiznega brskalnika:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Odprite DuckDuckGo v sistemu Mac ali Windows</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Pojdite v <b>Nastavitve</b> > <b>Gesla</b>]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Izberite <b>Uvozi gesla</b> ... in upoštevajte korake za uvoz]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Ko jih uvozite v računalnik, lahko nastavite sinhronizacijo v tej napravi</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Pridobite namizno aplikacijo</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Prenesite DuckDuckGo za računalnike Mac ali Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">V računalniku odprite:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Prijavite težavo s samodejnim izpolnjevanjem</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Anonimno prijavite, da samodejno izpolnjevanje ne deluje na tem spletnem mestu. Gesla niso nikoli deljena.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Želite prijaviti, da samodejno izpolnjevanje ne deluje na spletnem mestu %1$s?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">Poročila, poslana DuckDuckGo, so anonimna in ne vključujejo vašega uporabniškega imena, gesla ali drugih osebnih podatkov, ki omogočajo individualno prepoznavanje.\n\nPoročilo vključuje samo URL spletnega mesta in stanje nekaterih nastavitev samodejnega izpolnjevanja.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Pošljite poročilo</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Prekliči</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Hvala! Vaše poročilo nam bo pomagalo izboljšati DuckDuckGo za vse.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Ključne lastnosti</string>
+    <string name="onboardingSaveDialogFeature1Title">Brezhibno prijavljanje</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Ni si vam treba zapomniti podatkov za prijavo.</string>
+    <string name="onboardingSaveDialogFeature2Title">Varno shranjevanje</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Gesla so šifrirana, shranjena v napravi in zaklenjena z vzorcem ali kodo PIN za Android.</string>
+    <string name="onboardingSaveDialogFeature3Title">Sinhronizacija med napravami</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">Celovito šifriranje in preprosta nastavitev, ko ste pripravljeni.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Shranjevanje gesel lahko kadar koli izklopite.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Odpri nastavitve</string>
+
+    <string name="newTabPageShortcutPasswords">Gesla</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Uvozi gesla</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">Št. gesel, uvoženih iz Googla: %1$d</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">Št. gesel, uvoženih iz CSV: %1$d</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Uvozi gesla iz Googla</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Uvozi gesla iz Googla</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Sinhroniziraj gesla za namizje</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Sinhroniziraj gesla za namizje</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Uvozi gesla iz Googla</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google vas bo morda prosil, da se prijavite ali vnesete geslo za potrditev.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Vaša naprava vas bo morda prosila, da vnesete kodo PIN, geslo ali vzorec za potrditev.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Uvozi iz Googla</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Izberite datoteko CSV</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Uvoz iz namiznega brskalnika</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Uvoz v DuckDuckGo</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Uvoz je dokončan</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Razumem</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Uvoz gesel ni uspel</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Preskočeno (podvojeno ali neveljavno): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Uvožena gesla: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Odprite gesla</string>
+    <string name="autofill_service_select_password_activity">Izberi shranjeno geslo</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Gesla in samodejno izpolnjevanje</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Želite ponastaviti izključena spletna mesta?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Če ponastavite izključena spletna mesta, boste ob naslednji prijavi na katero koli od teh spletnih mest pozvani, da shranite svojo prijavo.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Ponastavi</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Prekliči</string>
+    <string name="autofillSettingsPasswordsEntry">Gesla</string>
+    <string name="autofillSettingsAutofillToggleLabel">Vprašaj za shranjevanje in samodejno izpolnjevanje</string>
+    <string name="autofillSettingsAutofillSubtitle">Gesla so šifrirana. Nihče razen vas jih ne more videti, niti mi. <annotation type="learn_more_link">Več o tem</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Uvozi gesla</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Uvozi gesla iz Googla</string>
+    <string name="autofillSettingsImportFromDesktopSync">Sinhroniziraj gesla za namizje</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Ponastavi izključena spletna mesta</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Prenesite gesla iz&lt;br /&gt;Googla v DuckDuckGo</string>
+    <string name="passwords_import_promo_subtitle">Hitro in varno uvozite svoja gesla v DuckDuckGo. Google vas bo morda prosil, da vnesete geslo.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Hitro in varno uvozite svoja gesla v DuckDuckGo. Vaša naprava vas bo morda prosila, da za potrditev vnesete kodo PIN, geslo ali vzorec.</string>
+    <string name="passwords_import_promo_action">Uvozi iz Googla</string>
+    <string name="passwords_import_promo_in_browser_title">Prenesite gesla iz Googla v DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Uvozite gesla iz Googla v DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Ne vprašaj več</string>
+    <string name="passwords_import_promo_in_settings_title">Uvozi gesla iz Googla</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Skrij se</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Uvoz v DuckDuckGo</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Uvoženo iz Chroma</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Uvozi zaznamke iz Googla</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google vas bo morda prosil, da se prijavite ali vnesete geslo za potrditev.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Uvozi iz Googla</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Izberite datoteko z zaznamki …</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Uvoz zaznamkov</string>
+    <string name="importBookmarksProgressTitle">Uvažanje iz Googla …</string>
+    <string name="importBookmarksProgressSubtitle">Pustite ta zaslon odprt in počakajte – ne bi smelo trajati več kot minuto ali dve.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google vas bo morda prosil, da se prijavite ali vnesete geslo za potrditev.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google vam bo morda poslal e-poštno sporočilo s potrditvijo izvoza vaših zaznamkov.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Želite preklicati uvoz?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Če prekličete zdaj, vaši zaznamki ne bodo uvoženi.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Prekliči uvoz</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Nadaljuj</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Zaznamki: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Zapri</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Nekaj je šlo narobe</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Prepričajte se, da je vzpostavljena povezava z internetom, in poskusite znova.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Uvoz je dokončan!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Počakajte – to okno pustite odprto. Ne bi smelo trajati več kot minuto ali dve.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google vas bo morda prosil za geslo.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google vam bo poslal e-poštno sporočilo s potrditvijo, da so bili vaši podatki izvoženi. Ni vam treba storiti ničesar.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Uvoz je dokončan!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Uvoženi zaznamki: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Prenesite gesla iz Googla v DuckDuckGo.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Uvozi gesla iz Googla</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Prenesite zaznamke iz Googla v DuckDuckGo.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Uvozi zaznamke iz Googla</string>
+
+</resources>

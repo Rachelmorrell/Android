@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources>
+    <string name="voiceSearchError">Nešto nije bilo kako treba.Pokušaj ponovno nešto kasnije.</string>
+    <string name="voiceSearchIconContentDescription">Glasovno pretraživanje</string>
+    <string name="voiceSearchListening">Govori sad</string>
+    <string name="voiceSearchListeningFooter">Zvuk se obrađuje na uređaju. Ne pohranjuje se i ne dijeli ni s kim, uključujući DuckDuckGo.</string>
+    <string name="voiceSearchNegativeAction">Odustani</string>
+    <string name="voiceSearchMicAccessDeniedDialogTitle">DuckDuckGo treba pristupiti tvom mikrofonu</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessage">Ako želiš koristiti naše Privatno glasovno pretraživanje, potrebna su dopuštenja za mikrofon.</string>
+    <string name="voiceSearchMicAccessDeniedDialogMessageDuckAi">Dopuštenja za mikrofon potrebna su ako želiš koristiti naše privatne glasovne značajke.</string>
+    <string name="voiceSearchMicAccessDeniedDialogChangePermissions">Promijeni dozvole</string>
+    <string name="voiceSearchMicAccessDeniedDialogHideVoiceSearch">Sakrij glasovno pretraživanje</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarMessage">Za glasovne funkcije potrebno je dopuštenje za mikrofon</string>
+    <string name="voiceSearchMicPermissionDeniedSnackbarAction">Dopusti</string>
+    <string name="voiceSearchTitle">Glasovno pretraživanje</string>
+</resources>

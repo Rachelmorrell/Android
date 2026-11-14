@@ -1,0 +1,240 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.pixel
+
+import com.duckduckgo.app.statistics.api.StatisticsUpdater
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.duckchat.impl.helper.DuckChatTermsOfServiceHandler
+import com.duckduckgo.duckchat.impl.metric.DuckAiMetricCollector
+import com.duckduckgo.duckchat.impl.repository.DuckChatFeatureRepository
+import kotlinx.coroutines.test.runTest
+import org.junit.Rule
+import org.junit.Test
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+
+class RealDuckChatPixelsAttachmentsTest {
+
+    @get:Rule
+    val coroutineTestRule: CoroutineTestRule = CoroutineTestRule()
+
+    private val pixel: Pixel = mock()
+    private val duckChatFeatureRepository: DuckChatFeatureRepository = mock()
+    private val statisticsUpdater: StatisticsUpdater = mock()
+    private val duckAiMetricCollector: DuckAiMetricCollector = mock()
+    private val termsOfServiceHandler: DuckChatTermsOfServiceHandler = mock()
+
+    private val testee = RealDuckChatPixels(
+        pixel = pixel,
+        duckChatFeatureRepository = duckChatFeatureRepository,
+        appCoroutineScope = coroutineTestRule.testScope,
+        dispatcherProvider = coroutineTestRule.testDispatcherProvider,
+        statisticsUpdater = statisticsUpdater,
+        duckAiMetricCollector = duckAiMetricCollector,
+        termsOfServiceHandler = termsOfServiceHandler,
+        duckAiTabSessionRepository = mock(),
+        appBuildConfig = mock(),
+        browserInteractionsPlugins = mock(),
+        duckAiNewChatMetricPixelsPlugin = mock(),
+        duckAiSessionCallback = mock(),
+    )
+
+    @Test
+    fun whenImageAttachedFromCameraThenSourceParam() = runTest {
+        testee.fireImageAttached(source = "camera", surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(
+            DuckChatPixelParameters.ATTACHMENT_SOURCE to "camera",
+            DuckChatPixelParameters.SURFACE to "duck_ai",
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_ATTACHED_COUNT,
+            parameters = params,
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_ATTACHED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenImageRemovedThenCountAndDaily() = runTest {
+        testee.fireImageRemoved(DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_REMOVED_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_REMOVED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenImageValidationFailedThenReasonParam() = runTest {
+        testee.fireImageValidationFailed(reason = "count_exceeded", surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(
+            DuckChatPixelParameters.FILE_VALIDATION_REASON to "count_exceeded",
+            DuckChatPixelParameters.SURFACE to "duck_ai",
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_VALIDATION_FAILED_COUNT,
+            parameters = params,
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_IMAGE_VALIDATION_FAILED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenFileAttachedThenCountAndDaily() = runTest {
+        testee.fireFileAttached(DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_ATTACHED_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_ATTACHED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenFileRemovedThenCountAndDaily() = runTest {
+        testee.fireFileRemoved(DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_REMOVED_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_REMOVED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenFileValidationFailedThenReasonParam() = runTest {
+        testee.fireFileValidationFailed(reason = "size_exceeded", surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(
+            DuckChatPixelParameters.FILE_VALIDATION_REASON to "size_exceeded",
+            DuckChatPixelParameters.SURFACE to "duck_ai",
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_VALIDATION_FAILED_COUNT,
+            parameters = params,
+        )
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_FILE_VALIDATION_FAILED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenVoiceTappedThenCountAndDaily() = runTest {
+        testee.fireVoiceTapped(DuckChatPixelSurface.DUCK_AI)
+
+        val surfaceParams = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_VOICE_TAPPED_COUNT, parameters = surfaceParams)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_VOICE_TAPPED_DAILY,
+            parameters = surfaceParams,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenVoiceSearchTappedThenCountAndDaily() = runTest {
+        testee.fireVoiceSearchTapped(DuckChatPixelSurface.DUCK_AI)
+
+        val surfaceParams = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_VOICE_SEARCH_TAPPED_COUNT, parameters = surfaceParams)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_VOICE_SEARCH_TAPPED_DAILY,
+            parameters = surfaceParams,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenStopTappedThenSingleCount() = runTest {
+        testee.fireStopGenerationTapped(DuckChatPixelSurface.DUCK_AI)
+
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_UNIFIED_INPUT_STOP_GENERATION_TAPPED,
+            parameters = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai"),
+        )
+    }
+
+    @Test
+    fun whenAttachmentPrivacyShownWithImagesThenImagePixelsSent() = runTest {
+        testee.fireAttachmentPrivacyShown(hasImages = true, surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_IMAGE_SHOWN_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_IMAGE_SHOWN_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenAttachmentPrivacyShownWithoutImagesThenFilePixelsSent() = runTest {
+        testee.fireAttachmentPrivacyShown(hasImages = false, surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_FILE_SHOWN_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_FILE_SHOWN_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenAttachmentPrivacyLearnMoreTappedWithImagesThenImagePixelsSent() = runTest {
+        testee.fireAttachmentPrivacyLearnMoreTapped(hasImages = true, surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_IMAGE_LEARN_MORE_TAPPED_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_IMAGE_LEARN_MORE_TAPPED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+
+    @Test
+    fun whenAttachmentPrivacyLearnMoreTappedWithoutImagesThenFilePixelsSent() = runTest {
+        testee.fireAttachmentPrivacyLearnMoreTapped(hasImages = false, surface = DuckChatPixelSurface.DUCK_AI)
+
+        val params = mapOf(DuckChatPixelParameters.SURFACE to "duck_ai")
+        verify(pixel).fire(DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_FILE_LEARN_MORE_TAPPED_COUNT, parameters = params)
+        verify(pixel).fire(
+            DuckChatPixelName.DUCK_CHAT_ATTACHMENT_PRIVACY_FILE_LEARN_MORE_TAPPED_DAILY,
+            parameters = params,
+            type = Pixel.PixelType.Daily(),
+        )
+    }
+}

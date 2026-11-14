@@ -16,60 +16,161 @@
 
 package com.duckduckgo.app.trackerdetection
 
-import com.duckduckgo.app.global.UriString.Companion.sameOrSubdomain
+import android.net.Uri
+import com.duckduckgo.app.browser.UriString.Companion.host
+import com.duckduckgo.app.browser.UriString.Companion.sameOrSubdomain
 import com.duckduckgo.app.trackerdetection.model.Action.BLOCK
 import com.duckduckgo.app.trackerdetection.model.Action.IGNORE
-import com.duckduckgo.app.trackerdetection.model.RuleExceptions
+import com.duckduckgo.app.trackerdetection.model.Rule
 import com.duckduckgo.app.trackerdetection.model.TdsTracker
+import logcat.logcat
 
-class TdsClient(override val name: Client.ClientName, private val trackers: List<TdsTracker>) : Client {
+class TdsClient(
+    override val name: Client.ClientName,
+    trackers: List<TdsTracker>,
+    private val urlToTypeMapper: UrlToTypeMapper,
+) : Client {
 
-    override fun matches(url: String, documentUrl: String): Client.Result {
-        val tracker = trackers.firstOrNull { sameOrSubdomain(url, it.domain) } ?: return Client.Result(false)
-        val matches = matchesTrackerEntry(tracker, url, documentUrl)
-        return Client.Result(matches = matches.shouldBlock, entityName = tracker.ownerName, categories = tracker.categories, surrogate = matches.surrogate)
+    private val compiledTrackerByDomain: Map<String, CompiledTracker> = trackers.associate { tracker ->
+        tracker.domain.value to CompiledTracker(
+            tracker = tracker,
+            rules = tracker.rules.mapNotNull { rule ->
+                runCatching { ".*${rule.rule}.*".toRegex() }
+                    .onFailure { logcat { "TDS rule failed to compile, skipping: ${rule.rule} (${it.message})" } }
+                    .getOrNull()
+                    ?.let { regex -> CompiledRule(rule = rule, regex = regex) }
+            },
+        )
     }
 
-    private fun matchesTrackerEntry(tracker: TdsTracker, url: String, documentUrl: String): MatchedResult {
-        tracker.rules.forEach { rule ->
-            val regex = ".*${rule.rule}.*".toRegex()
-            if (url.matches(regex)) {
-                if (matchedException(rule.exceptions, documentUrl)) {
-                    return MatchedResult(shouldBlock = false)
+    override fun matches(
+        url: String,
+        documentUrl: Uri,
+        requestHeaders: Map<String, String>,
+    ): Client.Result {
+        val compiled = findCompiledTracker(host(url)) ?: return Client.Result.NO_MATCH
+        val matches = matchesTrackerEntry(compiled, url, documentUrl, requestHeaders)
+        return Client.Result(
+            matches = matches.shouldBlock,
+            entityName = compiled.tracker.ownerName,
+            categories = compiled.tracker.categories,
+            surrogate = matches.surrogate,
+            isATracker = matches.isATracker,
+        )
+    }
+
+    override fun matches(
+        url: Uri,
+        documentUrl: Uri,
+        requestHeaders: Map<String, String>,
+    ): Client.Result {
+        val compiled = findCompiledTracker(url.host) ?: return Client.Result.NO_MATCH
+        val matches = matchesTrackerEntry(compiled, url.toString(), documentUrl, requestHeaders)
+        return Client.Result(
+            matches = matches.shouldBlock,
+            entityName = compiled.tracker.ownerName,
+            categories = compiled.tracker.categories,
+            surrogate = matches.surrogate,
+            isATracker = matches.isATracker,
+        )
+    }
+
+    private fun findCompiledTracker(host: String?): CompiledTracker? {
+        if (host.isNullOrEmpty()) return null
+        var candidate: String = host
+        while (true) {
+            compiledTrackerByDomain[candidate]?.let { return it }
+            val dot = candidate.indexOf('.')
+            if (dot < 0) return null
+            candidate = candidate.substring(dot + 1)
+        }
+    }
+
+    private fun matchesTrackerEntry(
+        compiled: CompiledTracker,
+        url: String,
+        documentUrl: Uri,
+        requestHeaders: Map<String, String>,
+    ): MatchedResult {
+        // The request type depends only on (url, requestHeaders), so it is invariant across rules. Computing it once.
+        var type: String? = null
+        var typeResolved = false
+        compiled.rules.forEach { compiledRule ->
+            val rule = compiledRule.rule
+            if (url.matches(compiledRule.regex)) {
+                if (!typeResolved) {
+                    type = urlToTypeMapper.map(url, requestHeaders)
+                    typeResolved = true
                 }
+
+                val options = rule.options
+                if (options != null) {
+                    if (!matchedDomainAndTypes(options.domains, options.types, documentUrl, type)) {
+                        // Continue to the next rule instead
+                        return@forEach
+                    }
+                }
+
+                val exceptions = rule.exceptions
+                if (exceptions != null) {
+                    if (matchedDomainAndTypes(exceptions.domains, exceptions.types, documentUrl, type)) {
+                        return MatchedResult(shouldBlock = false, isATracker = true)
+                    }
+                }
+
                 if (rule.action == IGNORE) {
-                    return MatchedResult(shouldBlock = false)
+                    return MatchedResult(shouldBlock = false, isATracker = true)
                 }
+
                 if (rule.surrogate?.isNotEmpty() == true) {
-                    return MatchedResult(shouldBlock = true, surrogate = rule.surrogate)
+                    return MatchedResult(shouldBlock = true, surrogate = rule.surrogate, isATracker = true)
                 }
-                return MatchedResult(shouldBlock = true)
+                // Null means no action which we should default to block
+                if (rule.action == BLOCK || rule.action == null) {
+                    return MatchedResult(shouldBlock = true, isATracker = true)
+                }
             }
         }
 
-        return MatchedResult(shouldBlock = (tracker.defaultAction == BLOCK))
+        return MatchedResult(shouldBlock = (compiled.tracker.defaultAction == BLOCK), isATracker = true)
     }
 
-    private fun matchedException(exceptions: RuleExceptions?, documentUrl: String): Boolean {
+    private fun matchedDomainAndTypes(
+        ruleDomains: List<String>?,
+        ruleTypes: List<String>?,
+        documentUrl: Uri,
+        type: String?,
+    ): Boolean {
+        val matchesDomain = ruleDomains?.any { domain -> sameOrSubdomain(documentUrl, domain) }
+        val matchesType = ruleTypes?.contains(type)
 
-        if (exceptions == null) return false
-
-        val domains = exceptions.domains
-        val types = exceptions.types
-
-        // We don't support type filtering on android so if the types exist without a domain
-        // we allow the exception through
-        if (domains.isNullOrEmpty() && !types.isNullOrEmpty()) {
-            return true
-        }
-
-        domains?.forEach {
-            if (sameOrSubdomain(documentUrl, it)) {
-                return true
+        return when {
+            ruleTypes.isNullOrEmpty() && matchesDomain == true -> {
+                true
             }
+            ruleDomains.isNullOrEmpty() && matchesType == true -> {
+                true
+            }
+            matchesDomain == true && matchesType == true -> {
+                true
+            }
+            else -> false
         }
-        return false
     }
 
-    private data class MatchedResult(val shouldBlock: Boolean, val surrogate: String? = null)
+    private data class CompiledRule(
+        val rule: Rule,
+        val regex: Regex,
+    )
+
+    private data class CompiledTracker(
+        val tracker: TdsTracker,
+        val rules: List<CompiledRule>,
+    )
+
+    private data class MatchedResult(
+        val shouldBlock: Boolean,
+        val isATracker: Boolean,
+        val surrogate: String? = null,
+    )
 }

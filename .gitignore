@@ -17,7 +17,13 @@ out/
 .gradle/
 build/
 .externalNativeBuild/
+.kotlin/
 
+#Autoconsent
+/node_modules/@duckduckgo/autoconsent/
+
+#Privacy reference tests
+/node_modules/@duckduckgo/privacy-reference-tests/
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -36,17 +42,81 @@ captures/
 
 # Intellij
 *.iml
-.idea/
+.idea/*
+!.idea/icon.svg
+!.idea/copyright/
 .idea/workspace.xml
+
+# VSCode
+.vscode/*
 
 # Keystore files
 *.jks
 
 # Fastlane
 fastlane/report.xml
-
-# Bitrise configuration
-bitrise.yml
+.bundle/
+vendor/
 
 # NDK files
 **/.cxx
+app/play/release/
+app/release/
+app/internal/
+
+build-cache
+report
+
+.DS_Store
+
+# Ignore everything in node_modules except
+# - autofill: dist, license and readme
+# - config-scope-scripts: contentScope.js, license and readme
+# - privacy-dashboard: js files from build
+# Info on the weird syntax here: https://stackoverflow.com/a/54870120/1948947
+!/node_modules/
+/node_modules/*
+!/node_modules/@duckduckgo/
+/node_modules/@duckduckgo/*
+
+!/node_modules/@duckduckgo/autofill/
+/node_modules/@duckduckgo/autofill/*
+!/node_modules/@duckduckgo/autofill/LICENSE.md
+!/node_modules/@duckduckgo/autofill/README.md
+!/node_modules/@duckduckgo/autofill/dist/
+/node_modules/@duckduckgo/autofill/dist/*
+!/node_modules/@duckduckgo/autofill/dist/*
+
+!/node_modules/@duckduckgo/privacy-dashboard/
+/node_modules/@duckduckgo/privacy-dashboard/*
+!/node_modules/@duckduckgo/privacy-dashboard/build/
+/node_modules/@duckduckgo/privacy-dashboard/build/*
+!/node_modules/@duckduckgo/privacy-dashboard/build/app
+
+!/node_modules/@duckduckgo/content-scope-scripts/
+/node_modules/@duckduckgo/content-scope-scripts/*
+!/node_modules/@duckduckgo/content-scope-scripts/LICENSE.md
+!/node_modules/@duckduckgo/content-scope-scripts/README.md
+!/node_modules/@duckduckgo/content-scope-scripts/build/
+/node_modules/@duckduckgo/content-scope-scripts/build/*
+!/node_modules/@duckduckgo/content-scope-scripts/build/android/
+!/node_modules/@duckduckgo/content-scope-scripts/build/android/pages/
+/node_modules/@duckduckgo/content-scope-scripts/build/android/pages/*
+!/node_modules/@duckduckgo/content-scope-scripts/build/android/pages/duckplayer/
+
+# Pixel processing results
+PixelDefinitions/pixels/pixel_processing_results/*
+
+# perf-benchmarks/pageload_benchmark.py --out default (CI artifact, produced fresh each run)
+/pageload-results.json
+PixelDefinitions/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# LLM
+.claude/settings.local.json
+/.claude/worktrees/*
+CLAUDE.local.md
+docs/*

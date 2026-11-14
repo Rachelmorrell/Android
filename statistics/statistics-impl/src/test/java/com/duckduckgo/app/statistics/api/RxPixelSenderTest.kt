@@ -1,0 +1,1045 @@
+/*
+ * Copyright (c) 2024 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.app.statistics.api
+
+import android.annotation.SuppressLint
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.LifecycleOwner
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.duckduckgo.app.statistics.api.PixelSender.EnqueuePixelResult
+import com.duckduckgo.app.statistics.api.PixelSender.SendPixelResult.PIXEL_IGNORED
+import com.duckduckgo.app.statistics.api.PixelSender.SendPixelResult.PIXEL_SENT
+import com.duckduckgo.app.statistics.api.RxPixelSenderTest.TestPixels.TEST
+import com.duckduckgo.app.statistics.config.StatisticsLibraryConfig
+import com.duckduckgo.app.statistics.model.Atb
+import com.duckduckgo.app.statistics.model.PixelEntity
+import com.duckduckgo.app.statistics.model.QueryParamsTypeConverter
+import com.duckduckgo.app.statistics.pixels.Pixel
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Count
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Daily
+import com.duckduckgo.app.statistics.pixels.Pixel.PixelType.Unique
+import com.duckduckgo.app.statistics.store.PendingPixelDao
+import com.duckduckgo.app.statistics.store.PixelFiredRepository
+import com.duckduckgo.app.statistics.store.StatisticsDataStore
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.test.InstantSchedulersRule
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.common.utils.plugins.pixel.PixelRequiringAtbPlugin
+import com.duckduckgo.devicemigration.api.DeviceMigration
+import com.duckduckgo.feature.toggles.api.FakeFeatureToggleFactory
+import com.duckduckgo.feature.toggles.api.Toggle.State
+import io.reactivex.Completable
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.kotlin.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+
+@SuppressLint("DenyListedApi")
+@RunWith(AndroidJUnit4::class)
+class RxPixelSenderTest {
+
+    @get:Rule
+    var instantTaskExecutorRule = InstantTaskExecutorRule()
+
+    @get:Rule
+    val schedulers = InstantSchedulersRule()
+
+    @get:Rule
+    val coroutineRule = CoroutineTestRule()
+
+    @Mock
+    val api: PixelService = mock()
+
+    @Mock
+    val mockStatisticsDataStore: StatisticsDataStore = mock()
+
+    @Mock
+    val mockDeviceInfo: DeviceInfo = mock()
+
+    private lateinit var db: TestAppDatabase
+    private lateinit var pendingPixelDao: PendingPixelDao
+    private lateinit var testee: RxPixelSender
+    private val mockLifecycleOwner: LifecycleOwner = mock()
+    private val pixelFiredRepository = FakePixelFiredRepository()
+    private val pixelSenderFeature = FakeFeatureToggleFactory.create(PixelSenderFeature::class.java)
+    private val concurrencyLimitFeature = FakeFeatureToggleFactory.create(PixelConcurrencyLimitFeature::class.java)
+    private val deviceMigration = FakeDeviceMigration()
+    private var pixelsRequiringAtb: List<String> = emptyList()
+    private var pixelsRequiringAtbSecondPlugin: List<String> = emptyList()
+    private val pixelRequiringAtbPlugins = object : PluginPoint<PixelRequiringAtbPlugin> {
+        override fun getPlugins(): Collection<PixelRequiringAtbPlugin> =
+            listOf(
+                object : PixelRequiringAtbPlugin { override fun names() = pixelsRequiringAtb },
+                object : PixelRequiringAtbPlugin { override fun names() = pixelsRequiringAtbSecondPlugin },
+            )
+    }
+
+    @Before
+    fun before() {
+        db = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, TestAppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        pendingPixelDao = db.pixelDao()
+
+        // Disabled by default so existing tests exercise the legacy (ATB-always) path.
+        pixelSenderFeature.self().setRawStoredState(State(enable = false))
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = false))
+
+        testee = createTestee(pendingPixelDao)
+    }
+
+    private fun createTestee(pixelDao: PendingPixelDao) = RxPixelSender(
+        api,
+        pixelDao,
+        mockStatisticsDataStore,
+        mockDeviceInfo,
+        object : StatisticsLibraryConfig {
+            override fun shouldFirePixelsAsDev() = true
+        },
+        pixelFiredRepository,
+        lazy { pixelSenderFeature },
+        pixelRequiringAtbPlugins,
+        lazy { concurrencyLimitFeature },
+        lazy { deviceMigration },
+    )
+
+    @After
+    fun after() {
+        db.close()
+    }
+
+    @Test
+    fun whenPixelFiredThenPixelServiceCalledWithCorrectAtbAndVariant() {
+        givenPixelApiSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("phone"), eq("atbvariant"), any(), any(), any())
+    }
+
+    @Test
+    fun whenPixelFiredTabletFormFactorThenPixelServiceCalledWithTabletParameter() {
+        givenApiSendPixelSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.TABLET)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("tablet"), eq(""), any(), any(), any())
+    }
+
+    @Test
+    fun whenPixelFiredWithNoAtbThenPixelServiceCalledWithCorrectPixelNameAndNoAtb() {
+        givenApiSendPixelSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("phone"), eq(""), any(), any(), any())
+    }
+
+    @Test
+    fun whenPixelFiredWithAdditionalParametersThenPixelServiceCalledWithDefaultAndAdditionalParameters() {
+        givenPixelApiSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+        givenAppVersion("1.0.0")
+
+        val params = mapOf("param1" to "value1", "param2" to "value2")
+        val expectedParams = mapOf("param1" to "value1", "param2" to "value2", "appVersion" to "1.0.0")
+        testee.sendPixel(TEST.pixelName, params, emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire("test", "phone", "atbvariant", expectedParams, emptyMap())
+    }
+
+    @Test
+    fun whenPixelFiredWithoutAdditionalParametersThenPixelServiceCalledWithOnlyDefaultParameters() {
+        givenPixelApiSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+        givenAppVersion("1.0.0")
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        val expectedParams = mapOf("appVersion" to "1.0.0")
+        verify(api).fire("test", "phone", "atbvariant", expectedParams, emptyMap())
+    }
+
+    @Test
+    fun whenPixelEnqueuedWitAdditionalParametersThenPixelEnqueuedWithParameters() {
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+        givenAppVersion("1.0.0")
+        val params = mapOf("param1" to "value1", "param2" to "value2")
+
+        testee.enqueuePixel(TEST.pixelName, params, emptyMap(), Count).test()
+            .assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        val testObserver = pendingPixelDao.pixels().test()
+        val pixels = testObserver.assertNoErrors().values().last()
+
+        assertEquals(1, pixels.size)
+        assertPixelEntity(
+            PixelEntity(
+                pixelName = "test",
+                atb = "atbvariant",
+                additionalQueryParams = params + mapOf("appVersion" to "1.0.0"),
+                encodedQueryParams = emptyMap(),
+            ),
+            pixels.first(),
+        )
+    }
+
+    @Test
+    fun whenPixelEnqueuedWithoutAdditionalParametersThenPixelEnqueuedWithOnlyDefaultParameters() {
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+        givenAppVersion("1.0.0")
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Count).test()
+            .assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(1, pixels.size)
+        assertPixelEntity(
+            PixelEntity(
+                pixelName = "test",
+                atb = "atbvariant",
+                additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+                encodedQueryParams = emptyMap(),
+            ),
+            pixels.first(),
+        )
+    }
+
+    @Test
+    fun whenAppForegroundedThenPixelSent() {
+        givenPixelApiSucceeds()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api).fire(
+            pixelEntity.pixelName,
+            "phone",
+            pixelEntity.atb,
+            pixelEntity.additionalQueryParams,
+            pixelEntity.encodedQueryParams,
+        )
+    }
+
+    @Test
+    fun whenMigratedInstallForegroundedThenPreviousPhoneQueueDroppedUnsent() {
+        givenPixelApiSucceeds()
+        deviceMigration.migrated = true
+        pendingPixelDao.insert(queuedPixel())
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api, never()).fire(any(), any(), any(), any(), any(), any())
+        assertTrue(pendingPixelDao.pixels().test().assertNoErrors().values().last().isEmpty())
+    }
+
+    @Test
+    fun whenMigratedInstallForegroundedAgainThenQueueNotDroppedTwice() {
+        givenPixelApiSucceeds()
+        deviceMigration.migrated = true
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+        testee.onStart(mockLifecycleOwner)
+        testee.onStop(mockLifecycleOwner)
+        val ownPixel = queuedPixel()
+        pendingPixelDao.insert(ownPixel)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api).fire(ownPixel.pixelName, "phone", ownPixel.atb, ownPixel.additionalQueryParams, ownPixel.encodedQueryParams)
+    }
+
+    @Test
+    fun whenMigratedInstallEnqueuesBeforeForegroundThenOnlyPreviousPhoneQueueDropped() {
+        givenPixelApiSucceeds()
+        deviceMigration.migrated = true
+        pendingPixelDao.insert(queuedPixel().copy(pixelName = "previous_phone"))
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Unique()).test()
+            .assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api, never()).fire(eq("previous_phone"), any(), any(), any(), any(), any())
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenTransferredQueueAlreadyClearedThenLaterEnqueuesKept() {
+        deviceMigration.migrated = true
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Count).test()
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Count).test()
+
+        assertEquals(2, pendingPixelDao.pixels().test().assertNoErrors().values().last().size)
+    }
+
+    @Test
+    fun whenNotMigratedInstallForegroundedThenQueueSentAndNotCheckedAgain() {
+        givenPixelApiSucceeds()
+        val pixelEntity = queuedPixel()
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api).fire(pixelEntity.pixelName, "phone", pixelEntity.atb, pixelEntity.additionalQueryParams, pixelEntity.encodedQueryParams)
+        assertTrue(deviceMigration.done.isNotEmpty())
+    }
+
+    @Test
+    fun whenAppForegroundedAndPixelSentThenPixelRemoved() {
+        givenPixelApiSucceeds()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertTrue(pixels.isEmpty())
+    }
+
+    @Test
+    fun whenAppForegroundedAndSendPixelFailsThenPixelNotRemoved() {
+        givenPixelApiFails()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        val testObserver = pendingPixelDao.pixels().test()
+        val pixels = testObserver.assertNoErrors().values().last()
+        assertTrue(pixels.isNotEmpty())
+    }
+
+    @Test
+    fun whenAppForegroundedWithMultiplePixelsEnqueuedThenSendAllPixels() {
+        givenPixelApiSucceeds()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity, times = 5)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api, times(5)).fire(
+            pixelEntity.pixelName,
+            "phone",
+            pixelEntity.atb,
+            pixelEntity.additionalQueryParams,
+            pixelEntity.encodedQueryParams,
+        )
+    }
+
+    @Test
+    fun whenDailyPixelIsFiredThenPixelNameIsStored() = runTest {
+        givenPixelApiSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertTrue(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenDailyPixelFireFailsThenPixelNameIsNotStored() = runTest {
+        givenPixelApiFails()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertError(RuntimeException::class.java)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertFalse(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenDailyPixelHasAlreadyBeenFiredTodayThenItIsNotFiredAgain() = runTest {
+        pixelFiredRepository.dailyPixelsFiredToday += TEST.pixelName
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertValue(PIXEL_IGNORED)
+
+        verifyNoInteractions(api)
+        assertTrue(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenDailyPixelIsFiredThenTagIsStored() = runTest {
+        givenPixelApiSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily("tag"))
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertTrue("tag" in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenDailyPixelFireFailsThenTagIsNotStored() = runTest {
+        givenPixelApiFails()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily("tag"))
+            .test().assertError(RuntimeException::class.java)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertFalse("tag" in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenDailyPixelHasAlreadyBeenFiredAndUsesTagTodayThenItIsNotFiredAgain() = runTest {
+        pixelFiredRepository.dailyPixelsFiredToday += "tag"
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily("tag"))
+            .test().assertValue(PIXEL_IGNORED)
+
+        verifyNoInteractions(api)
+        assertTrue("tag" in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenUniquePixelIsFiredThenPixelNameIsStored() = runTest {
+        givenPixelApiSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique())
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertTrue(TEST.pixelName in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenUniquePixelFireFailsThenPixelNameIsNotStored() = runTest {
+        givenPixelApiFails()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique())
+            .test().assertError(RuntimeException::class.java)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertFalse(TEST.pixelName in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenUniquePixelHasAlreadyBeenFiredThenItIsNotFiredAgain() = runTest {
+        pixelFiredRepository.uniquePixelsFired += TEST.pixelName
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique())
+            .test().assertValue(PIXEL_IGNORED)
+
+        verifyNoInteractions(api)
+        assertTrue(TEST.pixelName in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenUniquePixelIsFiredThenTagIsStored() = runTest {
+        givenPixelApiSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique("tag"))
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertTrue("tag" in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenUniquePixelFireFailsThenTagIsNotStored() = runTest {
+        givenPixelApiFails()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique("tag"))
+            .test().assertError(RuntimeException::class.java)
+
+        verify(api).fire(eq(TEST.pixelName), any(), any(), any(), any(), any())
+        assertFalse("tag" in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenUniquePixelHasAlreadyBeenFiredAndUsesTagThenItIsNotFiredAgain() = runTest {
+        pixelFiredRepository.uniquePixelsFired += "tag"
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Unique("tag"))
+            .test().assertValue(PIXEL_IGNORED)
+
+        verifyNoInteractions(api)
+        assertTrue("tag" in pixelFiredRepository.uniquePixelsFired)
+    }
+
+    @Test
+    fun whenDailyPixelIsEnqueuedThenPixelNameIsStored() = runTest {
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        assertTrue(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(1, pixels.size)
+    }
+
+    @Test
+    fun whenDailyPixelHasAlreadyBeenFiredTodayThenItIsNotEnqueued() = runTest {
+        pixelFiredRepository.dailyPixelsFiredToday += TEST.pixelName
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertValue(EnqueuePixelResult.PIXEL_IGNORED)
+
+        assertTrue(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(0, pixels.size)
+    }
+
+    @Test
+    fun whenDailyPixelIsEnqueuedThenTagIsStored() = runTest {
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Daily("tag"))
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        assertTrue("tag" in pixelFiredRepository.dailyPixelsFiredToday)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(1, pixels.size)
+    }
+
+    @Test
+    fun whenDailyPixelHasAlreadyBeenFiredAndUsesTagThenItIsNotEnqueued() = runTest {
+        pixelFiredRepository.dailyPixelsFiredToday += "tag"
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Daily("tag"))
+            .test().assertValue(EnqueuePixelResult.PIXEL_IGNORED)
+
+        assertTrue("tag" in pixelFiredRepository.dailyPixelsFiredToday)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(0, pixels.size)
+    }
+
+    @Test
+    fun whenUniquePixelIsEnqueuedThenPixelNameIsStored() = runTest {
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Unique())
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        assertTrue(TEST.pixelName in pixelFiredRepository.uniquePixelsFired)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(1, pixels.size)
+    }
+
+    @Test
+    fun whenUniquePixelHasAlreadyBeenFiredThenItIsNotEnqueued() = runTest {
+        pixelFiredRepository.uniquePixelsFired += TEST.pixelName
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Unique())
+            .test().assertValue(EnqueuePixelResult.PIXEL_IGNORED)
+
+        assertTrue(TEST.pixelName in pixelFiredRepository.uniquePixelsFired)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(0, pixels.size)
+    }
+
+    @Test
+    fun whenUniquePixelIsEnqueuedThenTagIsStored() = runTest {
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Unique("tag"))
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+
+        assertTrue("tag" in pixelFiredRepository.uniquePixelsFired)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(1, pixels.size)
+    }
+
+    @Test
+    fun whenUniquePixelHasAlreadyBeenFiredAndUsesTagThenItIsNotEnqueued() = runTest {
+        pixelFiredRepository.uniquePixelsFired += "tag"
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Unique("tag"))
+            .test().assertValue(EnqueuePixelResult.PIXEL_IGNORED)
+
+        assertTrue("tag" in pixelFiredRepository.uniquePixelsFired)
+        val pixels = pendingPixelDao.pixels().test().assertNoErrors().values().last()
+        assertEquals(0, pixels.size)
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndPixelNotOptedInThenFiredWithoutAtb() {
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = emptyList()
+        givenFireWithoutAtbSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fireWithoutAtb(eq("test"), eq("phone"), any(), any(), any())
+        verify(api, never()).fire(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndPixelOptedInThenFiredWithAtb() {
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = listOf("test")
+        givenApiSendPixelSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("phone"), eq("atbvariant"), any(), any(), any())
+        verify(api, never()).fireWithoutAtb(any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInDisabledThenAlwaysFiredWithAtb() {
+        pixelSenderFeature.self().setRawStoredState(State(enable = false))
+        pixelsRequiringAtb = emptyList()
+        givenApiSendPixelSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("phone"), eq("atbvariant"), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndEnqueuedPixelNotOptedInThenSentWithoutAtb() {
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = emptyList()
+        givenFireWithoutAtbSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api).fireWithoutAtb(eq("test"), eq("phone"), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndEnqueuedPixelOptedInThenSentWithAtb() {
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = listOf("test")
+        givenApiSendPixelSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.enqueuePixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(EnqueuePixelResult.PIXEL_ENQUEUED)
+        testee.onStart(mockLifecycleOwner)
+
+        verify(api).fire(eq("test"), eq("phone"), eq("atbvariant"), any(), any(), any())
+        verify(api, never()).fireWithoutAtb(any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndPixelNameStartsWithOptedInPrefixThenFiredWithAtb() {
+        // The opt-in list holds prefixes: a longer pixel name that starts with the prefix must still match.
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = listOf("m_anr")
+        givenApiSendPixelSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel("m_anr_exception", emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("m_anr_exception"), eq("phone"), eq("atbvariant"), any(), any(), any())
+        verify(api, never()).fireWithoutAtb(any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndPixelNameOnlyContainsPrefixThenFiredWithoutAtb() {
+        // Matching is startsWith, not contains: a prefix appearing mid-name must not opt the pixel in.
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = listOf("anr")
+        givenFireWithoutAtbSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel("m_anr_exception", emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fireWithoutAtb(eq("m_anr_exception"), eq("phone"), any(), any(), any())
+        verify(api, never()).fire(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenAtbOptInEnabledAndPixelOptedInBySecondPluginThenFiredWithAtb() {
+        // The opt-in decision must span every contributed plugin, not just the first.
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = listOf("other")
+        pixelsRequiringAtbSecondPlugin = listOf("test")
+        givenApiSendPixelSucceeds()
+        givenAtbVariant(Atb("atb"))
+        givenVariant("variant")
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verify(api).fire(eq("test"), eq("phone"), eq("atbvariant"), any(), any(), any())
+        verify(api, never()).fireWithoutAtb(any(), any(), any(), any(), any())
+    }
+
+    private fun assertPixelEntity(
+        expectedEntity: PixelEntity,
+        pixelEntity: PixelEntity,
+    ) {
+        assertEquals(expectedEntity.pixelName, pixelEntity.pixelName)
+        assertEquals(expectedEntity.atb, pixelEntity.atb)
+        assertEquals(expectedEntity.additionalQueryParams, pixelEntity.additionalQueryParams)
+        assertEquals(expectedEntity.encodedQueryParams, pixelEntity.encodedQueryParams)
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledThenPixelSentWithFireAsync() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        givenAsyncPixelApiSucceeds()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verifyBlocking(api) { fireAsync(eq(TEST.pixelName), eq("phone"), any(), any(), any(), any()) }
+        verify(api, never()).fire(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndAtbOptInEnabledAndPixelNotOptedInThenFiredWithoutAtb() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        pixelSenderFeature.self().setRawStoredState(State(enable = true))
+        pixelsRequiringAtb = emptyList()
+        wheneverBlocking { api.fireWithoutAtbAsync(any(), any(), any(), any(), any()) }.thenReturn(Unit)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Count)
+            .test().assertValue(PIXEL_SENT)
+
+        verifyBlocking(api) { fireWithoutAtbAsync(eq("test"), eq("phone"), any(), any(), any()) }
+        verifyBlocking(api, never()) { fireAsync(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndDailyPixelFireFailsThenPixelNameIsNotStored() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        givenAsyncPixelApiFails()
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.sendPixel(TEST.pixelName, emptyMap(), emptyMap(), Daily())
+            .test().assertError(TimeoutException::class.java)
+
+        assertFalse(TEST.pixelName in pixelFiredRepository.dailyPixelsFiredToday)
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndAppForegroundedThenQueuedPixelSentWithFireAsyncAndRemoved() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        givenAsyncPixelApiSucceeds()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        verifyBlocking(api) {
+            fireAsync(pixelEntity.pixelName, "phone", pixelEntity.atb, pixelEntity.additionalQueryParams, pixelEntity.encodedQueryParams)
+        }
+        verify(api, never()).fire(any(), any(), any(), any(), any(), any())
+        assertTrue(pendingPixelDao.pixels().test().assertNoErrors().values().last().isEmpty())
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndQueuedPixelSendFailsThenPixelNotRemoved() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        givenAsyncPixelApiFails()
+        val pixelEntity = PixelEntity(
+            pixelName = "test",
+            atb = "atbvariant",
+            additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+            encodedQueryParams = emptyMap(),
+        )
+        pendingPixelDao.insert(pixelEntity)
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        assertEquals(1, pendingPixelDao.pixels().test().assertNoErrors().values().last().size)
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndMultiplePixelsQueuedThenEachSentOnceAndQueueEmptied() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        // The send must actually suspend; with an instant mock a non-blocking drain would not get cancelled by switchMap.
+        wheneverBlocking { api.fireAsync(any(), any(), any(), anyOrNull(), any(), any()) }.doSuspendableAnswer { delay(10) }
+        val pixelNames = listOf("first", "second", "third")
+        pixelNames.forEach { name ->
+            pendingPixelDao.insert(
+                PixelEntity(
+                    pixelName = name,
+                    atb = "atbvariant",
+                    additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+                    encodedQueryParams = emptyMap(),
+                ),
+            )
+        }
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        testee.onStart(mockLifecycleOwner)
+
+        pixelNames.forEach { name ->
+            verifyBlocking(api, times(1)) { fireAsync(eq(name), any(), any(), any(), any(), any()) }
+        }
+        assertTrue(pendingPixelDao.pixels().test().assertNoErrors().values().last().isEmpty())
+    }
+
+    @Test
+    fun whenConcurrencyLimitEnabledAndAppStopsDuringQueuedSendThenSendCancelledAndPixelKept() {
+        concurrencyLimitFeature.self().setRawStoredState(State(enable = true))
+        // As in the app, Room must emit on its own thread: otherwise disposing interrupts the sending thread, which cancels the send anyway
+        val roomExecutor = Executors.newSingleThreadExecutor()
+        val asyncDb = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, TestAppDatabase::class.java)
+            .allowMainThreadQueries()
+            .setQueryExecutor(roomExecutor)
+            .build()
+        val asyncPixelDao = asyncDb.pixelDao()
+        val testee = createTestee(asyncPixelDao)
+        val sendStarted = CountDownLatch(1)
+        val sendCancelled = CountDownLatch(1)
+        wheneverBlocking { api.fireAsync(any(), any(), any(), anyOrNull(), any(), any()) }.doSuspendableAnswer {
+            sendStarted.countDown()
+            try {
+                awaitCancellation()
+            } finally {
+                sendCancelled.countDown()
+            }
+        }
+        asyncPixelDao.insert(
+            PixelEntity(
+                pixelName = "test",
+                atb = "atbvariant",
+                additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+                encodedQueryParams = emptyMap(),
+            ),
+        )
+        givenFormFactor(DeviceInfo.FormFactor.PHONE)
+
+        try {
+            testee.onStart(mockLifecycleOwner)
+            assertTrue(sendStarted.await(5, TimeUnit.SECONDS))
+
+            testee.onStop(mockLifecycleOwner)
+
+            assertTrue(sendCancelled.await(5, TimeUnit.SECONDS))
+            assertEquals(1, asyncPixelDao.pixels().blockingFirst().size)
+        } finally {
+            asyncDb.close()
+            roomExecutor.shutdownNow()
+        }
+    }
+
+    private fun givenAsyncPixelApiSucceeds() {
+        wheneverBlocking { api.fireAsync(any(), any(), any(), anyOrNull(), any(), any()) }.thenReturn(Unit)
+    }
+
+    private fun givenAsyncPixelApiFails() {
+        wheneverBlocking { api.fireAsync(any(), any(), any(), anyOrNull(), any(), any()) }.thenAnswer { throw TimeoutException() }
+    }
+
+    @Suppress("SameParameterValue")
+    private fun givenAppVersion(appVersion: String) {
+        whenever(mockDeviceInfo.appVersion).thenReturn(appVersion)
+    }
+
+    private fun givenApiSendPixelSucceeds() {
+        whenever(api.fire(any(), any(), any(), any(), any(), any())).thenReturn(Completable.complete())
+    }
+
+    private fun givenFireWithoutAtbSucceeds() {
+        whenever(api.fireWithoutAtb(any(), any(), any(), any(), any())).thenReturn(Completable.complete())
+    }
+
+    private fun givenVariant(variantKey: String) {
+        whenever(mockStatisticsDataStore.variant).thenReturn(variantKey)
+    }
+
+    private fun givenAtbVariant(atb: Atb) {
+        whenever(mockStatisticsDataStore.atb).thenReturn(atb)
+    }
+
+    private fun givenFormFactor(formFactor: DeviceInfo.FormFactor) {
+        whenever(mockDeviceInfo.formFactor()).thenReturn(formFactor)
+    }
+
+    private fun givenPixelApiSucceeds() {
+        whenever(api.fire(any(), any(), any(), anyOrNull(), any(), any())).thenReturn(Completable.complete())
+    }
+
+    private fun givenPixelApiFails() {
+        whenever(api.fire(any(), any(), any(), anyOrNull(), any(), any())).thenReturn(Completable.error(TimeoutException()))
+    }
+
+    private fun queuedPixel() = PixelEntity(
+        pixelName = "test",
+        atb = "atbvariant",
+        additionalQueryParams = mapOf("appVersion" to "1.0.0"),
+        encodedQueryParams = emptyMap(),
+    )
+
+    private class FakeDeviceMigration : DeviceMigration {
+        var migrated = false
+        val done = mutableSetOf<String>()
+        override suspend fun isMigratedInstall() = migrated
+        override fun sourceDeviceIsNewInstall(): Boolean? = if (migrated) false else null
+        override suspend fun sourceDeviceWasDefaultBrowser(): Boolean? = null
+        override suspend fun previousDeviceHadSync(): Boolean = false
+        override suspend fun isMigrationFlowPending() = false
+        override suspend fun markMigrationFlowCompleted() = Unit
+        override suspend fun isMigrationExperienceEnabled() = true
+        override fun isDoneOnThisInstall(key: String) = key in done
+        override fun markDoneOnThisInstall(key: String) {
+            done += key
+        }
+    }
+
+    private fun PendingPixelDao.insert(
+        pixel: PixelEntity,
+        times: Int,
+    ) {
+        for (x in 1..times) {
+            this.insert(pixel)
+        }
+    }
+
+    enum class TestPixels(override val pixelName: String, val enqueue: Boolean = false) : Pixel.PixelName {
+        TEST("test"),
+    }
+}
+
+@Database(
+    exportSchema = false,
+    version = 1,
+    entities = [PixelEntity::class],
+)
+@TypeConverters(
+    QueryParamsTypeConverter::class,
+)
+internal abstract class TestAppDatabase : RoomDatabase() {
+    abstract fun pixelDao(): PendingPixelDao
+}
+
+private class FakePixelFiredRepository : PixelFiredRepository {
+
+    val dailyPixelsFiredToday = mutableSetOf<String>()
+    val uniquePixelsFired = mutableSetOf<String>()
+
+    override suspend fun storeDailyPixelFiredToday(name: String) {
+        dailyPixelsFiredToday += name
+    }
+
+    override suspend fun hasDailyPixelFiredToday(name: String): Boolean =
+        name in dailyPixelsFiredToday
+
+    override suspend fun storeUniquePixelFired(name: String) {
+        uniquePixelsFired += name
+    }
+
+    override suspend fun hasUniquePixelFired(name: String): Boolean =
+        name in uniquePixelsFired
+}

@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="managementDisabledModeCta"><b>Configurează în Setări</b></string>
+
+    <string name="saveLoginDialogButtonSave">Salvează parola</string>
+    <string name="saveLoginMissingUsernameDialogButtonSave">Salvează parola</string>
+    <string name="saveLoginDialogNotNow">Nu salva</string>
+    <string name="saveLoginDialogTitle">Dorești să îți salvezi parola?</string>
+    <string name="saveLoginDialogMoreOptionsButtonLabel">Mai multe opțiuni</string>
+
+    <string name="useSavedLoginDialogTitle">Folosești o parolă salvată?</string>
+    <string name="useSavedLoginDialogMissingUsernameButtonText" instruction="Placeholder is the name of a website">Parola pentru %1$s</string>
+    <string name="useSavedLoginDialogMissingUsernameMissingDomainButtonText">Parola pentru site</string>
+    <string name="useSavedLoginDialogGroupThisWebsite">De pe acest site web</string>
+    <string name="useSavedLoginDialogFromDomainLabel" instruction="Placeholder is the URL of a website">Din %1$s</string>
+
+    <string name="updateLoginDialogButtonUpdatePassword">Actualizează parola</string>
+    <string name="updateLoginDialogButtonNotNow">Nu salva</string>
+
+    <string name="updateLoginDialogTitleUpdateUsername">Actualizezi numele de utilizator?</string>
+    <string name="updateLoginDialogButtonUpdateUsername">Actualizează numele de utilizator</string>
+
+    <string name="updateLoginDialogTitleLine" instruction="Placeholder is the user&apos;s username for this site">Actualizezi parola pentru \n%1$s?</string>
+    <string name="updateLoginUpdatePasswordExplanation">DuckDuckGo va actualiza această parolă stocată pe dispozitivul tău.</string>
+
+    <string name="autofillDialogCloseButtonContentDescription">Închide dialogul de completare automată</string>
+
+    <string name="credentialManagementEditUsernameHint">Nume utilizator</string>
+    <string name="credentialManagementEditPasswordHint">Parolă</string>
+    <string name="credentialManagementEditWebsiteHint">URL-ul site-ului</string>
+    <string name="credentialManagementEditNotesHint">Note</string>
+    <string name="credentialManagementEditButtonDelete">Ștergere</string>
+    <string name="credentialManagementEditButtonSaveChanges">Salvează modificările</string>
+    <string name="credentialManagementEditButtonCopyUsername">Copiază numele de utilizator</string>
+    <string name="credentialManagementEditButtonCopyPassword">Copiază parola</string>
+
+    <string name="credentialManagementViewMenuEdit">Editează</string>
+    <string name="credentialManagementViewMenuDelete">Ștergere</string>
+
+    <string name="credentialManagementSuggestionsLabel">Sugerat</string>
+
+    <string name="credentialManagementWebViewIncompatibleErrorMessage">Completarea automată a parolelor nu este disponibilă, deoarece versiunea ta de Android WebView este învechită sau incompatibilă.</string>
+
+    <string name="autofillManagementSearchClearDescription">Șterge datele introduse pentru căutare</string>
+    <string name="autofillManagementNoSearchResults" instruction="Placeholder is the query the user has searched for. e.g., No results for &apos;kittens&apos;">Nu există rezultate pentru „%1$s”</string>
+
+    <string name="autofillDeleteLoginDialogCancel">Anulare</string>
+    <string name="autofillDeleteLoginDialogDelete">Ștergere</string>
+
+    <!-- Autofill Management Survey Prompt, shown only to English locale so marked as not translatable -->
+    <string name="autofillManagementSurveyPromptTitle" translatable="false">Help us improve!</string>
+    <string name="autofillManagementSurveyPromptMessage" translatable="false">We want to make using passwords in DuckDuckGo better.</string>
+    <string name="autofillManagementSurveyPromptAcceptButtonText" translatable="false">Take Survey</string>
+
+    <string name="autofillManagementUsernameCopied">Numele de utilizator a fost copiat</string>
+    <string name="autofillManagementPasswordCopied">Parolă copiată</string>
+
+    <string name="autofill_password_generation_offer_title">Folosiți o parolă puternică de la DuckDuckGo?</string>
+    <string name="autofill_password_generation_offer_accept">Utilizați o parolă puternică</string>
+    <string name="autofill_password_generation_offer_decline">Îmi creez propria parolă</string>
+
+    <string name="deviceNotSupportedTitle">Dispozitivul nu este acceptat</string>
+
+    <string name="autofillManagementUndoDeletion">Anulează</string>
+
+    <string name="credentialManagementLinkButtonContentDescription" instruction="Accessibility text for a button that will show next to a text field containing a website address; it will launch the website when tapped">Deschide site-ul</string>
+
+    <string name="credentialManagementDuckAddressLabel" translatable="false">Duck Address</string>
+
+    <string name="credentialManagementDeactivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to deactivate their private &apos;Duck Address&apos;">Dezactivează Duck Address privată?</string>
+    <string name="credentialManagementDeactivateDuckAddressDialogMessage" instruction="Placeholder is an email address">E-mailurile trimise la %1$s nu vor mai fi redirecționate către căsuța ta de inbox.</string>
+    <string name="credentialManagementDeactivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will deactivate their email address, meaning emails sent there will no longer be forwarded to their inbox">Dezactivează</string>
+    <string name="credentialManagementActivateDuckAddressDialogTitle" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated. We are confirming with the user that they are about to reactivate their private &apos;Duck Address&apos;">Reactivezi Duck Address privată?</string>
+    <string name="credentialManagementActivateDuckAddressDialogMessage" instruction="Placeholder is an email address">Mesajele de e-mail trimise la %1$s vor fi din nou redirecționate către căsuța ta de inbox.</string>
+    <string name="credentialManagementActivateDuckAddressPositiveButton" instruction="This is the text shown on a button. When pressed, it will reactivate their email address, meaning emails sent there will again be forwarded to their inbox">Reactivează</string>
+
+    <string name="credentialManagementDuckAddressActivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is active">Activ</string>
+    <string name="credentialManagementDuckAddressActivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from deactivated to active">Se activează...</string>
+
+    <string name="credentialManagementDuckAddressDeactivatedLabel" instruction="This indicates that the &apos;status&apos; of their private &apos;Duck Address&apos; is deactivated">Dezactivat</string>
+    <string name="credentialManagementDuckAddressDeactivatingLabel" instruction="This is text shown briefly while changing the status of their &apos;Duck Address&apos;, going from active to deactivated">Se dezactivează...</string>
+
+    <string name="credentialManagementDuckAddressManagementTemporarilyUnavailable" instruction="Error message shown when unable to manage this &apos;Duck Address&apos; right now">Gestionarea acestei adrese este temporar indisponibilă.</string>
+
+    <string name="credentialManagementEnableEmailProtectionPrompt" instruction="&apos;Duck Addresses&apos; is the feature name, and should not be translated."><annotation type="enable_duck_address">Activează Email Protection</annotation> pentru a gestiona adresele Duck Address pe acest dispozitiv.</string>
+
+    <string name="autofill_email_protection_choose_email_dialog_title">Selectează adresa de e-mail</string>
+    <string name="autofillTooltipUseYourAliasDescription">Blochează tehnologiile de urmărire din e-mail</string>
+    <string name="autofillTooltipGenerateAddress" instruction="&apos;Duck Address&apos; is the feature name, and should not be translated.">Generează o Duck Address privată</string>
+    <string name="autofillTooltipGenerateAddressDescription" instruction="&apos;hide address&apos; refers to using an alias so your real email address is not used">Blochează tehnologiile de urmărire din e-mailuri și ascunde adresa</string>
+
+    <string name="autofillDisableAutofillPromptMessage">Poți dezactiva oricând acest lucru din Setări.</string>
+    <string name="autofillDisableAutofillPromptPositiveButton">Continuă să salvezi</string>
+    <string name="autofillDisableAutofillPromptNegativeButton">Dezactivează</string>
+
+    <string name="autofillEmailProtectionInContextSignUpDialogTitle">Ascunde-ți e-mailul și blochează tehnologiile de urmărire</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogFeatureName">Protecția comunicațiilor prin e-mail</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogExplanation">Creează o adresă unică, aleatorie, care elimină și tehnologiile de urmărire ascunse și redirecționează e-mailurile către căsuța ta de inbox.</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogProtectEmailButtonText">Protejează-mi adresa de e-mail</string>
+    <string name="autofillEmailProtectionInContextSignUpDialogDoNotShowAgainButtonText">Nu mai afișa</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogTitle">Dacă ieșiți acum, Duck Address nu va fi salvată</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogPositiveButton">Continuă configurarea</string>
+    <string name="autofillEmailProtectionInContextSignUpConfirmExitDialogNegativeButton">Ieși din configurare</string>
+
+    <string name="autofillManagementScreenTitle">Parole</string>
+    <string name="autofillManagementScreenTitleNew">Parole și completare automată</string>
+    <string name="credentialManagementNoLoginsSavedTitle">Nici o parolă nu a fost salvată încă</string>
+    <string name="credentialManagementAutofillToggleLabel">Salvează și completează automat parolele</string>
+    <string name="credentialManagementAutofillSubtitle">Parolele sunt criptate. Nimeni în afară de tine nu le poate vedea, nici măcar noi. <annotation type="learn_more_link">Află mai multe</annotation></string>
+    <string name="credentialManagementAutofillHelpPageTitle">Securitatea managerului de parole</string>
+    <string name="saveLoginDialogSubtitle">Stochează în siguranță parola pe dispozitiv, cu Parole și completare automată DuckDuckGo.</string>
+    <string name="autofillManagementAddLogin">Adaugă parola</string>
+    <string name="credentialManagementEditLoginTitleHint">Titlu</string>
+    <string name="autofillManagementDeletedConfirmation">Parolă ștearsă</string>
+    <string name="credentialManagementEditLastUpdated" instruction="Placeholder is a date">Ultima actualizare %1$s</string>
+    <string name="autofillDisableAutofillPromptTitle">Dorești să continui să salvezi parolele?</string>
+    <string name="deviceNotSupportedSubtitle">Pentru a stoca parolele în siguranță, trebuie să le criptăm și să le stocăm pe dispozitivul tău. Deoarece dispozitivul tău nu acceptă stocarea criptată, salvarea și completarea automată a parolelor nu este disponibilă.</string>
+    <string name="autofill_password_generation_offer_message">Parolele sunt stocate în siguranță pe dispozitivul tău.</string>
+    <string name="autofillManagementSearchLogins">Caută parole</string>
+    <string name="biometric_prompt_title">Parole blocate</string>
+    <string name="autofill_auth_text_for_access">Deblochează dispozitivul pentru a accesa parolele</string>
+    <string name="managementDisabledModeTitle">Securizează-ți dispozitivul pentru a salva parolele</string>
+    <string name="managementDisabledModeSubtitle">Este necesar un model de blocare a dispozitivului, un cod PIN sau date biometrice pentru a-ți proteja parolele.</string>
+    <string name="credentialManagementEditTitle">Editează parola</string>
+
+    <string name="credentials_limit_warning"><b>Sincronizare întreruptă</b>\nAi atins numărul maxim de parole. Șterge câteva pentru a relua sincronizarea.\n\n<annotation type="manage_logins">Gestionează parolele</annotation></string>
+    <string name="credentials_limit_warning_notif"><b>Sincronizarea parolelor este întreruptă</b>\nAi atins numărul maxim de parole. Șterge câteva parole pentru a relua sincronizarea.</string>
+    <string name="credentials_invalid_request_warning"><b></b>\nUnele parole sunt formatate incorect sau sunt prea lungi și nu au fost sincronizate.\n\n<annotation type="manage_logins">Gestionează parolele</annotation></string>
+    <string name="credentials_invalid_request_warning_notif"><b>Sincronizarea parolelor este întreruptă</b>\nUnele parole sunt formatate incorect sau sunt prea lungi și nu au fost sincronizate.</string>
+
+    <string name="saveLoginDialogNeverForThisSite">Nu solicita niciodată pentru acest site</string>
+    <string name="saveOnboardingLoginDialogSecondaryButton">Nu, mulțumesc</string>
+    <string name="credentialManagementInstructionNeverForThisSite">Dacă resetezi site-urile excluse, ți se va solicita să îți salvezi parola data viitoare când te conectezi la oricare dintre aceste site-uri.</string>
+    <string name="credentialManagementClearNeverForThisSiteList">Resetează site-urile excluse</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogTitle">Resetezi site-urile excluse?</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogPositiveButton">Resetează</string>
+    <string name="credentialManagementClearNeverForThisSiteDialogNegativeButton">Anulare</string>
+
+    <string name="credentialManagementDeleteAllPasswordsMenu">Șterge toate parolele</string>
+
+    <plurals name="credentialManagementDeleteAllPasswordsSnackbarConfirmation" instruction="Placeholder is a number representing how many passwords were deleted">
+        <item quantity="one">%1$d parolă ștearsă</item>
+        <item quantity="few">%1$d parole șterse</item>
+        <item quantity="other">%1$d de parole șterse</item>
+    </plurals>
+
+    <string name="autofill_auth_text_for_delete_all">Autentifică-te pentru a confirma că dorești să ștergi toate parolele</string>
+    <string name="autofill_title_text_for_delete_all">Șterge toate parolele</string>
+
+    <!-- Sync settings screen -->
+    <plurals name="syncCredentialInvalidItemsWarning" instruction="%1$ represents a site name or url, %2$d is the number of other invalid sites">
+        <item quantity="one">Parola ta pentru %1$s nu se poate sincroniza, deoarece unul dintre câmpuri depășește limita de caractere.</item>
+        <item quantity="few">Parolele tale pentru %1$s și încă alte %2$d site-uri nu se pot sincroniza, deoarece unele dintre câmpuri depășesc limita de caractere.</item>
+        <item quantity="other">Parolele tale pentru %1$s și încă alte %2$d de site-uri nu se pot sincroniza deoarece unele dintre câmpurile lor depășesc limita de caractere.</item>
+    </plurals>
+    <string name="syncCredentialInvalidItemsWarningLink"><annotation type="manage_passwords">Gestionează parolele</annotation></string>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedSingular">Parola ta va fi ștearsă de pe acest dispozitiv.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogFirstInstructionNotSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Parola ta va fi ștearsă de pe acest dispozitiv.</item>
+        <item quantity="few">Parolele tale vor fi șterse de pe acest dispozitiv.</item>
+        <item quantity="other">Parolele tale vor fi șterse de pe acest dispozitiv.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedSingular">Parola ta va fi ștearsă de pe toate dispozitivele sincronizate.</string>
+    <plurals name="credentialManagementDeleteAllPasswordsFirstInstructionSyncedPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Parola ta va fi ștearsă de pe toate dispozitivele sincronizate.</item>
+        <item quantity="few">Parolele tale vor fi șterse de pe toate dispozitivele sincronizate.</item>
+        <item quantity="other">Parolele tale vor fi șterse de pe toate dispozitivele sincronizate.</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllPasswordsDialogConfirmationTitleSingular">Sigur dorești să ștergi această parolă?</string>
+    <plurals name="credentialManagementDeleteAllPasswordsDialogConfirmationTitlePlural" tools:ignore="ImpliedQuantity" instruction="Placeholder is a number representing how many passwords will be deleted">
+        <item quantity="one">Sigur dorești să ștergi %1$d parolă?</item>
+        <item quantity="few">Sigur dorești să ștergi %1$d parole?</item>
+        <item quantity="other">Sigur dorești să ștergi această %1$d de parole?</item>
+    </plurals>
+
+    <string name="credentialManagementDeleteAllSecondInstructionSingular">Asigură-te că ai în continuare posibilitatea de a-ți accesa contul.</string>
+    <plurals name="credentialManagementDeleteAllSecondInstructionPlural" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Asigură-te că ai în continuare posibilitatea de a-ți accesa contul.</item>
+        <item quantity="few">Asigură-te că ai în continuare posibilitatea de a-ți accesa conturile.</item>
+        <item quantity="other">Asigură-te că ai în continuare posibilitatea de a-ți accesa conturile.</item>
+    </plurals>
+
+    <string name="credentialManagementNoLoginsSavedSubtitle">Poți importa parolele salvate dintr-un alt browser în DuckDuckGo.</string>
+
+    <string name="autofillManagementImportPasswords">Importă parolele</string>
+    <string name="autofillManagementHowToSyncDesktopPasswords">Sincronizează parolele de pe desktop</string>
+    <string name="autofillManagementImportPasswordsHowToTitle">Cum să imporți parolele</string>
+    <string name="autofillManagementHowToSyncDesktopPasswordsTitle">Cum se sincronizează parolele de pe desktop</string>
+    <string name="autofillManagementImportPasswordsHowToInstruction">Importă parolele în versiunea desktop a browserului DuckDuckGo, apoi sincronizează-le între dispozitive.</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserButtonText">Obține browserul pentru desktop</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentTitle">Obține browserul DuckDuckGo pentru Mac sau Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopBrowserIntentMessage" instruction="Placeholder is a URL">Caută în mod privat și blochează tehnologiile de urmărire cu browserul pentru desktop DuckDuckGo. Accesează acest link pe computerul tău pentru a descărca astăzi.\n\n%1$s</string>
+    <string name="autofillManagementImportPasswordsSyncWithDesktopButtonText">Sincronizare cu computerul desktop</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopTitle">Importă din browserul desktop:</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionOne">Deschide DuckDuckGo pe Mac sau Windows</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionTwo">"<![CDATA[Accesează <b>Setări</b> > <b>Parole</b>]]>"</string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionThree"><![CDATA[Selectează <b>Importă parole</b>... și urmează pașii pentru a importa]]></string>
+    <string name="autofillManagementImportPasswordsImportFromDesktopInstructionFour">Odată importate pe computer, poți configura sincronizarea pe acest dispozitiv</string>
+
+    <string name="autofillManagementImportPasswordsGetDesktopAppTitle">Obține aplicația pentru desktop</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppSubtitle">Obține DuckDuckGo pentru Mac sau Windows</string>
+    <string name="autofillManagementImportPasswordsGetDesktopAppInstruction">De pe computerul tău, accesează:</string>
+
+    <string name="autofillManagementReportBreakagePromptTitle">Raportează o problemă cu completarea automată</string>
+    <string name="autofillManagementReportBreakagePromptSubtitle">Raportează anonim că completarea automată nu funcționează pe acest site. Parolele nu sunt niciodată comunicate.</string>
+    <string name="autofillManagementReportBreakageDialogTitle" instruction="Placeholder is a website URL">Dorești să transmiți o sesizare că nu funcționează completarea automată pe %1$s?</string>
+    <string name="autofillManagementReportBreakageDialogMessage">Sesizările trimise către DuckDuckGo sunt anonime și nu includ numele tău de utilizator, parola sau orice alte informații de identificare personală.\n\nSesizarea include doar URL-ul site-ului și starea unor setări de completare automată.</string>
+    <string name="autofillManagementReportBreakageDialogPositiveButton">Trimite raportul</string>
+    <string name="autofillManagementReportBreakageDialogNegativeButton">Anulare</string>
+    <string name="autofillManagementReportBreakageSuccessMessage">Mulțumim! Sesizarea ta ne va ajuta să îmbunătățim DuckDuckGo pentru toată lumea.</string>
+
+    <!-- Save Dialog -->
+    <string name="onboardingSaveDialogKeyFeatureTitle">Caracteristici principale</string>
+    <string name="onboardingSaveDialogFeature1Title">Conectări rapide și ușoare</string>
+    <string name="onboardingSaveDialogFeature1Subtitle">Nu este nevoie să ții minte informațiile de conectare.</string>
+    <string name="onboardingSaveDialogFeature2Title">Stocare securizată</string>
+    <string name="onboardingSaveDialogFeature2Subtitle">Parolele sunt criptate, stocate pe dispozitiv și blocate cu modelul sau codul PIN Android.</string>
+    <string name="onboardingSaveDialogFeature3Title">Sincronizare între dispozitive</string>
+    <string name="onboardingSaveDialogFeature3Subtitle">Criptare de la un capăt la altul și configurare ușoară atunci când ești gata.</string>
+
+    <string name="autofillDisableInSettingsSnackbarText">Poți dezactiva oricând salvarea parolelor.</string>
+    <string name="autofillDisableInSettingsSnackbarAction">Deschide Setări</string>
+
+    <string name="newTabPageShortcutPasswords">Parole</string>
+
+    <string name="autofillImportGooglePasswordsWebFlowTitle">Importă parolele</string>
+    <string name="autofillImportGooglePasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d parole importate de la Google</string>
+    <string name="autofillImportCsvPasswordsSuccessMessage" instruction="Placeholder is the number of passwords imported">%1$d parole importate din CSV</string>
+
+    <string name="autofillImportGooglePasswordEmptyStateButtonTitle">Importă parole de la Google</string>
+    <string name="autofillImportGooglePasswordsPasswordsMenuTitle">Importă parole de la Google</string>
+
+    <string name="autofillSyncDesktopPasswordEmptyStateButtonTitle">Sincronizează parolele de pe desktop</string>
+    <string name="autofillSyncDesktopPasswordsMenuTitle">Sincronizează parolele de pe desktop</string>
+
+    <string name="importPasswordsChooseMethodDialogTitle">Importă parole de la Google</string>
+    <string name="importPasswordsChooseMethodDialogSubtitle">Google îți poate solicita să te conectezi sau să completezi parola pentru a confirma.</string>
+    <string name="importPasswordsChooseMethodDialogSubtitleDeviceAuth">Dispozitivul îți poate cere să completezi codul PIN, parola sau modelul de deblocare pentru confirmare.</string>
+    <string name="importPasswordsChooseMethodDialogGpmButton">Importă din Google</string>
+    <string name="importPasswordsChooseMethodDialogCsvButton">Alege un fișier CSV</string>
+    <string name="importPasswordsChooseMethodDialogDesktopSyncButton">Importă din browserul pentru desktop</string>
+
+    <string name="importPasswordsProcessingResultDialogTitleBeforeSuccess">Importă în DuckDuckGo</string>
+    <string name="importPasswordsProcessingResultDialogTitleUponSuccess">Import finalizat</string>
+    <string name="importPasswordsProcessingResultDialogDoneButtonText">Am înțeles</string>
+    <string name="importPasswordsProcessingResultDialogResultImportFailed">Importarea parolelor nu a reușit</string>
+    <string name="importPasswordsProcessingResultDialogResultDuplicatesSkipped"><![CDATA[Omise (duplicate sau nevalide): <b>%1$d</b>]]></string>
+    <string name="importPasswordsProcessingResultDialogResultPasswordsImported"><![CDATA[Parole importate: <b>%1$d</b>]]></string>
+
+    <string name="serviceName" translatable="false">DuckDuckGo</string>
+    <string name="autofill_service_suggestion_open_passwords">Deschide parolele</string>
+    <string name="autofill_service_select_password_activity">Selectează o parolă salvată</string>
+
+    <!-- New autofill Settings screen -->
+    <string name="autofillSettingsActivityTitle">Parole și completare automată</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogTitle">Resetezi site-urile excluse?</string>
+    <string name="autofillSettingsInstructionNeverForThisSite">Dacă resetezi site-urile excluse, ți se va solicita să îți salvezi parola data viitoare când te conectezi la oricare dintre aceste site-uri.</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogPositiveButton">Resetează</string>
+    <string name="autofillSettingsClearNeverForThisSiteDialogNegativeButton">Anulare</string>
+    <string name="autofillSettingsPasswordsEntry">Parole</string>
+    <string name="autofillSettingsAutofillToggleLabel">Solicită salvarea și completarea automată</string>
+    <string name="autofillSettingsAutofillSubtitle">Parolele sunt criptate. Nimeni în afară de tine nu le poate vedea, nici măcar noi. <annotation type="learn_more_link">Află mai multe</annotation></string>
+    <string name="autofillSettingsImportSectionLabel">Importă parolele</string>
+    <string name="autofillSettingsImportFromGoogleLabel">Importă parole de la Google</string>
+    <string name="autofillSettingsImportFromDesktopSync">Sincronizează parolele de pe desktop</string>
+    <string name="autofillSettingsResetExcludedSitesTitle">Resetează site-urile excluse</string>
+
+    <string name="passwords_import_promo_title" instruction="The &apos;br&apos; is a forced line break for English. It does not need to be included in translations.">Importă parolele tale din&lt;br /&gt;Google în DuckDuckGo</string>
+    <string name="passwords_import_promo_subtitle">Importă-ți parolele rapid și în siguranță în DuckDuckGo. Google îți poate cere să completezi parola.</string>
+    <string name="passwords_import_promo_subtitle_device_auth">Importă-ți parolele rapid și în siguranță în DuckDuckGo. Dispozitivul îți poate cere să completezi codul PIN, parola sau modelul de deblocare pentru confirmare.</string>
+    <string name="passwords_import_promo_action">Importă din Google</string>
+    <string name="passwords_import_promo_in_browser_title">Importă parolele tale din Google în DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_title_device_auth">Importă-ți parolele din Google în DuckDuckGo</string>
+    <string name="passwords_import_promo_in_browser_secondary_action_button">Nu întreba din nou</string>
+    <string name="passwords_import_promo_in_settings_title">Importă parole de la Google</string>
+    <string name="passwords_import_promo_in_settings_dismiss_text">Ascunde</string>
+
+    <!-- Import Bookmarks Strings -->
+    <string name="importToDuckDuckGo">Importă în DuckDuckGo</string>
+    <string name="importBookmarksFromGoogleChromeFolderName">Importat din Chrome</string>
+    <string name="importBookmarksFromGooglePreImportDialogTitle">Importă marcajele din Google</string>
+    <string name="importBookmarksFromGooglePreImportDialogInstruction">Google îți poate solicita să te conectezi sau să completezi parola pentru a confirma.</string>
+    <string name="importBookmarksFromGooglePreImportDialogImportButton">Importă din Google</string>
+    <string name="importBookmarksFromGooglePreImportDialogSelectFileButton">Selectează fișierul cu marcaje...</string>
+    <string name="importBookmarksFromGoogleWebFlowTitle">Importă marcaje</string>
+    <string name="importBookmarksProgressTitle">Se importă din Google…</string>
+    <string name="importBookmarksProgressSubtitle">Ține acest ecran deschis și așteaptă – nu ar trebui să dureze mai mult de un minut sau două.</string>
+    <string name="importBookmarksProgressInfoMessage1">Google îți poate solicita să te conectezi sau să completezi parola pentru a confirma.</string>
+    <string name="importBookmarksProgressInfoMessage2">Google îți poate trimite un e-mail confirmând că marcajele tale sunt exportate.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogTitle">Dorești să anulezi importul?</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogMessage">Marcajele tale nu vor fi importate dacă anulezi acum.</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogCancelImport">Anulează importul</string>
+    <string name="importBookmarksFromGoogleCancelConfirmationDialogContinue">Continuă</string>
+    <string name="importBookmarksFromGoogleSuccessBookmarksCount" instruction="Placeholder is the number of bookmarks that were imported">Marcaje: %1$d</string>
+    <string name="importBookmarksSuccessTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksFinalDoneButton">Închidere</string>
+    <string name="importBookmarksErrorTitle">@string/importToDuckDuckGo</string>
+    <string name="importBookmarksErrorGenericMessage">Ceva nu a funcționat corect</string>
+    <string name="importBookmarksErrorGenericMessageSecondary">Asigură-te că ești conectat la internet și încearcă din nou.</string>
+
+    <!-- Passwords import redesign: success and error -->
+    <string name="importPasswordsRedesignResultTitle">Import finalizat!</string>
+
+    <!-- Bookmarks import redesign: importing -->
+    <string name="importBookmarksRedesignImportingSubtitle">Așteaptă puțin – ține această fereastră deschisă. Nu ar trebui să dureze mai mult de un minut sau două.</string>
+    <string name="importBookmarksRedesignImportingFirstInfoRow">Google îți poate cere parola.</string>
+    <string name="importBookmarksRedesignImportingSecondInfoRow">Google îți va trimite un e-mail ca să confirme că datele tale au fost exportate. Nu trebuie să faci nimic.</string>
+
+    <!-- Bookmarks import redesign: success and error -->
+    <string name="importBookmarksRedesignResultTitle">Import finalizat!</string>
+    <string name="importBookmarksRedesignSuccessImportedRow" instruction="Placeholder is the number of bookmarks that were imported"><![CDATA[Marcaje importate: <b>%1$d</b>]]></string>
+
+    <!-- Passwords import promo on the bookmarks import result screen -->
+    <string name="passwords_import_promo_in_bookmarks_import_title">Importă-ți parolele din Google în DuckDuckGo.</string>
+    <string name="passwords_import_promo_in_bookmarks_import_button">Importă parole din Google</string>
+
+    <!-- Bookmarks import promo on the passwords import result screen -->
+    <string name="bookmarks_import_promo_in_passwords_import_title">Importă-ți marcajele din Google în DuckDuckGo.</string>
+    <string name="bookmarks_import_promo_in_passwords_import_button">Importă marcajele din Google</string>
+
+</resources>

@@ -1,43 +1,364 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
+import static de.fayard.refreshVersions.core.Versions.versionFor
+import com.gradle.develocity.agent.gradle.test.ImportJUnitXmlReports
+
 buildscript {
-    def versionPropsFile = file('versions.properties')
-    Properties versionProps = new Properties()
 
-    if (versionPropsFile.canRead()) {
-        versionProps.load(new FileInputStream(versionPropsFile))
+    ext {
+        min_sdk = 28
+        target_sdk = 36
+        compile_sdk = 36
+
+        // Calculate lint_version (must always be gradle_plugin + 23)
+        def gradle_plugin_version = versionFor(project, Android.tools.build.gradlePlugin)
+        def components = gradle_plugin_version.split('\\.')
+        lint_version = gradle_plugin_version.replaceFirst(components[0], (components[0].toInteger() + 23).toString())
     }
-
-    ext.kotlin_version = versionProps['version.kotlin']
-    ext.spotless = "5.14.0"
-    ext.anvil_version = "2.3.3"
-
-    ext.min_sdk = 21
-    ext.target_sdk = 29
-    ext.compile_sdk = 30
-    ext.tools_build_version = "30.0.3"
 
     repositories {
         google()
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:$spotless"
-        classpath "com.squareup.anvil:gradle-plugin:$anvil_version"
+        classpath(Android.tools.build.gradlePlugin)
+        classpath "com.android.tools.build:gradle-kotlin:${versionFor(project, Android.tools.build.gradlePlugin)}"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:_"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
+
+        // Metro DI plugin (requires JVM 21+ to load)
+        classpath "dev.zacsweers.metro:gradle-plugin:_"
     }
+}
+
+plugins {
+    id 'org.jetbrains.dokka'
+    id 'com.osacky.fulladle'
+    id 'org.jetbrains.kotlin.plugin.compose' apply false
+    id 'com.google.devtools.ksp' apply false
+    id 'com.diffplug.spotless' apply false
+    id 'androidx.baselineprofile' apply false
+}
+
+// Proprietary DuckSans font swap. See https://app.asana.com/1/137249556945/project/1207908166761516/task/1213686706814504
+def gprUser = findProperty("ducksans.gpr.user") ?: providers.environmentVariable("DUCKSANS_PACKAGE_AUTH_USER").getOrNull()
+def gprKey = findProperty("ducksans.gpr.key") ?: providers.environmentVariable("DUCKSANS_PACKAGE_AUTH_TOKEN").getOrNull()
+def hasGprCredentials = gprUser && gprKey
+def useProprietaryFontProp = findProperty("useProprietaryFont")
+ext.proprietaryFontAvailable = hasGprCredentials && useProprietaryFontProp?.toBoolean() != false
+ext.proprietaryFontOptOut = useProprietaryFontProp?.toBoolean() == false
+
+if (proprietaryFontAvailable) {
+    logger.lifecycle("DUCKSANS: Using proprietary font AAR from GitHub Packages")
+} else if (proprietaryFontOptOut) {
+    logger.lifecycle("DUCKSANS: Using placeholder fallback fonts (opted out via -PuseProprietaryFont=false)")
+} else {
+    logger.lifecycle("DUCKSANS: Using placeholder fallback fonts (no credentials found)")
 }
 
 allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://jitpack.io' }
+        if (rootProject.ext.proprietaryFontAvailable) {
+            maven {
+                url = uri("https://maven.pkg.github.com/duckduckgo/native-apps-ducksans")
+                credentials {
+                    username = gprUser
+                    password = gprKey
+                }
+                content {
+                    includeGroup "com.duckduckgo"
+                }
+            }
+        }
+    }
+    configurations.all {
+        resolutionStrategy.force 'org.objenesis:objenesis:2.6'
+    }
+}
+
+subprojects {
+
+    if (project.name.endsWith("api")) {
+        apply plugin: 'org.jetbrains.dokka'
+    }
+
+    String[] allowAndroidTestsIn = ["app", "sync-lib", "httpsupgrade-impl", "pir-impl", "feature-toggles-impl", "app-database"]
+    if (!allowAndroidTestsIn.contains(project.name)) {
+        project.projectDir.eachFile(groovy.io.FileType.DIRECTORIES) { File parent ->
+            if (parent.name == "src") {
+                parent.eachFile(groovy.io.FileType.DIRECTORIES) { child ->
+                    if (child.name == "androidTest") {
+                        throw new GradleException("Only the app module can have Android Tests. Perhaps you could use Robolectric?")
+                    }
+                }
+            }
+        }
+    }
+
+    String[] allowStringsIn = ["app"]
+    if (!allowStringsIn.contains(project.name)) {
+        project.projectDir.eachDirRecurse { File parent ->
+            if (parent.name == "values") {
+                parent.eachFile(groovy.io.FileType.FILES) { child ->
+                    if (child.name == "strings.xml") {
+                        throw new GradleException("Duplicate strings.xml file found in $project. " +
+                                "Only :app should contain the strings.xml file. " +
+                                "Rename file to strings-<feature>.xml instead.")
+                    }
+                }
+            }
+        }
+    }
+
+    def projectPath = path
+    configurations.configureEach {
+        if (name == "compileClasspath" || name.endsWith("CompileClasspath")) {
+            incoming.beforeResolve {
+
+                plugins.each { plugin ->
+                    // API modules cannot use the Metro plugin
+                    if (projectPath.endsWith("api")) {
+                        if (plugin.toString().contains("dev.zacsweers.metro")) {
+                            throw new GradleException("Invalid plugin $projectPath -> " +
+                                    "'api' modules can't use the Metro plugin")
+                        }
+                    }
+                    if (plugin.toString().toLowerCase().contains("kapt")) {
+                        throw new GradleException("Invalid usage of kapt $projectPath -> " +
+                                "Use ksp instead of kapt")
+                    }
+                }
+
+                for (dependency in dependencies) {
+                    if (dependency.group == "com.google.dagger" || dependency.group == "com.squareup.anvil") {
+                        throw new GradleException("Invalid dependency $projectPath -> ${dependency.group}:${dependency.name}. " +
+                                "Dagger and Anvil were replaced by Metro")
+                    }
+
+                    if (dependency instanceof ProjectDependency) {
+                        def dependencyPath = dependency.path
+                        if (dependencyPath == projectPath) continue
+                        // internal modules have to use internalImplementation
+                        // when a non internal configuration is built (i.e. PlayDebug) no internal dependencies should be found
+                        def internalExceptions = []
+                        if (dependencyPath.endsWith('internal') && !internalExceptions.contains(dependencyPath) && !name.toLowerCase().contains("internal")) {
+                            throw new GradleException("Invalid dependency $projectPath -> $dependencyPath. " +
+                                    "'internal' modules must use internalImplementation")
+                        }
+                        // internal modules can depend on impl
+                        if (projectPath.endsWith('internal') && dependencyPath.endsWith('impl')) continue
+                        if (!projectPath.endsWith(":app") && dependencyPath.endsWith("impl")) {
+                            throw new GradleException("Invalid dependency $projectPath -> $dependencyPath. " +
+                                    "Only :app module can depend on 'impl' modules")
+                        }
+                        // API modules cannot depend on :di
+                        if (projectPath.endsWith("api") && dependencyPath == ":di") {
+                            throw new GradleException("Invalid dependency $projectPath -> $dependencyPath. " +
+                                    "'api' modules can't depend on the 'di' module")
+                        }
+
+                        // API modules can depend on :feature-toggles-api
+                        if (projectPath.endsWith("api")
+                                && dependencyPath.endsWith("api")
+                                && dependencyPath != ":feature-toggles-api"
+                                && dependencyPath != ":navigation-api"
+                                && dependencyPath != ":js-messaging-api"
+                                && dependencyPath != ":browser-api"
+                                && dependencyPath != ":browser-mode-api"
+                                && dependencyPath != ":tracker-detection-api"
+                        ) {
+                            if (projectPath.endsWith(":feature-toggles-api") &&
+                                    (dependencyPath == ":experiments-api"
+                                            || dependencyPath == ":feature-toggles-internal-api")
+                            ) {
+                                // noop
+                            } else {
+                                throw new GradleException("Invalid dependency $projectPath -> $dependencyPath. " +
+                                        "'api' modules can't depend on other 'api' modules")
+                            }
+                        }
+                        if (dependencyPath.endsWith(":app")) {
+                            throw new GradleException("Invalid dependency $projectPath -> $dependencyPath. " +
+                                    "No other module can depend on ':app'")
+                        }
+                    }
+                }
+            }
+        }
+        resolutionStrategy.dependencySubstitution {
+            // Use Guava (which already bundles ListenableFuture) everywhere a bare listenablefuture is requested.
+            // Note: refreshVersions placeholders ("_") are not resolved in substitutions, so pin the version explicitly.
+            substitute(module("com.google.guava:listenablefuture"))
+                    .using(module("com.google.guava:guava:33.4.0-android"))
+                    .because("Use guava's bundled ListenableFuture to avoid duplicate classes")
+        }
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlinx' && details.requested.name.startsWith('kotlinx-serialization')) {
+                details.useVersion '1.8.1'
+                details.because 'Keep kotlinx-serialization runtime artifacts aligned'
+            }
+        }
+    }
+
+    // Use JDK 21 for Kotlin compilation (required for Metro compiler plugin)
+    // Output bytecode still targets JVM 17
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
+    pluginManager.withPlugin('com.android.base') {
+        kotlin {
+            jvmToolchain(21)
+        }
+    }
+    pluginManager.withPlugin('org.jetbrains.kotlin.jvm') {
+        kotlin {
+            jvmToolchain(21)
+        }
+    }
+
+    plugins.withId('com.google.devtools.ksp') {
+        afterEvaluate {
+            configurations.configureEach { config ->
+                if (config.name == 'ksp') {
+                    config.dependencies.matching {
+                        it.group == 'androidx.room' && it.name == 'room-compiler'
+                    }.configureEach {
+                        ksp {
+                            arg("room.generateKotlin", "true")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+subprojects {
+    plugins.withId('dev.zacsweers.metro') {
+        metro {
+            interop {
+                includeJavax()
+            }
+        }
+        dependencies {
+            implementation "javax.inject:javax.inject:_"
+        }
     }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// Develocity test retry configuration to detect flaky tests
+def isCI = System.getenv('CI') != null
+subprojects {
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+        develocity.testRetry {
+            maxRetries = isCI ? 1 : 0
+            maxFailures = 5
+            failOnPassedAfterRetry = true
+        }
+        develocity.predictiveTestSelection {
+            enabled.set(System.getProperty("pts.enabled", "true").toBoolean())
+        }
+    }
+}
+
+fladle {
+    configs {
+        serviceAccountCredentials.set(project.layout.projectDirectory.file("flank.json"))
+        androidTests {
+            async.set(false)
+            flankVersion.set("21.+")
+            testShards.set(2)
+            useOrchestrator.set(false)
+            recordVideo.set(false)
+            testTargets.set([
+                    "notAnnotation com.duckduckgo.espresso.PrivacyTest",
+                    "notAnnotation com.duckduckgo.espresso.InternalPrivacyTest",
+                    "notAnnotation com.duckduckgo.espresso.UserJourney",
+            ])
+            devices.set([
+                    ["model": "MediumPhone.arm", "version": "30"],
+                    ["model": "Pixel2.arm", "version": "28"]
+            ])
+            localResultsDir.set("fladleResults")
+            // retry once, if it succeeds it will be reported as a flaky test
+            flakyTestAttempts.set(1)
+            // Emit the full merged JUnit report so it retains every execution,
+            // including the failed attempt + passed rerun of a flaky test.
+            fullJunitResult.set(true)
+        }
+        perfTests {
+            serviceAccountCredentials.set(project.layout.projectDirectory.file("flank.json"))
+            flankVersion.set("21.+")
+            useOrchestrator.set(false)
+            recordVideo.set(false)
+            testTimeout.set("45m")
+            debugApk.set(project.provider {
+                def dir = rootProject.file("app/build/outputs/apk/internal/release")
+                def apks = dir.exists() ? (dir.listFiles() ?: []).findAll { it.name.endsWith("-internal-release.apk") } : []
+                apks.isEmpty() ? new File(dir, "missing-internal-release.apk").absolutePath : apks.first().absolutePath
+            })
+            instrumentationApk.set(rootProject.file("macrobenchmark/build/outputs/apk/release/macrobenchmark-release.apk").absolutePath)
+            additionalTestApks.set([])
+            testTargets.set(["class com.duckduckgo.macrobenchmark.PageLoadBenchmark"])
+            devices.set([["model": "tokay", "version": "36"]])
+            environmentVariables.set([
+                    "additionalTestOutputDir"        : "/sdcard/Download",
+                    "no-isolated-storage"            : "true",
+            ])
+            directoriesToPull.set(["/sdcard/Download"])
+            localResultsDir.set("perfResults")
+            flakyTestAttempts.set(0)
+        }
+    }
+}
+
+tasks.matching { it.name == "execFlankPerfTests" }.configureEach {
+    doFirst {
+        if (!file(config.debugApk.get()).exists()) {
+            throw new GradleException("No internalRelease APK in app/build/outputs/apk/internal/release — run :app:assembleInternalRelease first")
+        }
+    }
+}
+
+afterEvaluate {
+    // Import FullJUnitReport.xml, not JUnitReport.xml. fullJunitResult=true makes
+    // Flank emit this extra report carrying the flaky markers (failure nodes on
+    // passed-after-retry tests) that the ANDROID_FIREBASE dialect needs to detect
+    // flaky tests; the plain JUnitReport.xml has no such markers (imports fine but
+    // always reports 0 flaky).
+    tasks.withType(ImportJUnitXmlReports).matching { it.name.startsWith("execFlank") }.configureEach {
+        reports.setFrom(file("build/fladle/fladleResults/FullJUnitReport.xml"))
+    }
+}
+
+tasks.register('aiConfigCheck') {
+    group = 'verification'
+    description = 'Validates AI config (.claude/rules, .claude/docs, .claude/skills) against AGENTS.md and checks for dangling references.'
+    def repoRoot = layout.projectDirectory.asFile
+    doLast {
+        def checker = new com.duckduckgo.gradle.AiConfigChecker(repoRoot)
+        def violations = checker.check()
+        if (!violations.isEmpty()) {
+            violations.each { v -> logger.error("AI config: " + v.format()) }
+            throw new GradleException("AI config check failed with ${violations.size()} violation(s). See messages above.")
+        }
+        logger.lifecycle("AI config check passed: ${violations.size()} violations.")
+    }
+}
+
+
+// :app adds the privacy Flank configs to this project's fladle extension, and fladle only registers
+// tasks for the configs present when this project finishes evaluating, so :app must be evaluated first.
+evaluationDependsOn(':app')

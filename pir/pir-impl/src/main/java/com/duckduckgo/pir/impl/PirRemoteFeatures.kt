@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.pir.impl
+
+import com.duckduckgo.codegen.annotations.ContributesRemoteFeature
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.feature.toggles.api.Toggle.DefaultFeatureValue
+import com.duckduckgo.feature.toggles.api.Toggle.DefaultValue
+import com.duckduckgo.feature.toggles.api.Toggle.InternalAlwaysEnabled
+import com.duckduckgo.pir.api.PirFeature
+import com.duckduckgo.pir.api.dashboard.PirFeatureState
+import com.duckduckgo.pir.impl.store.PirRepository
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+
+@ContributesRemoteFeature(
+    scope = AppScope::class,
+    featureName = "pir",
+)
+interface PirRemoteFeatures {
+    @Toggle.DefaultValue(DefaultFeatureValue.TRUE)
+    fun self(): Toggle
+
+    @DefaultValue(DefaultFeatureValue.FALSE)
+    @InternalAlwaysEnabled
+    fun pirBeta(): Toggle
+
+    @DefaultValue(DefaultFeatureValue.TRUE)
+    fun useBundledBrokerJsons(): Toggle
+
+    @DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun trackerBlocking(): Toggle
+
+    @DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun ensureBrokerDataBeforeScan(): Toggle
+
+    @DefaultValue(DefaultFeatureValue.TRUE)
+    fun sendScanWideEvent(): Toggle
+
+    /**
+     * When enabled, opening the dashboard with an interrupted initial scan (pending scan jobs,
+     * no scan currently running) restarts the foreground scan to finish it.
+     */
+    @DefaultValue(DefaultFeatureValue.TRUE)
+    fun resumeInitialScanOnDashboardOpen(): Toggle
+
+    /**
+     * Kill-switch for the work queue. When disabled, runner work distribution falls
+     * back to static equal-count partitioning.
+     */
+    @DefaultValue(DefaultFeatureValue.TRUE)
+    fun workQueueScheduling(): Toggle
+
+    /**
+     * Enables Freemium PIR: an activated, unauthenticated user may run scans, but never
+     * opt-outs or maintenance scans.
+     */
+    @DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun freemium(): Toggle
+
+    /**
+     * When enabled, completing onboarding on the dashboard asks for the notification permission
+     * (after explaining why) so the user can be told when the initial scan completes.
+     */
+    @DefaultValue(DefaultFeatureValue.INTERNAL)
+    fun notificationPermissionPrompt(): Toggle
+}
+
+@SingleIn(AppScope::class)
+@ContributesBinding(
+    scope = AppScope::class,
+    binding = binding<PirFeature>(),
+)
+class PirRemoteFeatureImpl @Inject constructor(
+    private val pirRemoteFeatures: PirRemoteFeatures,
+    private val dispatcherProvider: DispatcherProvider,
+    private val pirRepository: PirRepository,
+) : PirFeature {
+
+    override suspend fun getPirFeatureState(): PirFeatureState = withContext(dispatcherProvider.io()) {
+        val isEnabled = pirRemoteFeatures.pirBeta().isEnabled()
+        if (!isEnabled) {
+            return@withContext PirFeatureState.DISABLED
+        }
+
+        val isRepositoryAvailable = pirRepository.isRepositoryAvailable()
+        if (!isRepositoryAvailable) {
+            return@withContext PirFeatureState.NOT_AVAILABLE
+        }
+
+        return@withContext PirFeatureState.ENABLED
+    }
+}

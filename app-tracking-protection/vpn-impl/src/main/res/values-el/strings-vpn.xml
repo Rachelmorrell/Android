@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2020 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="atp_name">Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="refresh">Ανανέωση</string>
+
+    <!-- Debug Screens -->
+    <string name="atp_DiagnosticsMenuLabel">Διαγνωστικά</string>
+    <string name="atp_DataMenuLabel">Στατιστικά δεδομένων</string>
+    <string name="atp_MeteredConnection" instruction="Placeholder is true or false">"Με βάση τη χρήση: %1$s"</string>
+    <string name="atp_ConnectionStatus" instruction="Placeholder is true or false">"Συνδεδεμένο VPN: %1$s"</string>
+    <string name="atp_NetworkAvailable" instruction="Placeholder is true or false">"Συνδεδεμένο στο διαδίκτυο: %1$s"</string>
+    <string name="atp_DnsServers" instruction="Placeholder is a list of dns addresses">"Ενεργό DNS δικτύου: %1$s"</string>
+    <string name="atp_AppExitsReasonsTitle">Αιτίες εξόδου από την εφαρμογή</string>
+    <string name="atp_AppRestartsTitle">Επανεκκινήσεις της εφαρμογής</string>
+
+    <!-- Diagnostics -->
+    <string name="vpnTimeRunning" instruction="Placeholder is the time expressed as a String that the vpn has been running">Χρόνος εκτέλεσης: %1$s</string>
+    <string name="vpnTrackerCompaniesBlockedToday" instruction="Placeholder is a number">Εταιρείες εφαρμογών παρακολούθησης που αποκλείστηκαν σήμερα: %1$d</string>
+    <string name="vpnTrackerCompaniesBlockedThisWeek" instruction="Placeholder is a number">Εταιρείες εφαρμογών παρακολούθησης που αποκλείστηκαν αυτήν την εβδομάδα: %1$d</string>
+    <string name="vpnTrackerCompaniesNone">"Καμία εταιρεία εφαρμογών παρακολούθησης δεν έχει αποκλειστεί ακόμα"</string>
+    <string name="vpnTrackersBlockedToday" instruction="Placeholder is a number">Εφαρμογές παρακολούθησης που αποκλείστηκαν σήμερα: %1$d</string>
+    <string name="vpnTrackersBlockedThisWeek" instruction="Placeholder is a number">Εφαρμογές παρακολούθησης που αποκλείστηκαν αυτήν την εβδομάδα: %1$d</string>
+    <string name="vpnTrackersNone">"Δεν έχουν αποκλειστεί ακόμη εφαρμογές παρακολούθησης"</string>
+    <string name="vpnNotRunYet">"Το VPN δεν έχει εκτελεστεί ακόμα"</string>
+    <string name="vpnDataTransferred" instruction="%1$s is the size of data transferred, i.e. 340MB. %2$s is the amount of packets, i.e. 123 packets ">"%1$s\n%2$s πακέτα"</string>
+
+    <!-- App Tracking Protection Ongoing Notification -->
+    <string name="atp_ReportIssue">Αντιμετωπίζετε προβλήματα με μια εφαρμογή;</string>
+    <string name="atp_OnInitialNotification">"Η App Tracking Protection είναι ενεργοποιημένη και εμποδίζει τις προσπάθειες παρακολούθησης στις εφαρμογές σας"</string>
+    <string name="atp_OnNoTrackersNotificationHeader">"Σάρωση για παρακολούθηση δραστηριοτήτων…μπιπ… μπιπ"</string>
+    <plurals name="atp_OnNotification">
+        <item quantity="one" instruction="Placeholder is a number"><![CDATA[ Προσπάθειες παρακολούθησης που έχουν αποκλειστεί <b>σε %1$d εφαρμογή</b> (την προηγούμενη ώρα).]]></item>
+        <item quantity="other" instruction="Placeholder is a number"><![CDATA[ Προσπάθειες παρακολούθησης που έχουν αποκλειστεί <b>σε %1$d εφαρμογές</b> (την προηγούμενη ώρα).]]></item>
+    </plurals>
+    <string name="atp_DisabledNotification">Η Προστασία παρακολούθησης από εφαρμογές απενεργοποιήθηκε. Πατήστε για να συνεχίσετε τον αποκλεισμό προσπαθειών παρακολούθησης.</string>
+    <string name="atp_RevokedNotification">Μια εφαρμογή VPN στη συσκευή σας απενεργοποίησε την Προστασία παρακολούθησης από εφαρμογές. Πατήστε για να την ενεργοποιήσετε ξανά.</string>
+
+    <!-- App Tracking Protection Daily Notification -->
+    <string name="atp_DailyTrackersNotificationOneTrackingZeroApps" instruction="Placeholder is a number"><![CDATA[ Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyTrackersNotificationOneTrackingOneApps" instruction="%1$d is the number of tracking attempts and %2$s is the name of the app where it happened"><![CDATA[ Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης σε 1 εφαρμογή, %2$s</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyTrackersNotificationOtherTrackingZeroApps" instruction="Placeholder is a number"><![CDATA[ Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyTrackersNotificationOtherTrackingOtherApps" instruction="%1$d is the number of tracking attempts, %2$d is the number of apps where the tracking took place, %3$s is the name of one of the apps where it happened"><![CDATA[ Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης σε %2$d εφαρμογές, συμπεριλαμβανομένης της %3$s</b> (την προηγούμενη μέρα).]]></string>
+
+    <plurals name="atp_DailyTopCompanyNotification">
+        <item quantity="one" instruction="%1$s is the name of a company, %2$d is the number of apps the company tried to track the user"><![CDATA[Η %1$s επιχείρησε να σας παρακολουθήσει <b>σε %2$d εφαρμογή</b> (την προηγούμενη μέρα). <b>Δείτε περισσότερα</b>]]></item>
+        <item quantity="other" instruction="%1$s is the name of a company, %2$d is the number of apps the company tried to track the user"><![CDATA[Η %1$s επιχείρησε να σας παρακολουθήσει <b>σε %2$d εφαρμογές</b> (την προηγούμενη μέρα). <b>Δείτε περισσότερα</b>]]></item>
+    </plurals>
+
+    <plurals name="atp_DailyCompanyBlockedNotification">
+        <item quantity="one" instruction="Placeholder is the name of an app"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε τις περισσότερες προσπάθειες παρακολούθησης σε <b>%1$s</b> (την προηγούμενη μέρα).]]></item>
+        <item quantity="other" instruction="Both placeholders are the name of an app"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε τις περισσότερες προσπάθειες παρακολούθησης σε <b>%1$s</b>και <b>%2$s</b> (την προηγούμενη μέρα).]]></item>
+    </plurals>
+
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeZeroOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορά στην %3$s</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeOneOtherApp" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορά στην %3$s και 1 ακόμη εφαρμογή</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOneTimeMoreOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened, %4$d is the number of apps this the tracking also happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορά στην %3$s και %4$d ακόμη εφαρμογές</b> (την προηγούμενη μέρα).]]></string>
+
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesZeroOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορές στην %3$s</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesOneOtherApp" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορές στην %3$s και 1 ακόμη εφαρμογή</b> (την προηγούμενη μέρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedNotificationOtherTimesMoreOtherApps" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of times we blocked their tracking attempts. %3$s is the name of the app where it happened, %4$d is the number of apps this the tracking also happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s %2$d φορές στην %3$s και %4$d ακόμη εφαρμογές</b> (την προηγούμενη μέρα).]]></string>
+
+    <!-- App Tracking Protection Weekly Notification -->
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeZeroOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s</b> (την προηγούμενη βδομάδα).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeOneOtherApp" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s</b> και 1 ακόμη εφαρμογή (την προηγούμενη βδομάδα).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOneTimeMoreOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened, %3$d is the number of other apps where this also happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s</b> και %3$d ακόμη εφαρμογές (την προηγούμενη βδομάδα).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesZeroOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s</b> (την προηγούμενη βδομάδα).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesOneOtherApp" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s</b> και 1 ακόμη εφαρμογή (την προηγούμενη βδομάδα).]]></string>
+    <string name="atp_WeeklyCompanyTrackersBlockedNotificationOtherTimesMoreOtherApps" instruction="%1$d is the number of the tracking attempts, %2$s is the name of the app where it happened, %3$d is the number of other apps where this also happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s</b> και %3$d ακόμη εφαρμογές (την προηγούμενη βδομάδα).]]></string>
+
+    <plurals name="atp_WeeklyCompanyTeaserNotification">
+        <item quantity="one" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of apps where blocked their tracking attempts. %3$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s στην εφαρμογή %2$d, %3$s</b> (την προηγούμενη βδομάδα).]]></item>
+        <item quantity="other" instruction="%1$s is name of the tracking company, i.e. Facebook. %2$d is the number of apps where blocked their tracking attempts. %3$s is the name of one of the apps where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε την <b>%1$s σε %2$d εφαρμογές, συμπεριλαμβανομένης της %3$s</b> (την προηγούμενη βδομάδα).]]></item>
+    </plurals>
+
+    <string name="atp_EnableCTA">Ενεργοποίηση της Προστασίας παρακολούθησης από εφαρμογές</string>
+
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeZeroOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s</b> (την προηγούμενη ώρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeOneOtherApp" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s και 1 ακόμη εφαρμογή</b> (την προηγούμενη ώρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOneTimeMoreOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened, %3$d is the number of other apps where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθεια παρακολούθησης στην %2$s και %3$d ακόμη εφαρμογές</b> (την προηγούμενη ώρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesZeroOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of the app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s</b> (την προηγούμενη ώρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesOneOtherApp" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s και 1 ακόμη εφαρμογή</b> (την προηγούμενη ώρα).]]></string>
+    <string name="atp_DailyLastCompanyBlockedHomeTabOtherTimesMoreOtherApps" instruction="%1$d is the number of tracking attempts, %2$s is the name of an app where it happened, %3$d is the number of other apps where it happened"><![CDATA[Η Προστασία παρακολούθησης από εφαρμογές απέκλεισε <b>%1$d προσπάθειες παρακολούθησης στην %2$s και %3$d ακόμη εφαρμογές</b> (την προηγούμενη ώρα).]]></string>
+
+    <!-- App Tracking Protection Privacy Report -->
+    <string name="atp_PrivacyReportEnabledTooltip">Η Προστασία παρακολούθησης από εφαρμογές είναι ενεργοποιημένη και αποκλείει εφαρμογές παρακολούθησης στο σύνολο της συσκευής σας</string>
+
+    <!-- App Tracking Protection Onboarding -->
+    <string name="atp_OnboardingLogoDescription">Ενεργοποίηση της Προστασίας παρακολούθησης από εφαρμογές</string>
+    <string name="atp_OnboardingLastPageOneTitle">Ένα εύκολο βήμα για καλύτερο απόρρητο των εφαρμογών!</string>
+    <string name="atp_OnboardingLatsPageOneSubtitle" formatted="false">Διαπιστώσαμε ότι <b>πάνω από το 96% των δημοφιλών δωρεάν εφαρμογών</b> επιτρέπουν σε άλλες εταιρείες να παρακολουθούν τις προσωπικές πληροφορίες σας, ακόμη και όταν κοιμάστε.\n\nΔείτε ποιες εφαρμογές <b>έχουμε εντοπίσει να επιτρέπουν σε άλλες εταιρείες να σας παρακολουθούν</b> και ανακτήστε τον έλεγχο!</string>
+    <string name="atp_OnboardingLastPageTwoTitle">Πώς λειτουργεί;</string>
+    <string name="atp_OnboardingLastPageTwoSubTitle">Η App Tracking Protection <b>ανιχνεύει και αποκλείει εφαρμογές παρακολούθησης από άλλες εταιρείες</b>, όπως όταν το Facebook επιχειρεί να σας παρακολουθήσει σε μια εφαρμογή υγείας.\n\n<b>Είναι δωρεάν</b> και μπορείτε να απολαμβάνετε τις εφαρμογές σας όπως συνήθως. Λειτουργώντας στο παρασκήνιο, σας βοηθά να <b>προστατεύεστε νυχθημερόν.</b></string>
+    <string name="atp_OnboardingLastPageThreeTitle">Ποιος βλέπει τα δεδομένα σας;</string>
+    <string name="atp_OnboardingLastPageThreeSubTitle"><b>Η App Tracking Protection δεν είναι VPN.</b> Ωστόσο, η συσκευή σας θα την αναγνωρίσει ως τέτοια. Αυτό συμβαίνει επειδή χρησιμοποιεί τοπική σύνδεση VPN για να λειτουργήσει.\n\nΗ App Tracking Protection είναι διαφορετική.<b> Δεν δρομολογεί ποτέ δεδομένα εφαρμογών μέσω εξωτερικού διακομιστή.</b>\n\n<annotation type="learn_more_link"><b>Μάθετε περισσότερα</b></annotation></string>
+    <string name="atp_FAQCta">Συχνές ερωτήσεις για την Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="atp_OnboardingContinue">Συνέχεια</string>
+    <string name="atp_OnboardingMaybeLater">Ίσως αργότερα</string>
+
+    <!-- App Tracking Protection Dax Onboarding -->
+    <string name="atp_daxOnboardingIntroTitle">Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="atp_daxOnboardingIntroMessage" formatted="false">Πάνω από το 96% των δημοφιλών δωρεάν εφαρμογών επιτρέπουν σε άλλες εταιρείες να σας παρακολουθούν, ακόμη και όταν δεν χρησιμοποιείτε το τηλέφωνό σας. Η Προστασία παρακολούθησης από εφαρμογές εντοπίζει και αποκλείει αυτές τις προσπάθειες παρακολούθησης.</string>
+    <string name="atp_daxOnboardingPermissionTitle">Πώς λειτουργεί;</string>
+    <string name="atp_daxOnboardingPermissionMessage">Η Προστασία παρακολούθησης από εφαρμογές δεν είναι VPN. Ωστόσο, η συσκευή σας θα την αναγνωρίσει ως τέτοια. Αυτό συμβαίνει επειδή χρησιμοποιεί τοπική σύνδεση VPN για να λειτουργήσει.\n\n Δεν δρομολογεί ποτέ δεδομένα εφαρμογών μέσω εξωτερικού διακομιστή. <annotation type="learn_more_link">Μάθετε περισσότερα</annotation></string>
+
+    <!--  App Tracking Protection Enabled Activity -->
+    <string name="atp_EnabledTitle">Υπέροχα! Είστε πανέτοιμοι.</string>
+    <string name="atp_EnabledMessage">Η Προστασία παρακολούθησης από εφαρμογές εμφανίζει <b>μια λίστα εφαρμογών στη συσκευή σας σε πραγματικό χρόνο,</b> τις οποίες εντοπίζουμε να προσπαθούν να σας παρακολουθήσουν.</string>
+    <string name="atp_EnabledActivityCTA">Προβολή σύνοψης παρακολούθησης από εφαρμογές</string>
+    <string name="atp_EnabledSettings">Μπορείτε να αποκτήσετε πρόσβαση στην Προστασία παρακολούθησης από εφαρμογές στις <annotation type="settings_link">Ρυθμίσεις.</annotation></string>
+
+    <!-- New Tab Integration -->
+    <string name="atp_NewTabDisabled">Η <b>Προστασία παρακολούθησης από εφαρμογές απενεργοποιήθηκε.</b>\nΠατήστε για να συνεχίσετε τον αποκλεισμό προσπαθειών παρακολούθησης των εφαρμογών σας.</string>
+    <string name="atp_NewTabRevoked"><b>Μια εφαρμογή VPN στη συσκευή σας απενεργοποίησε την Προστασία παρακολούθησης από εφαρμογές.</b>\nΠατήστε για να την ενεργοποιήσετε ξανά.</string>
+    <string name="atp_NewTabEnabled">Η <b>Προστασία παρακολούθησης από εφαρμογές</b> είναι ενεργοποιημένη και εμποδίζει τις προσπάθειες παρακολούθησης στις εφαρμογές σας.</string>
+
+    <!-- Exclusion List -->
+    <string name="atp_ExclusionListActivityTitle">Όλες οι εφαρμογές</string>
+    <string name="atp_ExcludedAppsFeature">Η Προστασία παρακολούθησης από εφαρμογές ανιχνεύει και αποκλείει εφαρμογές παρακολούθησης από άλλες εταιρείες, όπως όταν το Facebook προσπαθεί να σας παρακολουθήσει σε μια εφαρμογή υγείας. Οι εταιρείες ενδέχεται να εξακολουθούν να σας παρακολουθούν σε εφαρμογές που τους ανήκουν.\n\nΕάν μια εφαρμογή δεν λειτουργεί όπως αναμένεται, δοκιμάστε να απενεργοποιήσετε την προστασία για τη συγκεκριμένη εφαρμογή.</string>
+    <string name="atp_ExcludedAppsEnabledLabel">Το DuckDuckGo ενδέχεται να απενεργοποιήσει την προστασία για ορισμένες εφαρμογές, ώστε να επιλύσει γνωστά προβλήματα φόρτωσης περιεχομένου. Οι προσαρμοσμένες ρυθμίσεις σας δεν θα αλλάξουν εάν δεν κάνετε επαναφορά στις προεπιλεγμένες ρυθμίσεις.</string>
+    <string name="atp_ExcludedAppsDisabledLabel"><b>Η Προστασία παρακολούθησης από εφαρμογές είναι απενεργοποιημένη</b> Προκάλεσε η Προστασία παρακολούθησης από εφαρμογές πρόβλημα στις εφαρμογές σας; <annotation type="report_issues_link">Αναφορά προβλημάτων</annotation></string>
+    <string name="atp_ExcludedAppsReport">Αναφορά προβλήματος με άλλη εφαρμογή</string>
+    <string name="atp_ExcludedReasonManuallyDisabled">Μη αυτόματη απενεργοποίηση</string>
+    <string name="atp_ExcludedReasonManuallyEnabled">Μη αυτόματη ενεργοποίηση</string>
+    <string name="atp_ExcludeAppsManuallyCTACancel">Ακύρωση</string>
+    <string name="atp_ExcludeAppsManuallyCTARestore">Επαναφορά</string>
+    <string name="atp_ExcludeAppsManuallyEnableFooter">Η ενεργοποίηση της προστασίας στέλνει το όνομα της εφαρμογής στο DuckDuckGo.</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerOne">Σταμάτησε να λειτουργεί όπως αναμενόταν</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerTwo">Αποδέχομαι να παρακολουθούμαι σε αυτήν την εφαρμογή</string>
+    <string name="atp_ExcludeAppsManuallyDisableAnswerThree">Για άλλον λόγο</string>
+    <string name="atp_ExcludeAppsManuallyMenuRestore">Επαναφορά προεπιλεγμένων προστατευμένων εφαρμογών</string>
+    <string name="atp_ExcludeAppsManuallyMenuReport">Αναφέρετε ένα πρόβλημα με μια εφαρμογή</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsTitle">Επαναφορά προεπιλεγμένης προστασίας;</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsMessage">Οι προσαρμοσμένες ρυθμίσεις προστασίας σας θα ενημερωθούν με τις πιο πρόσφατες προεπιλεγμένες λειτουργίες προστασίας μας. Μπορείτε πάντα να αλλάξετε ξανά τις ρυθμίσεις προστασίας αργότερα.</string>
+    <string name="atp_ExcludeAppsRestoreDefaultSnackbar">Έγινε επαναφορά της προστασίας στις προεπιλεγμένες ρυθμίσεις</string>
+    <string name="atp_ExcludeAppsRestoreDefaultsDisclaimer">Η ενεργοποίηση της προστασίας στέλνει το όνομα της εφαρμογής στο DuckDuckGo.</string>
+
+    <!--  Breakage report app list  -->
+    <string name="atp_ReportBreakageAppListActivityTitle">Αναφέρετε ένα πρόβλημα</string>
+    <string name="atp_ReportBreakageAppFeature"><b> Επιλέξτε την εφαρμογή που αντιμετωπίζει το πρόβλημα</b>. Τα σχόλιά σας μας βοηθούν πραγματικά να βελτιωθούμε!\n\nΈχετε γενικά σχόλια σχετικά με την Προστασία παρακολούθησης από εφαρμογές; Χρησιμοποιήστε <annotation type="use_this_form_link">τη φόρμα αυτή</annotation>.</string>
+    <string name="atp_ReportBreakageAppEntry" instruction="Placeholder is the name of an app">Εφαρμογή %1$s</string>
+    <string name="atp_ReportBreakageAppSubmitCta">Υποβολή</string>
+    <string name="atp_ReportBreakageAppNextCta">Επόμενο</string>
+    <string name="atp_ReportBreakageFormWhatHappenedText">Περιγράψτε τι συμβαίνει, τι περιμένατε να συμβεί και ποια ήταν τα βήματα που οδήγησαν στο πρόβλημα.</string>
+    <string name="atp_ReportBreakageFormInputHint">Πείτε μας περισσότερα για το πρόβλημα που αντιμετωπίζετε</string>
+    <string name="atp_ReportBreakageFormCheckboxText">Κάνοντας κλικ στο κουμπί «Υποβολή» συμφωνώ ότι το DuckDuckGo μπορεί να χρησιμοποιήσει τις πληροφορίες της αναφοράς αυτής για σκοπούς βελτίωσης των λειτουργιών της εφαρμογής.
+    </string>
+    <string name="atp_ReportBreakageFormDisclaimerText">
+        <![CDATA[Εκτός από τα στοιχεία που καταχωρήσατε στη φόρμα αυτή, η αναφορά προβλήματος της εφαρμογής σας θα περιέχει:<br/>• Το όνομα του πακέτου της εφαρμογής<br/>• Λίστα με τις εφαρμογές παρακολούθησης που έχουν αποκλειστεί στην εφαρμογή<br/>• Εάν είναι ενεργοποιημένες συγκεκριμένες λειτουργίες του DuckDuckGo<br/>• Συγκεντρωτικά διαγνωστικά της εφαρμογής DuckDuckGo<br/>]]>
+    </string>
+    <string name="atp_ReportBreakageSent">Η αναφορά στάλθηκε. Ευχαριστώ! Τα σχόλιά σας μας βοηθούν να βελτιώσουμε την Προστασία παρακολούθησης από εφαρμογές για όλους.</string>
+    <string name="atp_ThanksForTheFeedback">Ευχαριστούμε για τα σχόλιά σας!</string>
+    <string name="atp_ReportBreakageCategoriesTitle">Τι συμβαίνει;</string>
+    <string name="atp_ReportBreakageCategoriesHint">Τι συμβαίνει;</string>
+    <string name="atp_ReportBreakageCategoryCrashes">Η εφαρμογή παγώνει ή παύει να ανταποκρίνεται</string>
+    <string name="atp_ReportBreakageCategoryMessages">Η παράδοση του μηνύματος αποτυγχάνει</string>
+    <string name="atp_ReportBreakageCategoryCalls">Οι φωνητικές κλήσεις δεν λειτουργούν</string>
+    <string name="atp_ReportBreakageCategoryUploads">Δεν είναι δυνατή η μεταφόρτωση ή κοινοποίηση αρχείων</string>
+    <string name="atp_ReportBreakageCategoryDownloads">Δεν είναι δυνατή η λήψη αρχείων</string>
+    <string name="atp_ReportBreakageCategoryContent">Το περιεχόμενο φορτώνει αργά</string>
+    <string name="atp_ReportBreakageCategoryConnection">Η εφαρμογή δεν έχει σύνδεση</string>
+    <string name="atp_ReportBreakageCategoryIot">Δεν είναι δυνατή η σύνδεση της τοπικής συσκευής</string>
+    <string name="atp_ReportBreakageCategoryOther">Κάτι άλλο</string>
+
+    <!--  Tracker Profiling Info -->
+    <string name="atp_ProfilingActivityTitle">Σχετικά με τις εφαρμογές παρακολούθησης</string>
+    <string name="atp_ProfilingInfoTitle">Τι είναι οι εφαρμογές παρακολούθησης;</string>
+    <string name="atp_ProfilingInfoFirstParagraph" formatted="false">Πιθανώς έχετε ακούσει για εταιρείες όπως η Google και το Facebook οι οποίες σας παρακολουθούν παρασκηνιακά σε ιστότοπους τρίτων. Γνωρίζατε όμως ότι παρακολουθούν επίσης τις προσωπικές πληροφορίες σας μέσω εφαρμογών στη συσκευή σας;\n\n<b>Πάνω από το 96\\% των 100 πιο δημοφιλών δωρεάν εφαρμογών Android που</b> δοκιμάσαμε περιείχαν κρυμμένες εφαρμογές παρακολούθησης τρίτων κατασκευαστών. Από αυτούς, το 87\\% έστελνε δεδομένα στη Google και το 68\\% έστελνε δεδομένα στο Facebook. Αυτό συμβαίνει ακόμα και όταν δεν χρησιμοποιείτε τη συσκευή σας.\n\n<b>Οι εφαρμογές ανίχνευσης που υπάρχουν σε εφαρμογές μπορεί να έχουν πρόσβαση σε πολύ περισσότερες πληροφορίες</b> από ό,τι οι παρόμοιες εφαρμογές παρακολούθησης ιστότοπων, όπως η τοποθεσία σας μέχρι και τον όροφο του κτιρίου στον οποίο βρίσκεστε, πόσο συχνά παίζετε παιχνίδια ενώ βρίσκεστε στη δουλειά, αλλά και πότε και πόση ώρα κοιμάστε κάθε μέρα. <b>Ακόμη και αν δεν διαθέτετε λογαριασμό σε Google ή Facebook, για παράδειγμα, μπορούν ακόμα να συλλέγουν δεδομένα για εσάς μέσα από τις εφαρμογές που έχετε εγκαταστήσει.</b>\n\nΤα δίκτυα παρακολούθησης όπως Facebook και Google χρησιμοποιούν αυτά τα μικρά κομμάτια πληροφοριών <b>για να δημιουργήσουν το ψηφιακό προφίλ σας</b>. Με αυτό, τα δίκτυα παρακολούθησης μπορούν να χειραγωγούν αυτά που βλέπετε στο διαδίκτυο και να επιτρέπουν σε διαφημιστές να υποβάλλουν προσφορές για να έχουν πρόσβαση σε εσάς με βάση τα δεδομένα σας.\n\nΟι εφαρμογές παρακολούθησης που εγκαθίστανται σε εφαρμογές αποτελούν ΤΕΡΑΣΤΙΟ πρόβλημα για το απόρρητο των πληροφοριών σας. <b>Αλλά το DuckDuckGo έχει μια λύση που μπορεί να βοηθήσει.</b>\n\nΌταν είναι ενεργοποιημένη στην εφαρμογή περιήγησης με προστασία δεδομένων DuckDuckGo, η Προστασία παρακολούθησης από εφαρμογές αποκλείει πολλές εφαρμογές παρακολούθησης σε άλλες εφαρμογές που είναι εγκαταστημένες στη συσκευή σας, ενώ ταυτόχρονα η εφαρμογή DuckDuckGo αποκλείει τις εφαρμογές παρακολούθησης που εντοπίζουμε σε ιστότοπους κατά την περιήγησή σας. <b>Τα δύο αυτά επίπεδα προστασίας μειώνουν συνολικά τις πληροφορίες που γνωρίζουν οι εταιρείες παρακολούθησης για εσάς</b>, ώστε να μπορείτε να χρησιμοποιείτε τις εφαρμογές σας χωρίς άγχος, γνωρίζοντας ότι είστε πιο προστατευμένοι.</string>
+
+    <!--  App Tracking Protection Activity -->
+    <string name="atp_ActivityPastWeek">Προηγούμενες 7 ημέρες</string>
+    <string name="atp_ActivityTitle">Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="atp_MostRecentActivityTitle">Όλη η πρόσφατη δραστηριότητα</string>
+    <string name="atp_ActivityRecentActivity">Δραστηριότητα</string>
+    <string name="atp_ActivityCtaShowAll">Προβολή όλης της πρόσφατης δραστηριότητας</string>
+    <string name="atp_ActivityAppTrackersFAQ">Τι είναι οι εφαρμογές παρακολούθησης;</string>
+    <string name="atp_ActivityReportProblem">Αναφορά προβλήματος με μια εφαρμογή</string>
+    <string name="atp_ActivityBetaInstructions">Οδηγίες Beta</string>
+    <string name="atp_ActivityManageProtection">Αντιμετωπίζετε προβλήματα;</string>
+    <string name="atp_RecentAppActivity">Πρόσφατη δραστηριότητα εφαρμογών</string>
+
+    <string name="atp_ActivityTrackersCompanyBlockedOnetimeOneCompany" instruction="Placeholder %1$s is the name of the app doing the tracking. Example: 1 tracking attempt blocked from 1 company in Venmo app.">
+        <![CDATA[1 προσπάθεια παρακολούθησης αποκλείστηκε από 1 εταιρεία στην εφαρμογή <b>%1$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOnetimeOtherCompanies" instruction="Placeholder %1$d is the number of companies doing the tracking. Placeholder %2$s is the name of the app doing the tracking. Example: 1 tracking attempt blocked from 5 companies in Venmo app.">
+        <![CDATA[1 προσπάθεια παρακολούθησης αποκλείστηκε από %1$d εταιρείες στην εφαρμογή <b>%2$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOtherTimesOneCompany" instruction="Placeholder %1$d is the number of tracking attempts blocked. Placeholder %2$s is the name of the app doing the tracking. Example: 5 tracking attempts blocked from 1 company in Venmo app.">
+        <![CDATA[%1$d προσπάθειες παρακολούθησης αποκλείστηκαν από 1 εταιρεία στην εφαρμογή <b>%2$s</b>]]>
+    </string>
+    <string name="atp_ActivityTrackersCompanyBlockedOtherTimesOtherCompanies" instruction="Placeholder %1$d is the number of tracking attempts blocked. Placeholder %2$d is the number of companies doing the tracking. Placeholder %3$s is the name of the app doing the tracking. Example: 10 tracking attempts blocked from 5 companies in Venmo app.">
+        <![CDATA[%1$d απόπειρες παρακολούθησης αποκλείστηκαν από %2$d εταιρείες στην εφαρμογή <b>%3$s</b>]]>
+    </string>
+
+    <string name="atp_ActivityPastWeekBlocked">Αποκλείστηκαν</string>
+    <string name="atp_ActivityPastWeekAcross">Σε συνολικά</string>
+
+    <plurals name="atp_ActivityPastWeekTrackerCount" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Προσπάθεια παρακολούθησης</item>
+        <item quantity="other">Προσπάθειες παρακολούθησης</item>
+    </plurals>
+    <plurals name="atp_ActivityPastWeekAppCount" tools:ignore="ImpliedQuantity">
+        <item quantity="one">Εφαρμογή</item>
+        <item quantity="other">Εφαρμογές</item>
+    </plurals>
+    <string name="atp_ActivityDisabledLabel"><b>Η Προστασία παρακολούθησης από εφαρμογές είναι απενεργοποιημένη</b>\nΠροκάλεσε η Προστασία παρακολούθησης από εφαρμογές πρόβλημα στις εφαρμογές σας; <annotation type="report_issues_link">Αναφορά προβλημάτων</annotation></string>
+    <string name="atp_ActivityDisabledBySystemLabel"><b>Το Android απενεργοποίησε την Προστασία παρακολούθησης από εφαρμογές</b>. Θέλετε να αποτρέψετε την επανάληψή του; <annotation type="re_enable_link">Επανενεργοποίηση</annotation></string>
+    <string name="atp_ActivityRevokedLabel">Η <b>Προστασία παρακολούθησης από εφαρμογές είναι απενεργοποιημένη.</b>\nΕνδέχεται να την έχει απενεργοποιήσει μια εφαρμογή VPN στη συσκευή σας. Χρησιμοποιήστε τον διακόπτη πιο πάνω για να την ενεργοποιήσετε ξανά.</string>
+    <string name="atp_ActivityAbout">Σχετικά</string>
+    <string name="atp_ActivityManage">Διαχείριση</string>
+    <string name="atp_ActivityRemoveFeature">Απενεργοποίηση και διαγραφή δεδομένων</string>
+    <string name="atp_ActivityBlockingTrackersEnabledDescription">Το DuckDuckGo αποκλείει κρυφές εφαρμογές παρακολούθησης στις εφαρμογές σας.</string>
+    <string name="atp_ActivityBlockingTrackersDisabledDescription">Ενεργοποιήστε εκ νέου την Προστασία παρακολούθησης από εφαρμογές για να συνεχίσετε να αποκλείετε εφαρμογές παρακολούθησης των εφαρμογών σας.</string>
+    <string name="atp_ActivityBlockedByHeaderText" instruction="Placeholder %1$s is a text containing either Today or Yesterday. Example: Blocked by DuckDuckGo Today">Αποκλείστηκε από το DuckDuckGo %1$s</string>
+    <string name="atp_ActivityBlockedByOnDateHeaderText" instruction="Placeholder %1$s is a text containing a formatted date like Feb 05. Example: Blocked by DuckDuckGo on Feb 05">Αποκλείστηκε από το DuckDuckGo στις %1$s</string>
+
+    <!--  App Tracking Protection FAQ -->
+    <string name="atp_FAQActivityTitle">Συχνές ερωτήσεις</string>
+    <string name="atp_FAQFirstHeader">Πώς λειτουργεί η Προστασία παρακολούθησης εφαρμογών;</string>
+    <string name="atp_FAQFirstText"><b>Η Προστασία παρακολούθησης από εφαρμογές αποκλείει γνωστές εφαρμογές παρακολούθησης από άλλες εταιρείες, όπως όταν το Facebook προσπαθεί να σας εντοπίσει σε μια εφαρμογή υγείας.</b> Οι εταιρείες ενδέχεται να εξακολουθούν να σας παρακολουθούν σε εφαρμογές που τους ανήκουν.</string>
+    <string name="atp_FAQSecondHeader">Η Προστασία παρακολούθησης από εφαρμογές αποκλείσει εφαρμογές παρακολούθησης σε όλες τις εφαρμογές μου;</string>
+    <string name="atp_FAQSecondText"><b>Η προστασία μπορεί να απενεργοποιηθεί αυτόματα για ορισμένες εφαρμογές, όπως όσες φορτώνουν ιστότοπους, ώστε το περιεχόμενο να εμφανίζεται κανονικά</b>. Για εφαρμογές με γνωστά προβλήματα, αυτό είναι κατά βάση προσωρινό, καθώς εργαζόμαστε για βελτίωση της Προστασίας παρακολούθησης από εφαρμογές. Μπορείτε να διαχειριστείτε την προστασία αυτή για κάθε εφαρμογή στη συσκευή σας, από τις ρυθμίσεις.\n\nΕπιπλέον, ορισμένες εφαρμογές παρακολούθησης ενδέχεται να μην είναι αποκλεισμένες καθώς δεν τις έχουμε ακόμη εντοπίσει και προσθέσει στη λίστα αποκλεισμού μας. Εργαζόμαστε αδιάκοπα για τον εντοπισμό και την προστασία από νέες εφαρμογές παρακολούθησης, ώστε να νιώθετε σιγουριά γνωρίζοντας πως έχετε την πιο ενημερωμένη προστασία.\n\nΜπορείτε να περιμένετε ενημερώσεις στη λίστα εφαρμογών παρακολούθησης κάθε λίγους μήνες. Οι ενημερώσεις αυτές θα εφαρμοστούν στη συσκευή σας αυτόματα</string>
+    <string name="atp_FAQThirdHeader">Γιατί η Προστασία παρακολούθησης από εφαρμογές χρησιμοποιεί σύνδεση VPN;</string>
+    <string name="atp_FAQThirdText">Θα σας ζητηθεί να ρυθμίσετε σύνδεση εικονικού ιδιωτικού δικτύου (VPN), <b>ωστόσο δεν χρειάζεται να εγκαταστήσετε εφαρμογή VPN για να λειτουργήσει η Προστασία παρακολούθησης από εφαρμογές.</b>\n\nΗ άδεια αυτή επιτρέπει στην Προστασία παρακολούθησης από εφαρμογές, η οποία λειτουργεί τοπικά στη συσκευή σας, να παρακολουθεί την κίνηση δικτύου, <b>ώστε να μπορεί να αποκλείει γνωστές εφαρμογές παρακολούθησης.</b></string>
+    <string name="atp_FAQFourthHeader">Θα λειτουργήσει η Προστασία παρακολούθησης από εφαρμογές εάν χρησιμοποιώ ταυτόχρονα μια εφαρμογή VPN;</string>
+    <string name="atp_FAQFourthText">""<b>"<![CDATA[Το Android επιτρέπει μόνο μία ενεργή σύνδεση VPN κάθε φορά.]]>"</b>"<![CDATA[ Αυτό σημαίνει ότι δεν μπορείτε να χρησιμοποιείτε την Προστασία παρακολούθησης από εφαρμογές ενώ εκτελείται μια εφαρμογή VPN στη συσκευή σας ή είναι ρυθμισμένη ως «Πάντα ενεργή».\n\n]]>"<b>"<![CDATA[Συνιστούμε να ενεργοποιείτε την Προστασία παρακολούθησης από εφαρμογές όταν δεν χρησιμοποιείτε μια εφαρμογή VPN]]>"</b>"<![CDATA[ Απλά βεβαιωθείτε ότι η εφαρμογή VPN δεν είναι ρυθμισμένη να είναι πάντα ενεργή. Μεταβείτε στις Ρυθμίσεις δικτύου Android > VPN. Έπειτα, ελέγξτε το εικονίδιο γραναζιού για τυχόν καταχωρημένες εφαρμογές VPN και απενεργοποιήστε την επιλογή «Πάντα ενεργή». Ορισμένες εφαρμογές VPN μπορεί επίσης να έχουν ρύθμιση αυτόματης σύνδεσης, η οποία πρέπει να απενεργοποιηθεί.]]>"</string>
+    <string name="atp_FAQFifthHeader">Σε τι διαφέρει η Προστασία παρακολούθησης από εφαρμογές από ένα VPN;</string>
+    <string name="atp_FAQFifthText">Το VPN στέλνει τα δεδομένα σας από τη συσκευή στον δικό του διακομιστή, όπου διασφαλίζει και ανωνυμοποιεί τα δεδομένα σας από τα αδιάκριτα μάτια. Ωστόσο, αυτό επιτρέπει στην εταιρεία VPN να παρακολουθεί την κυκλοφορία του δικτύου σας.\n\n<b>Η Προστασία παρακολούθησης από εφαρμογές είναι διαφορετική.</b> Αντί να στέλνει τα δεδομένα σας σε έναν διακομιστή VPN, η <b>Προστασία παρακολούθησης από εφαρμογές λειτουργεί τοπικά στη συσκευή σας</b> και βρίσκεται μεταξύ των εφαρμογών σας και των διακομιστών με τους οποίους επικοινωνούν.\n\nΚάθε φορά που η Προστασία παρακολούθησης από εφαρμογές αναγνωρίζει μια γνωστή εφαρμογή παρακολούθησης, <b>εμποδίζει την εφαρμογή παρακολούθησης από το να στέλνει προσωπικές πληροφορίες (όπως η διεύθυνση IP, η δραστηριότητα και τα στοιχεία της συσκευής σας) εκτός της συσκευής σας.</b> Όλα τα υπόλοιπα δεδομένα κυκλοφορίας φτάνουν στον προορισμό τους, οπότε οι εφαρμογές σας μπορούν να λειτουργούν κανονικά.</string>
+    <string name="atp_FAQSixthHeader">Είναι τα δεδομένα μου ιδιωτικά;</string>
+    <string name="atp_FAQSixthText">Η Προστασία παρακολούθησης από εφαρμογές λειτουργεί στη συσκευή σας και δεν αποστέλλει τα προσωπικά δεδομένα σας εκτός της συσκευής σας, στο DuckDuckGo.</string>
+
+    <!--  App Tracking Protection Waitlist -->
+    <string name="atp_WaitlistNotificationTitle">Η πρόσκλησή σας για την Προστασία παρακολούθησης από εφαρμογές είναι εδώ!</string>
+    <string name="atp_WaitlistNotificationDescription">Εγγραφήκατε στη λίστα αναμονής και μας ζητήσατε να σας ενημερώσουμε για το πότε θα είναι η σειρά σας να δοκιμάσετε τη λειτουργία μας Προστασία παρακολούθησης από εφαρμογές. Πατήστε για να δείτε την πρόσκλησή σας.</string>
+    <string name="atp_WaitlistStatusNotJoined">Ένα εύκολο βήμα για καλύτερο απόρρητο των εφαρμογών!</string>
+    <string name="atp_WaitlistStatusJoined">Είστε στη λίστα!</string>
+    <string name="atp_WaitlistStatusInBeta">Έχετε προσκληθεί!</string>
+    <string name="atp_WaitlistDescription">Αποκλείστε εφαρμογές παρακολούθησης που βρίσκουμε να κρύβονται μέσα σε άλλες εφαρμογές και δείτε ποιος προσπαθούσε να σας παρακολουθήσει.\n<annotation type="beta_link">Μάθετε περισσότερα</annotation></string>
+    <string name="atp_WaitlistInBetaDescription">Αποκλείστε εφαρμογές παρακολούθησης που βρίσκουμε να κρύβονται μέσα σε άλλες εφαρμογές και δείτε ποιος προσπαθούσε να σας παρακολουθήσει.\n<annotation type="beta_link">Μάθετε περισσότερα σχετικά με την έκδοση beta</annotation></string>
+    <string name="atp_WaitlistJoin">Εγγραφείτε στην Ιδιωτική λίστα αναμονής</string>
+    <string name="atp_WaitlistCodeCta">Διαθέτω Κωδικό πρόσκλησης</string>
+    <string name="atp_WaitlistGetStartedCta">Ξεκινήστε</string>
+    <string name="atp_WaitlistRedeemCodeCta">Συνέχεια</string>
+    <string name="atp_WaitlistRedeemCodeLabel">Κωδικός πρόσκλησης</string>
+    <string name="atp_WaitlistRedeemCodeTitle">Σχεδόν έτοιμοι...</string>
+    <string name="atp_WaitlistRedeemCodeError">Δεν αναγνωρίσαμε αυτόν τον Κωδικό πρόσκλησης.</string>
+    <string name="atp_WaitlistFooterDescription">Δεν θα χρειαστεί να κοινοποιήσετε προσωπικά στοιχεία για εγγραφή στη λίστα αναμονής. Θα εξασφαλίσετε τη θέση σας στη λίστα αναμονής βάσει χρονικής σήμανσης που υπάρχει αποκλειστικά στη συσκευή σας, ώστε να μπορούμε να σας ειδοποιήσουμε μόλις έρθει η σειρά σας.</string>
+    <string name="atp_WaitlistErrorJoining">Προέκυψε σφάλμα κατά την εγγραφή στη Λίστα αναμονής. Ξαναπροσπαθήστε αργότερα.</string>
+    <string name="atp_WaitlistJoinedWithNotification">Θα σας στείλουμε ειδοποίηση όταν&lt;br/&gt; θα είναι έτοιμη για σας η Προστασία παρακολούθησης από εφαρμογές.<annotation type="beta_link">Μάθετε περισσότερα σχετικά με την έκδοση beta</annotation></string>
+    <string name="atp_WaitlistJoinedWithoutNotification">Η πρόσκλησή σας για να δοκιμάσετε την Προστασία παρακολούθησης από εφαρμογές θα σταλεί εδώ. Ελέγξτε πάλι σύντομα. Διαφορετικά, μπορούμε να σας στείλουμε ειδοποίηση όταν έρθει η σειρά σας.\n\n<annotation type="notify_me_link">Να ειδοποιηθώ</annotation>\n\n<annotation type="beta_link">Μάθετε περισσότερα σχετικά με την έκδοση beta</annotation></string>
+    <string name="atp_WaitlistRedeemedCodeStatus">Τέλεια! Τα καταφέρατε!</string>
+    <string name="atp_WaitlistBetaBlogPost">https://spreadprivacy.com/introducing-app-tracking-protection</string>
+
+    <!--  App Tracking Company Details -->
+    <plurals name="atp_CompanyDetailsTrackingAttempts">
+        <item quantity="one" instruction="Placeholder is a number">%1$d προσπάθεια. Είναι γνωστό ότι συλλέγει:</item>
+        <item quantity="other" instruction="Placeholder is a number">%1$d προσπάθειες. Είναι γνωστό ότι συλλέγει:</item>
+    </plurals>
+    <plurals name="atp_CompanyDetailsTrackingAttemptsTitle">
+        <item quantity="one" instruction="Placeholder is a number">Το DuckDuckGo απέκλεισε %1$d προσπάθεια παρακολούθησης</item>
+        <item quantity="other" instruction="Placeholder is a number">Το DuckDuckGo απέκλεισε %1$d προσπάθειες παρακολούθησης</item>
+    </plurals>
+    <string name="atp_CompanyDetailsTrackingMenuReport">Αναφέρετε ένα πρόβλημα με αυτήν την εφαρμογή</string>
+    <string name="atp_CompanyDetailsTrackingShowMore" instruction="Placeholder is a number">Εμφάνιση %1$d ακόμα</string>
+    <string name="atp_CompanyDetailsTrackingLearnMore">Οι εφαρμογές μπορεί να περιλαμβάνουν εφαρμογές παρακολούθησης από άλλες εταιρείες, για σκοπούς αναλύσεων και μάρκετινγκ. Αν δεν τις αποκλείσουμε, αυτές οι εφαρμογές παρακολούθησης μπορούν να δημιουργήσουν ακόμα πιο λεπτομερή ψηφιακά προφίλ για εσάς. <annotation type="learn_more_link">Μάθετε περισσότερα.</annotation></string>
+    <string name="atp_CompanyDetailsTrackingShowLess">Δείξε λιγότερα</string>
+    <string name="atp_CompanyDetailsAppInfoPanel">Προς το παρόν, η προστασία είναι απενεργοποιημένη για την εφαρμογή αυτή. Εάν η Προστασία παρακολούθησης από εφαρμογές προκάλεσε κάποιο πρόβλημα, <annotation type="report_issues_link">αναφέρετε το πρόβλημα</annotation></string>
+    <string name="atp_CompanyDetailsNotAvailableForUninstalledApps" instruction="Toast shown when users tap on item that corresponds to an already uninstalled application">Οι λεπτομέρειες της εφαρμογής παρακολούθησης δεν είναι διαθέσιμες για απεγκατεστημένες εφαρμογές</string>
+
+    <!--  App Tracking Company Signals -->
+    <string name="atp_TrackingSignalAAID">Αναγνωριστικό διαφήμισης Android</string>
+    <string name="atp_TrackingSignalUniqueIdentifier">Μοναδικό αναγνωριστικό</string>
+    <string name="atp_TrackingSignalCookies">Cookies</string>
+    <string name="atp_TrackingSignalOsVersion">Έκδοση λειτουργικού συστήματος</string>
+    <string name="atp_TrackingSignalOsBuildNumber">Αριθμός δομής λειτουργικού συστήματος</string>
+    <string name="atp_TrackingSignalPlatform">Πλατφόρμα συσκευής</string>
+    <string name="atp_TrackingSignalDeviceBrand">Μάρκα συσκευής</string>
+    <string name="atp_TrackingSignalDeviceLanguage">Γλώσσα συσκευής</string>
+    <string name="atp_TrackingSignalDeviceModel">Μοντέλο συσκευής</string>
+    <string name="atp_TrackingSignalCPUData">Δεδομένα CPU</string>
+    <string name="atp_TrackingSignalScreenResolution">Ανάλυση οθόνης</string>
+    <string name="atp_TrackingSignalInternalStorage">Εσωτερικός χώρος αποθήκευσης</string>
+    <string name="atp_TrackingSignalExternalStorage">Εξωτερικός χώρος αποθήκευσης</string>
+    <string name="atp_TrackingSignalDeviceMemory">Μνήμη συσκευής</string>
+    <string name="atp_TrackingSignalDeviceName">Όνομα συσκευής</string>
+    <string name="atp_TrackingSignalWifiNetworkName">Όνομα δικτύου Wi-Fi</string>
+    <string name="atp_TrackingSignalAppName">Όνομα εφαρμογής</string>
+    <string name="atp_TrackingSignalAppVersion">Έκδοση εφαρμογής</string>
+    <string name="atp_TrackingSignalLocalIPAddress">Τοπική διεύθυνση IP</string>
+    <string name="atp_TrackingSignalISP">Πάροχος υπηρεσιών διαδικτύου</string>
+    <string name="atp_TrackingSignalDeviceBootTime">Χρόνος εκκίνησης συσκευής</string>
+    <string name="atp_TrackingSignalNetworkConnectionType">Τύπος σύνδεσης δικτύου</string>
+    <string name="atp_TrackingSignalSystemVolume">Τόμος συστήματος</string>
+    <string name="atp_TrackingSignalBatteryLevel">Επίπεδο μπαταρίας</string>
+    <string name="atp_TrackingSignalChargingStatus">Κατάσταση φόρτισης</string>
+    <string name="atp_TrackingSignalBrightness">Φωτεινότητα</string>
+    <string name="atp_TrackingSignalHeadphoneStatus">Κατάσταση ακουστικών</string>
+    <string name="atp_TrackingSignalAccelerometerData">Δεδομένα επιταχυνσιόμετρου</string>
+    <string name="atp_TrackingSignalRotationData">Δεδομένα περιστροφής</string>
+    <string name="atp_TrackingSignalDeviceOrientation">Προσανατολισμός συσκευής</string>
+    <string name="atp_TrackingSignalMagnetometerData">Δεδομένα μαγνητόμετρου</string>
+    <string name="atp_TrackingSignalAvailableInternalStorage">Διαθέσιμος εσωτερικός χώρος αποθήκευσης</string>
+    <string name="atp_TrackingSignalAvailableExternalStorage">Διαθέσιμος εξωτερικός χώρος αποθήκευσης</string>
+    <string name="atp_TrackingSignalDeviceTotalMemory">Συνολική μνήμη συσκευής</string>
+    <string name="atp_TrackingSignalAvailableDeviceMemory">Διαθέσιμη μνήμη συσκευής</string>
+    <string name="atp_TrackingSignalScreenMargins">Περιθώρια οθόνης</string>
+    <string name="atp_TrackingSignalScreenDensity">Πυκνότητα οθόνης</string>
+    <string name="atp_TrackingSignalFontSize">Μέγεθος Γραμματοσειράς</string>
+    <string name="atp_TrackingSignalNetworkCarrier">Πάροχος δικτύου</string>
+    <string name="atp_TrackingSignalAppInstallDate">Ημερομηνία εγκατάστασης εφαρμογής</string>
+    <string name="atp_TrackingSignalFirstAppLaunchDate">Ημερομηνία κυκλοφορίας πρώτης εφαρμογής</string>
+    <string name="atp_TrackingSignalGPSCoordinates">Συντεταγμένες GPS</string>
+    <string name="atp_TrackingSignalPostalCode">Ταχυδρομικός κώδικας</string>
+    <string name="atp_TrackingSignalNeighbourhood">Συνοικία</string>
+    <string name="atp_TrackingSignalCity">Πόλη</string>
+    <string name="atp_TrackingSignalState">Πολιτεία/Περιοχή/Περιφέρεια</string>
+    <string name="atp_TrackingSignalCountry">Χώρα</string>
+    <string name="atp_TrackingSignalTimezone">Ζώνη ώρας</string>
+    <string name="atp_TrackingSignalEmailAddress">Διεύθυνση email</string>
+    <string name="atp_TrackingSignalBirthday">Γενέθλια</string>
+    <string name="atp_TrackingSignalGender">Φύλο</string>
+    <string name="atp_TrackingSignalFirstName">Όνομα</string>
+    <string name="atp_TrackingSignalLastName">Επώνυμο</string>
+
+    <!--  App Tracking Protection Disable VPN Dialog -->
+    <string name="atp_DisableConfirmationDialogTitle">Απενεργοποίηση Προστασίας παρακολούθησης από εφαρμογές;</string>
+    <string name="atp_DisableConfirmationDialogMessage">Αν παρατηρήσατε κάποιο πρόβλημα με μια συγκεκριμένη εφαρμογή, μπορείτε να διαχειριστείτε την προστασία για τη συγκεκριμένη εφαρμογή.</string>
+    <string name="atp_DisableConfirmationDisableApp">Απενεργοποίηση για μία εφαρμογή</string>
+    <string name="atp_DisableConfirmationDisableAllApps">Απενεργοποίηση για όλες τις εφαρμογές</string>
+    <string name="atp_DisableConfirmationCancel">Ακύρωση</string>
+
+    <!--  App Tracking Protection VPN Conflict Dialog -->
+    <string name="atp_VpnConflictDialogTitle">Η εφαρμογή VPN που διαθέτετε ενδέχεται να έχει αποσυνδεθεί</string>
+    <string name="atp_VpnConflictAlwaysOnDialogTitle">Η εφαρμογή VPN αποκλείει την Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="atp_VpnConflictDialogMessage">Το Android επιτρέπει μόνο μία ενεργή σύνδεση VPN κάθε φορά. Η ενεργοποίηση της Προστασίας παρακολούθησης από εφαρμογές μπορεί να αποσυνδέσει οποιοδήποτε ενεργό VPN στη συσκευή σας.</string>
+    <string name="atp_VpnConflictDialogAlwaysOnMessage">Το Android επιτρέπει μόνο μία ενεργή σύνδεση VPN κάθε φορά. Ανοίξτε τις Ρυθμίσεις δικτύου &gt; VPN. Εντοπίστε την εφαρμογή VPN που είναι «Πάντα ενεργή» και απενεργοποιήστε την για να συνεχίσετε.</string>
+    <string name="atp_VpnConflictDialogCancel">Ακύρωση</string>
+    <string name="atp_VpnConflictDialogOpenSettings">Άνοιγμα Ρυθμίσεων</string>
+    <string name="atp_VpnConflictDialogGotIt">Το έπιασα</string>
+
+    <!-- Manage Recent Apps Protection -->
+    <string name="atp_ManageRecentAppsProtectionReportIssues">Εάν εξακολουθείτε να αντιμετωπίζετε προβλήματα με μια συγκεκριμένη εφαρμογή, απενεργοποιήστε την προστασία για την εν λόγω εφαρμογή και <annotation type="report_issues_link">υποβάλετε μια αναφορά.</annotation></string>
+    <string name="atp_ManageRecentAppsProtectionActivityTitle">Αντιμετωπίζετε προβλήματα;</string>
+    <string name="atp_ManageRecentAppsProtectionShowAll">Εμφάνιση όλων των εφαρμογών</string>
+    <string name="atp_ManageRecentAppsProtectionEmpty">Οι εφαρμογές με προσπάθειες παρακολούθησης που αποκλείστηκαν πρόσφατα θα εμφανίζονται εδώ</string>
+    <string name="atp_ManageRecentAppsProtectionSectionTitle">Προτεινόμενες ρυθμίσεις συστήματος</string>
+    <string name="atp_ManageRecentAppsProtectionAlwaysOnTitle">Βεβαιωθείτε ότι το VPN είναι πάντα ενεργό</string>
+    <string name="atp_ManageRecentAppsProtectionAlwaysOnByline">Στις Ρυθμίσεις Android, επιτρέψτε στο Πάντα σε λειτουργία, για να ενεργοποιηθεί ξανά η λειτουργία App Tracking Protection μετά από διακοπές σύνδεσης VPN</string>
+    <string name="atp_ManageRecentAppsProtectionAllowUnrestrictedBattTitle">Να επιτρέπεται απεριόριστη χρήση μπαταρίας για εφαρμογές</string>
+    <string name="atp_ManageRecentAppsProtectionAllowUnrestrictedBattByline">Στις Ρυθμίσεις μπαταρίας των εφαρμογών, επιτρέψτε Απεριόριστη χρήση για να αποτρέψετε απενεργοποίηση της λειτουργίας App Tracking Protection στο παρασκήνιο από το Android</string>
+    <string name="atp_ManageRecentAppsProtectionUnrestrictedBattTitle">Η χρήση μπαταρίας για εφαρμογές είναι απεριόριστη</string>
+    <string name="atp_ManageRecentAppsProtectionUnrestrictedBattByline">Στις Ρυθμίσεις μπαταρίας των εφαρμογών, αυτό εμποδίζει το Android να απενεργοποιήσει τη λειτουργία App Tracking Protection στο παρασκήνιο</string>
+
+    <!--  App Tracking Protection Remove Feature Dialog -->
+    <string name="atp_RemoveFeatureDialogTitle">Απενεργοποίηση και διαγραφή δεδομένων;</string>
+    <string name="atp_RemoveFeatureDialogMessage">Η Προστασία παρακολούθησης από εφαρμογές θα απενεργοποιηθεί και θα διαγραφούν όλες οι ρυθμίσεις και το ιστορικό των προσπαθειών παρακολούθησης. Μπορείτε να την ενεργοποιήσετε ξανά οποιαδήποτε στιγμή από τις Ρυθμίσεις.</string>
+    <string name="atp_RemoveFeatureDialogCancel">Ακύρωση</string>
+    <string name="atp_RemoveFeatureDialogRemove">Απενεργοποίηση</string>
+
+    <!--  App Tracking Protection Promote Always On -->
+    <string name="atp_PromoteAlwaysOnDialogSettings">Μεταβείτε στις Ρυθμίσεις</string>
+    <string name="atp_PromoteAlwaysOnDialogNotNow">Όχι τώρα</string>
+    <string name="atp_AlwaysOnModalBody"><![CDATA[Μεταβείτε στις Ρυθμίσεις VPN της συσκευής σας για το DuckDuckGo και ενεργοποιήστε το <b>Πάντα ενεργό</b> VPN για να αποτρέψετε απενεργοποίηση της προστασίας από το Android.\n\nΒεβαιωθείτε ότι έχετε αφήσει την άλλη ρύθμιση στη θέση OFF (ανενεργή).]]></string>
+    <string name="atp_AlwaysOnLockdownModalBody"><![CDATA[Για να αποφύγετε προβλήματα με εφαρμογές, μεταβείτε στις <b>Ρυθμίσεις VPN για το DuckDuckGo</b> της συσκευής σας και απενεργοποιήστε την επιλογή <b>Αποκλεισμός συνδέσεων χωρίς VPN</b>]]></string>
+    <string name="atp_AlwaysOnModalHeading">Να ρυθμιστεί σε «Πάντα ενεργή»</string>
+    <string name="atp_AlwaysOnLockdownModalHeading">Αλλάξτε τις ρυθμίσεις του VPN σας</string>
+    <string name="atp_AlwaysOnLockDownEnabled"><b>Απαιτείται ενέργεια!</b> Για να αποφύγετε προβλήματα με εφαρμογές, πρέπει να αλλάξετε τις ρυθμίσεις του Android σας. <annotation type="open_settings_link">Αλλαγή ρυθμίσεων</annotation></string>
+    <string name="atp_AlwaysOnLockDownNotificationTitle">Απαιτείται ενέργεια! Πρέπει να αλλάξει μια ρύθμιση του Android για την Προστασία παρακολούθησης από εφαρμογές.</string>
+
+    <!--  App Tracking Protection Exclusion list -->
+    <string name="atp_TrackingProtectionExclusionListActivityTitle">Οι εφαρμογές μου</string>
+    <string name="atp_ExcludedReasonIssuesMayOccur">Εάν έχει ενεργοποιηθεί, ενδέχεται να προκύψουν προβλήματα με την εφαρμογή</string>
+    <string name="atp_ExcludeAppsManuallyCTAEnableAnyway">Ενεργοποίηση οπωσδήποτε</string>
+    <string name="atp_ExcludeAppsManuallyEnableAnywayLabel" instruction="Placeholder is the name of an app">Η εφαρμογή %1$s ενδέχεται να αντιμετωπίσει προβλήματα εάν είναι ενεργοποιημένη η Προστασία παρακολούθησης από εφαρμογές</string>
+    <string name="atp_ExcludeAppsManuallyDisableAppDialogTitle">Θέλετε να αναφέρετε ένα πρόβλημα;</string>
+    <string name="atp_ExcludeAppsManuallyDisableAppDialogLabel" instruction="Placeholder is the name of an app">Ενημερώστε μας αν έχετε απενεργοποιήσει την Προστασία παρακολούθησης από εφαρμογές για την εφαρμογή %1$s επειδή αντιμετωπίσατε προβλήματα με την εφαρμογή.</string>
+    <string name="atp_ExcludeAppsManuallyCTAReportIssue">Αναφορά προβλήματος</string>
+    <string name="atp_ExcludeAppsManuallyCTANotNow">Όχι τώρα</string>
+    <string name="atp_ActivityRecentActivityHeader">Δραστηριότητα</string>
+    <string name="atp_ActivityManageProtectionLabel">Αντιμετωπίζετε προβλήματα;</string>
+    <string name="atp_ActivityEnabledBannerLabel">Η προστασία για ορισμένες εφαρμογές απενεργοποιείται αυτόματα. <annotation type="app_settings_link">Προβολή εφαρμογών</annotation></string>
+    <string name="atp_ActivityDescription">Οι αποκλεισμένες προσπάθειες παρακολούθησης θα εμφανίζονται εδώ</string>
+    <plurals name="atp_ActivityProtectedApps" instruction="Placeholder is the number of apps that are protected">
+        <item quantity="one">%1$s από τις εφαρμογές σας προστατεύεται από κρυφές εφαρμογές παρακολούθησης που εντοπίζουμε να προσπαθούν να αποκτήσουν πρόσβαση στις προσωπικές πληροφορίες σας</item>
+        <item quantity="other">%1$s από τις εφαρμογές σας προστατεύονται από κρυφές εφαρμογές παρακολούθησης που εντοπίζουμε να προσπαθούν να αποκτήσουν πρόσβαση στις προσωπικές πληροφορίες σας</item>
+    </plurals>
+    <plurals name="atp_ActivityUnprotectedApps" instruction="Placeholder is the number of apps that are not protected">
+        <item quantity="one">%1$s από τις εφαρμογές σας έχει την προστασία απενεργοποιημένη</item>
+        <item quantity="other">%1$s από τις εφαρμογές σας έχουν την προστασία απενεργοποιημένη</item>
+    </plurals>
+    <string name="atp_ActivityAppTpEnabledCtaText"><![CDATA[Υπέροχα νέα! Η Προστασία παρακολούθησης από εφαρμογές είναι πλέον ενεργοποιημένη.<br/><br/>👌Θα σας δείξω μια λίστα σε πραγματικό χρόνο που περιλαμβάνει εφαρμογές στη συσκευή σας που εντοπίζω να προσπαθούν να σας παρακολουθήσουν.]]></string>
+    <string name="atp_ActivityAppTpEnabledCtaButtonLabel">Το κατάλαβα!</string>
+    <string name="atp_ExcludedAppsFilterProtectedLabel" instruction="Placeholder is the number of apps where protection is enabled">Η προστασία ενεργοποιήθηκε (%1$s)</string>
+    <string name="atp_ExcludedAppsFilterUnprotectedLabel" instruction="Placeholder is the number of apps where protection is disabled">Η προστασία απενεργοποιήθηκε (%1$s)</string>
+    <string name="atp_ExcludedAppsFilterAllLabel">Όλα</string>
+    <string name="atp_ExcludedAppsFilterMenuProtectedLabel">Η προστασία ενεργοποιήθηκε</string>
+    <string name="atp_ExcludedAppsFilterMenuUnprotectedLabel">Η προστασία απενεργοποιήθηκε</string>
+    <string name="atp_ExcludedAppsFilterMenuAllLabel">Όλα</string>
+    <string name="atp_ActivityViewAppsLabel">Προβολή εφαρμογών</string>
+    <string name="atp_ActivityEnabledMoreThanADayLabel">Έχετε προβλήματα με μια εφαρμογή; <annotation type="app_settings_link">Βοηθήστε μας να βελτιωθούμε</annotation></string>
+    <string name="atp_ExcludedAppsEnabledLearnWhyLabel">Ορισμένες εφαρμογές ενδέχεται να αντιμετωπίζουν προβλήματα όταν είναι ενεργοποιημένη η Προστασία παρακολούθησης από εφαρμογές.\n<annotation type="learn_why_link">Μάθετε γιατί</annotation></string>
+    <string name="atp_ExcludedAppsDisabledLearnWhyLabel">Η προστασία είναι απενεργοποιημένη για εφαρμογές με γνωστά προβλήματα. Μπορείτε να ενεργοποιήσετε τις εφαρμογές αυτές, ωστόσο ενδέχεται να μη λειτουργούν όπως αναμένεται. <annotation type="learn_why_link">Μάθετε γιατί</annotation></string>
+
+    <!-- Notify Me View on AppTP -->
+    <string name="appTrackingProtectionNotifyMeTitle">Έχετε τον νου σας στις αποκλεισμένες εφαρμογές παρακολούθησης</string>
+    <string name="appTrackingProtectionNotifyMeSubtitle">Λάβετε ενημερώσεις σχετικά με μπλοκαρισμένες προσπάθειες παρακολούθησης στην ενότητα ειδοποιήσεων.</string>
+
+    <!-- Privacy pro upsell -->
+    <string name="apptp_PproUpsellInfoDisabled">Δεν μπορείτε να χρησιμοποιήσετε το App Tracking Protection λόγω του VPN σας; Μεταβείτε στο DuckDuckGo VPN, το μόνο συμβατό VPN. <annotation type="ppro_upsell_link">Μάθετε περισσότερα</annotation>.</string>
+    <string name="apptp_PproUpsellInfoDisabled_freeTrial">Δεν μπορείτε να χρησιμοποιήσετε το App Tracking Protection λόγω του VPN σας; Μεταβείτε στο DuckDuckGo VPN, το μόνο συμβατό VPN. <annotation type="ppro_upsell_link">Δοκίμασέ το δωρεάν!</annotation>.</string>
+    <string name="apptp_PproUpsellInfoRevoked">Το <b>App Tracking Protection απενεργοποιήθηκε</b>\nΑπενεργοποίησε το VPN σας το App Tracking Protection; Χρησιμοποιήστε τον διακόπτη πιο πάνω για να το ενεργοποιήσετε ξανά.\n\nΑποκτήστε το DuckDuckGo VPN — το μοναδικό VPN που λειτουργεί με το App Tracking Protection. <annotation type="ppro_upsell_link">Μάθετε περισσότερα</annotation>.</string>
+    <string name="apptp_PproUpsellInfoRevoked_freeTrial">Το <b>App Tracking Protection απενεργοποιήθηκε</b>\nΑπενεργοποίησε το VPN σας το App Tracking Protection; Χρησιμοποιήστε τον διακόπτη πιο πάνω για να το ενεργοποιήσετε ξανά.\n\nΜεταβείτε στο DuckDuckGo VPN — το μοναδικό VPN που λειτουργεί με το App Tracking Protection. <annotation type="ppro_upsell_link">Δοκίμασε το δωρεάν!</annotation>.</string>
+    <string name="apptp_PproUpsellBannerTitle">Πηγαίνετε την ιδιωτικότητά σας στο επόμενο επίπεδο</string>
+    <string name="apptp_PproUpsellBannerMessage">Το DuckDuckGo έχει το μοναδικό VPN που είναι συμβατό με το App Tracking Protection. Ενεργοποιήστε το με μια επί πληρωμή συνδρομή Privacy Pro.</string>
+    <string name="apptp_PproUpsellBannerAction">Μάθετε περισσότερα</string>
+    <string name="apptp_PproUpsellBannerMessage_freeTrial">Εγγραφείτε στο DuckDuckGo και αποκτήστε το μοναδικό VPN που είναι συμβατό με το App Tracking Protection.</string>
+    <string name="apptp_PproUpsellBannerAction_freeTrial">Δοκίμασε δωρεάν!</string>
+
+    <!-- Content Descriptions -->
+    <string name="atp_onboarding_close_button_content_description">Κλείσιμο</string>
+    <string name="atp_close_button_content_description">Κλείσιμο</string>
+
+</resources>

@@ -16,21 +16,26 @@
 
 package com.duckduckgo.app.global.view
 
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.duckduckgo.app.browser.R
+import com.duckduckgo.common.ui.view.divider.HorizontalDivider
 
 class DividerAdapter : RecyclerView.Adapter<DividerAdapter.DividerViewHolder>() {
 
-    class DividerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+    class DividerViewHolder(view: View) : RecyclerView.ViewHolder(view)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DividerViewHolder {
-        return DividerViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.view_item_divider, parent, false))
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): DividerViewHolder {
+        return DividerViewHolder(HorizontalDivider(parent.context))
     }
 
-    override fun onBindViewHolder(holder: DividerViewHolder, position: Int) {
+    override fun onBindViewHolder(
+        holder: DividerViewHolder,
+        position: Int,
+    ) {
         // noop
     }
 

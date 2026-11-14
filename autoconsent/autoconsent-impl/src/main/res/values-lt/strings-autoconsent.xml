@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 DuckDuckGo
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<!-- smartling.entity_escaping = false -->
+<!-- smartling.instruction_attributes = instruction -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="autoconsentTitle">Apsauga nuo slapukų iškylančiųjų langų</string>
+    <string name="autoconsentDescription"><![CDATA[„DuckDuckGo“ stengsis pasirinkti didžiausią privatumą užtikrinančius nustatymus ir paslėpti šiuos iškylančiuosius langus.\n<a href=\"\">Sužinoti daugiau</a>]]></string>
+    <string name="autoconsentToggle">Leiskite „DuckDuckGo“ tvarkyti slapukų iškylančiuosius langus</string>
+    <string name="autoconsentAutoManageToggle">Atmesti neprivalomus slapukus</string>
+    <string name="autoconsentAutoManageDescription">Stengsimės už jus atmesti kuo daugiau slapukų ir uždaryti iškylančiuosius langus.</string>
+    <string name="autoconsentCookiePopUpPreferenceHeaderDescription"><![CDATA[„DuckDuckGo“ gali automatiškai tvarkyti slapukų iškylančiuosius langus, kad užtikrintų maksimalų privatumą ir sumažintų slapukų skaičių tau jų net nepamačius.\n<a href=\"\">Sužinoti daugiau</a>]]></string>
+    <string name="autoconsentPopUpsWithoutOptOutsToggle">Priimti slapukus, kurių negalima atmesti</string>
+    <string name="autoconsentPopUpsWithoutOptOutsDescription">Jei nėra galimybės atmesti, sutaupysime jums spustelėjimą, priimsime šiuos slapukus už jus ir uždarysime iššokančiuosius langus.</string>
+    <string name="autoconsentPromptTitle">Atsibodo slapukų iškylantieji langai?</string>
+    <string name="autoconsentPromptFootnote">Vėliau visada galėsi tai pakeisti nuostatose.</string>
+    <string name="autoconsentPromptCpmOnMessage">Kai kurių slapukų atmesti negalima. Galime juos priimti už jūs.</string>
+    <string name="autoconsentPromptCpmOnPrimaryButton">Priimti slapukus už mane</string>
+    <string name="autoconsentPromptCpmOnPrimaryButtonV2">Atmesti, jei įmanoma, arba priimti už mane</string>
+    <string name="autoconsentPromptCpmOnSecondaryButton">Priimsiu savarankiškai</string>
+    <string name="autoconsentPromptCpmOffMessage">Leiskite mums tuo pasirūpinti už jus. Atmesime slapukus, kai tai įmanoma, ir priimsime tuos, kurių atmesti negalima.</string>
+    <string name="autoconsentPromptCpmOffPrimaryButton">Atmesti, jei įmanoma, arba priimti už mane</string>
+    <string name="autoconsentPromptCpmOffSecondaryButton">Susitvarkysiu</string>
+</resources>

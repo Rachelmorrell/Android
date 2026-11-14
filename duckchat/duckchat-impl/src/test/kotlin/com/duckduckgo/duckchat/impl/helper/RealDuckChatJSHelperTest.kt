@@ -1,0 +1,3402 @@
+/*
+ * Copyright (c) 2025 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.duckchat.impl.helper
+
+import android.annotation.SuppressLint
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.duckduckgo.app.browser.DuckDuckGoUrlDetector
+import com.duckduckgo.app.browser.favicon.FaviconManager
+import com.duckduckgo.app.tabs.model.DuckAiTabSessionRepository
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.api.install.AppInstall
+import com.duckduckgo.browser.api.wideevents.BrowserInteractionsPlugin
+import com.duckduckgo.browsermode.api.BrowserMode
+import com.duckduckgo.common.test.CoroutineTestRule
+import com.duckduckgo.common.utils.plugins.PluginPoint
+import com.duckduckgo.duckchat.api.DuckAiPdfMetadata
+import com.duckduckgo.duckchat.api.DuckAiSessionCallback
+import com.duckduckgo.duckchat.api.DuckAiSessionExitTrigger
+import com.duckduckgo.duckchat.api.DuckAiTermsConsent
+import com.duckduckgo.duckchat.api.DuckChatEntryPoint
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputState
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStateProvider
+import com.duckduckgo.duckchat.api.nativeinput.NativeInputStatePublisher
+import com.duckduckgo.duckchat.impl.ChatState
+import com.duckduckgo.duckchat.impl.DuckChatInternal
+import com.duckduckgo.duckchat.impl.EditPromptRequest
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_CREATE_NEW_CHAT
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_OPEN_HISTORY
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_SELECT_FIRST_HISTORY_ITEM
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_SUBMIT_FIRST_PROMPT
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_SUBMIT_PROMPT
+import com.duckduckgo.duckchat.impl.ReportMetric.USER_DID_TAP_KEYBOARD_RETURN_KEY
+import com.duckduckgo.duckchat.impl.contextual.PdfPageContextResolver
+import com.duckduckgo.duckchat.impl.feature.DuckAiChatHistoryFeature
+import com.duckduckgo.duckchat.impl.feature.DuckChatFeature
+import com.duckduckgo.duckchat.impl.helper.RealDuckChatJSHelper.Companion.DUCK_CHAT_FEATURE_NAME
+import com.duckduckgo.duckchat.impl.helper.RealDuckChatJSHelper.Companion.METHOD_GET_PAGE_CONTEXT
+import com.duckduckgo.duckchat.impl.nativeinput.ChatStateStore
+import com.duckduckgo.duckchat.impl.pixel.DuckChatPixels
+import com.duckduckgo.duckchat.impl.store.DuckChatDataStore
+import com.duckduckgo.duckchat.impl.ui.nativeinput.attachment.LimitsHandler
+import com.duckduckgo.duckchat.impl.ui.nativeinput.edit.SubmittedFile
+import com.duckduckgo.duckchat.impl.ui.nativeinput.edit.SubmittedImage
+import com.duckduckgo.duckchat.impl.voice.VoiceSessionStateManager
+import com.duckduckgo.duckchat.impl.wideevents.DuckAiEntryWideEvent
+import com.duckduckgo.duckchat.impl.wideevents.DuckAiResponseWaitWideEvent
+import com.duckduckgo.duckchat.store.impl.DuckAiChat
+import com.duckduckgo.duckchat.store.impl.DuckAiChatStore
+import com.duckduckgo.feature.toggles.api.FakeFeatureToggleFactory
+import com.duckduckgo.feature.toggles.api.Toggle
+import com.duckduckgo.js.messaging.api.JsCallbackData
+import com.duckduckgo.subscriptions.api.Subscriptions
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doSuspendableAnswer
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.inOrder
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.stub
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.whenever
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+
+@RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalCoroutinesApi::class)
+class RealDuckChatJSHelperTest {
+
+    @get:Rule
+    var coroutineRule = CoroutineTestRule()
+
+    private val mockDuckChat: DuckChatInternal = mock()
+    private val mockDataStore: DuckChatDataStore = mock()
+    private val mockDuckChatPixels: DuckChatPixels = mock()
+    private val mockPendingTabContextStore: PendingTabContextStore = mock()
+    private val mockPendingNativePromptStore: PendingNativePromptStore = mock()
+    private val mockFaviconManager: FaviconManager = mock()
+    private val mockDuckChatFeature: DuckChatFeature =
+        FakeFeatureToggleFactory.create(DuckChatFeature::class.java)
+    private val mockVoiceSessionStateManager: VoiceSessionStateManager = mock()
+    private val mockLimitsHandler: LimitsHandler = mock()
+    private val mockNativeInputStatePublisher: NativeInputStatePublisher = mock()
+    private val mockNativeInputStateProvider: NativeInputStateProvider = mock {
+        on { stateForTab(any()) } doReturn MutableStateFlow(NativeInputState.zero())
+    }
+    private val mockAppInstall: AppInstall = mock {
+        onBlocking { getInstallAge() } doReturn Duration.ZERO
+    }
+    private val mockAppBuildConfig: AppBuildConfig = mock {
+        onBlocking { isAppReinstall() } doReturn false
+    }
+    private val mockSubscriptions: Subscriptions = mock {
+        onBlocking { isEligible() } doReturn false
+    }
+    private val mockEditPromptSessionStore: EditPromptSessionStore = mock()
+    private val mockBrowserInteractionsPlugin: BrowserInteractionsPlugin = mock()
+    private val mockBrowserInteractionsPlugins: PluginPoint<BrowserInteractionsPlugin> = mock()
+    private val mockDuckAiSessionCallback: DuckAiSessionCallback = mock()
+    private val mockRegularChatStore: DuckAiChatStore = mock()
+    private val mockFireChatStore: DuckAiChatStore = mock()
+    private val fakeChatHistoryFeature: DuckAiChatHistoryFeature =
+        FakeFeatureToggleFactory.create(DuckAiChatHistoryFeature::class.java)
+    private val mockTermsConsent: DuckAiTermsConsent = mock()
+    private val chatStateStore = ChatStateStore()
+    private val mockResponseWaitWideEvent: DuckAiResponseWaitWideEvent = mock()
+
+    private val mockDuckDuckGoUrlDetector: DuckDuckGoUrlDetector = mock {
+        on { isDuckDuckGoQueryUrl(SERP_URL) } doReturn true
+    }
+    private val entryWideEvent: DuckAiEntryWideEvent = mock()
+    private val tabSessions: DuckAiTabSessionRepository = mock()
+
+    private val pdfPageContextResolver: PdfPageContextResolver = mock()
+
+    private val testee = RealDuckChatJSHelper(
+        pdfPageContextResolver = pdfPageContextResolver,
+        duckChat = mockDuckChat,
+        duckChatPixels = mockDuckChatPixels,
+        dataStore = mockDataStore,
+        appCoroutineScope = coroutineRule.testScope,
+        dispatcherProvider = coroutineRule.testDispatcherProvider,
+        pendingTabContextStore = mockPendingTabContextStore,
+        pendingNativePromptStore = mockPendingNativePromptStore,
+        faviconManager = mockFaviconManager,
+        duckChatFeature = mockDuckChatFeature,
+        voiceSessionStateManager = mockVoiceSessionStateManager,
+        limitsHandler = mockLimitsHandler,
+        nativeInputStatePublisher = mockNativeInputStatePublisher,
+        nativeInputStateProvider = mockNativeInputStateProvider,
+        appInstall = mockAppInstall,
+        appBuildConfig = mockAppBuildConfig,
+        subscriptions = mockSubscriptions,
+        editPromptSessionStore = mockEditPromptSessionStore,
+        browserInteractionsPlugins = mockBrowserInteractionsPlugins,
+        duckAiSessionCallback = mockDuckAiSessionCallback,
+        entryWideEvent = lazy { entryWideEvent },
+        regularChatStore = mockRegularChatStore,
+        fireChatStore = mockFireChatStore,
+        duckAiChatHistoryFeature = fakeChatHistoryFeature,
+        termsConsent = mockTermsConsent,
+        chatStateStore = chatStateStore,
+        responseWaitWideEvent = mockResponseWaitWideEvent,
+        duckDuckGoUrlDetector = mockDuckDuckGoUrlDetector,
+        tabSessions = tabSessions,
+    )
+
+    init {
+        whenever(mockBrowserInteractionsPlugins.getPlugins()).thenReturn(listOf(mockBrowserInteractionsPlugin))
+    }
+    private val viewModel =
+        object {
+            val updatedPageContext: String =
+                """
+                {
+                    "title": "Example Title",
+                    "url": "https://example.com",
+                    "content": "Example content",
+                    "favicon": [
+                        {
+                            "rel": "icon",
+                            "href": "data:image/png;base64,..."
+                        }
+                     ]
+                }
+                """.trimIndent()
+        }
+
+    @Test
+    fun whenMethodIsUnknownThenReturnNull() = runTest {
+        val featureName = "aiChat"
+        val method = "unknownMethod"
+        val id = "123"
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndIdIsNullThenReturnNull() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            null,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndDuckChatFeatureEnabledThenReturnJsCallbackDataWithDuckChatEnabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDataStore.fetchAndClearUserPreferences()).thenReturn("preferences")
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("aiChatPayload", "preferences")
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndDuckChatFeatureDisabledThenReturnJsCallbackDataWithDuckChatDisabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(false)
+        whenever(mockDataStore.fetchAndClearUserPreferences()).thenReturn("preferences")
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", false)
+            put("aiChatPayload", "preferences")
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndPreferencesNullThenReturnJsCallbackDataWithPreferencesNull() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDataStore.fetchAndClearUserPreferences()).thenReturn(null)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("aiChatPayload", null)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndIdIsNullThenReturnNull() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            null,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndDuckChatFeatureEnabledThenReturnJsCallbackDataWithDuckChatEnabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndPromoCampaignsEnabledThenSupportsBonusOfferIsTrue() = runTest {
+        mockDuckChatFeature.duckAiPromoCampaigns().setRawStoredState(Toggle.State(enable = true))
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsBonusOffer"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndPromoCampaignsDisabledThenSupportsBonusOfferIsFalse() = runTest {
+        mockDuckChatFeature.duckAiPromoCampaigns().setRawStoredState(Toggle.State(enable = false))
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsBonusOffer"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndPromoCardsEnabledThenSupportsPromoCardsIsTrue() = runTest {
+        mockDuckChatFeature.duckAiPromoCards().setRawStoredState(Toggle.State(enable = true))
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsPromoCards"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndPromoCardsDisabledThenSupportsPromoCardsIsFalse() = runTest {
+        mockDuckChatFeature.duckAiPromoCards().setRawStoredState(Toggle.State(enable = false))
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsPromoCards"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndAllUsageWarningGatesPassThenSupportsNativeUsageWarningsIsTrue() = runTest {
+        mockDuckChatFeature.duckAiUsageWarnings().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockDuckChat.isNativeChatInputEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsNativeUsageWarnings"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndUsageWarningsFlagDisabledThenSupportsNativeUsageWarningsIsFalse() = runTest {
+        mockDuckChatFeature.duckAiUsageWarnings().setRawStoredState(Toggle.State(enable = false))
+        whenever(mockDuckChat.isNativeChatInputEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsNativeUsageWarnings"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNativeStorageDisabledThenSupportsNativeUsageWarningsIsFalse() = runTest {
+        mockDuckChatFeature.duckAiUsageWarnings().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockDuckChat.isNativeChatInputEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsNativeUsageWarnings"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesInFireModeThenSupportsNativeUsageWarningsIsFalse() = runTest {
+        mockDuckChatFeature.duckAiUsageWarnings().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockDuckChat.isNativeChatInputEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+            browserMode = BrowserMode.FIRE,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsNativeUsageWarnings"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNativePromptEditingEnabledThenCapabilityIsTrue() = runTest {
+        whenever(mockDuckChat.isNativePromptEditingEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsNativePromptEditing"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNativePromptEditingDisabledThenCapabilityIsFalse() = runTest {
+        whenever(mockDuckChat.isNativePromptEditingEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsNativePromptEditing"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndAppReinstallThenInstallTypeIsReturning() = runTest {
+        whenever(mockAppBuildConfig.isAppReinstall()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "getAIChatNativeConfigValues",
+            id = "123",
+            data = null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertEquals("returning", result!!.params.getString("installType"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNotReinstallThenInstallTypeIsNew() = runTest {
+        whenever(mockAppBuildConfig.isAppReinstall()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "getAIChatNativeConfigValues",
+            id = "123",
+            data = null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertEquals("new", result!!.params.getString("installType"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesThenInstallAgeIsBucketedByDaysSinceInstall() = runTest {
+        val daysToExpectedBucket = mapOf(
+            0L to 0,
+            1L to 1,
+            7L to 1,
+            8L to 2,
+            14L to 2,
+            15L to 3,
+            21L to 3,
+            22L to 4,
+            28L to 4,
+            29L to 5,
+        )
+
+        daysToExpectedBucket.forEach { (days, expectedBucket) ->
+            whenever(mockAppInstall.getInstallAge()).thenReturn(days.days)
+
+            val result = testee.processJsCallbackMessage(
+                featureName = "aiChat",
+                method = "getAIChatNativeConfigValues",
+                id = "123",
+                data = null,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+            assertEquals(
+                "days=$days should map to bucket $expectedBucket",
+                expectedBucket,
+                result!!.params.getInt("installAge"),
+            )
+        }
+    }
+
+    @Test
+    fun whenInstallAgeIsNullThenInstallAgeIsOmitted() = runTest {
+        whenever(mockAppInstall.getInstallAge()).thenReturn(null)
+
+        val result = testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "getAIChatNativeConfigValues",
+            id = "123",
+            data = null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.has("installAge"))
+    }
+
+    @Test
+    fun whenGetPageContextInitAndAutomaticEnabledThenReturnsContext() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "init") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNotNull(result)
+        val context = result!!.params.getJSONObject("pageContext")
+        assertEquals("Example Title", context.getString("title"))
+        assertEquals("https://example.com", context.getString("url"))
+    }
+
+    @Test
+    fun whenGetPageContextInitAndAutomaticDisabledThenReturnsEmptyPageContext() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(false)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "init") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNotNull(result)
+        assertTrue(result!!.params.has("pageContext"))
+        assertTrue(result.params.isNull("pageContext"))
+    }
+
+    @Test
+    fun `manual PDF attachment reports frontend attachment pixel`() = runTest {
+        whenever(pdfPageContextResolver.isEnabled()).thenReturn(true)
+        whenever(pdfPageContextResolver.resolve(eq("tab-1"), anyOrNull(), eq(true), any())).thenReturn(pdfContextResult("JVBERi0="))
+
+        val response = testee.processJsCallbackMessage(
+            DUCK_CHAT_FEATURE_NAME,
+            METHOD_GET_PAGE_CONTEXT,
+            "id",
+            JSONObject().put("reason", "userAction"),
+            tabId = "tab-1",
+        )!!
+
+        val context = response.params.getJSONObject("pageContext")
+        assertEquals("JVBERi0=", context.getString("data"))
+        assertTrue(context.getBoolean("attached"))
+        verify(mockDuckChatPixels).reportContextualPageContextManuallyAttachedFrontend()
+    }
+
+    @Test
+    fun `manual PDF response without bytes does not report attached`() = runTest {
+        whenever(pdfPageContextResolver.isEnabled()).thenReturn(true)
+        whenever(pdfPageContextResolver.resolve(eq("tab-1"), anyOrNull(), eq(true), any())).thenReturn(pdfContextResult())
+
+        val response = testee.processJsCallbackMessage(
+            DUCK_CHAT_FEATURE_NAME,
+            METHOD_GET_PAGE_CONTEXT,
+            "id",
+            JSONObject().put("reason", "userAction"),
+            tabId = "tab-1",
+        )!!
+
+        assertFalse(response.params.getJSONObject("pageContext").getBoolean("attached"))
+        verify(mockDuckChatPixels, never()).reportContextualPageContextManuallyAttachedFrontend()
+    }
+
+    @Test
+    fun `PDF initialization with auto attachment off sends unattached metadata`() = runTest {
+        whenever(pdfPageContextResolver.isEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(false)
+        whenever(pdfPageContextResolver.resolve(eq("tab-1"), anyOrNull(), eq(false), any())).thenReturn(pdfContextResult())
+
+        val response = testee.processJsCallbackMessage(
+            DUCK_CHAT_FEATURE_NAME,
+            METHOD_GET_PAGE_CONTEXT,
+            "id",
+            JSONObject().put("reason", "init"),
+            tabId = "tab-1",
+        )!!
+
+        val context = response.params.getJSONObject("pageContext")
+        assertTrue(context.getBoolean("attachable"))
+        assertFalse(context.getBoolean("attached"))
+        assertFalse(context.has("data"))
+        verify(pdfPageContextResolver).resolve(eq("tab-1"), anyOrNull(), eq(false), any())
+    }
+
+    @Test
+    fun `PDF initialization after removal does not read bytes when auto attachment is on`() = runTest {
+        whenever(pdfPageContextResolver.isEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+        whenever(pdfPageContextResolver.resolve(eq("tab-1"), anyOrNull(), eq(false), any())).thenReturn(pdfContextResult())
+
+        val response = testee.processJsCallbackMessage(
+            DUCK_CHAT_FEATURE_NAME,
+            METHOD_GET_PAGE_CONTEXT,
+            "id",
+            JSONObject().put("reason", "init"),
+            tabId = "tab-1",
+            allowAutomaticPageContextAttachment = false,
+        )!!
+
+        assertFalse(response.params.getJSONObject("pageContext").getBoolean("attached"))
+        verify(pdfPageContextResolver).resolve(eq("tab-1"), anyOrNull(), eq(false), any())
+        verify(pdfPageContextResolver, never()).resolve(eq("tab-1"), anyOrNull(), eq(true), any())
+    }
+
+    private fun pdfContextResult(data: String? = null) = PdfPageContextResolver.Result.Pdf(
+        DuckAiPdfMetadata(
+            "document.pdf",
+            "https://example.com/document.pdf",
+            DuckAiPdfMetadata.Availability.AVAILABLE,
+        ),
+        data,
+    )
+
+    @Test
+    fun whenGetPageContextUserActionThenReturnsContextRegardlessOfAutoFlag() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(false)
+        val tabId = "tab-1"
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "userAction") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+                tabId = tabId,
+            )
+
+        assertNotNull(result)
+        val context = result!!.params.getJSONObject("pageContext")
+        assertEquals("Example Title", context.getString("title"))
+        assertEquals("https://example.com", context.getString("url"))
+        assertEquals("Example content", context.getString("content"))
+        verify(mockDuckChatPixels).reportContextualPageContextManuallyAttachedFrontend()
+    }
+
+    @Test
+    fun whenGetPageContextWithoutDataThenReturnsEmptyPageContext() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "userAction") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = "",
+            )
+
+        assertNotNull(result)
+        assertTrue(result!!.params.has("pageContext"))
+        assertTrue(result.params.isNull("pageContext"))
+    }
+
+    @Test
+    fun whenGetPageContextAndIdIsNullThenReturnsNull() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = null,
+                data = JSONObject().apply { put("reason", "userAction") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenGetPageContextInitAutomaticEnabledThenReturnsContext() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "init") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNotNull(result)
+        val context = result!!.params.getJSONObject("pageContext")
+        assertEquals("Example Title", context.getString("title"))
+        assertEquals("https://example.com", context.getString("url"))
+    }
+
+    @Test
+    fun whenGetPageContextWithoutReasonThenDefaultsToUserAction() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = null,
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNotNull(result)
+        val context = result!!.params.getJSONObject("pageContext")
+        assertEquals("Example Title", context.getString("title"))
+        assertEquals("https://example.com", context.getString("url"))
+    }
+
+    @Test
+    fun whenGetPageContextWithUnknownReasonThenReturnsEmptyPageContext() = runTest {
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result =
+            testee.processJsCallbackMessage(
+                featureName = DUCK_CHAT_FEATURE_NAME,
+                method = METHOD_GET_PAGE_CONTEXT,
+                id = "123",
+                data = JSONObject().apply { put("reason", "unexpected") },
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            )
+
+        assertNotNull(result)
+        assertTrue(result!!.params.has("pageContext"))
+        assertTrue(result.params.isNull("pageContext"))
+    }
+
+    @Test
+    fun whenTogglePageContextEnabledThenNoPixelReported() = runTest {
+        val featureName = "aiChat"
+        val method = "togglePageContextTelemetry"
+        val id = "123"
+        val data = JSONObject(mapOf("enabled" to true))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verifyNoInteractions(mockDuckChatPixels)
+    }
+
+    @Test
+    fun whenTogglePageContextDisabledThenReportContextRemoved() = runTest {
+        val featureName = "aiChat"
+        val method = "togglePageContextTelemetry"
+        val id = "123"
+        val data = JSONObject(mapOf("enabled" to false))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).reportContextualPageContextRemovedFrontend()
+    }
+
+    @Test
+    fun whenTogglePageContextWithoutDataThenNoPixelReported() = runTest {
+        val featureName = "aiChat"
+        val method = "togglePageContextTelemetry"
+        val id = "123"
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                null,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verifyNoInteractions(mockDuckChatPixels)
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndDuckChatFeatureDisabledThenReturnJsCallbackDataWithDuckChatDisabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(false)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", false)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndSubscriptionEligibleThenSupportsSubscriptionIsTrue() = runTest {
+        val method = "getAIChatNativeConfigValues"
+
+        whenever(mockSubscriptions.isEligible()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsSubscription"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndSubscriptionNotEligibleThenSupportsSubscriptionIsFalse() = runTest {
+        val method = "getAIChatNativeConfigValues"
+
+        whenever(mockSubscriptions.isEligible()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsSubscription"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndEligibilityCheckThrowsThenSupportsSubscriptionIsFalse() = runTest {
+        val method = "getAIChatNativeConfigValues"
+
+        whenever(mockSubscriptions.isEligible()).thenThrow(RuntimeException("Error"))
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsSubscription"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndDuckChatFeatureEnabledAndFullScreenModeEnabledAndModeFullThenReturnCorrectData() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", true)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", true)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun `when get AI chat page context for user action then return payload`() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatPageContext"
+        val id = "123"
+        val data = JSONObject(mapOf("reason" to "userAction"))
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("pageContext", JSONObject(viewModel.updatedPageContext))
+        }
+
+        assertNotNull(result)
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun `when get AI chat page context for init without automatic attachment then return empty page context`() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatPageContext"
+        val id = "123"
+        val data = JSONObject(mapOf("reason" to "init"))
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        assertTrue(result!!.params.has("pageContext"))
+        assertTrue(result.params.isNull("pageContext"))
+    }
+
+    @Test
+    fun `when get AI chat page context for init with automatic attachment then return context`() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatPageContext"
+        val id = "123"
+        val data = JSONObject(mapOf("reason" to "init"))
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        val context = result!!.params.getJSONObject("pageContext")
+        assertEquals("Example Title", context.getString("title"))
+        assertEquals("https://example.com", context.getString("url"))
+    }
+
+    @Test
+    fun `when get AI chat page context for init with automatic attachment then return payload`() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatPageContext"
+        val id = "123"
+        val data = JSONObject(mapOf("reason" to "init"))
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("pageContext", JSONObject(viewModel.updatedPageContext))
+        }
+
+        assertNotNull(result)
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun `when get AI chat page context without context then return empty page context`() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatPageContext"
+        val id = "123"
+        val data = JSONObject(mapOf("reason" to "userAction"))
+
+        whenever(mockDuckChat.isAutomaticContextAttachmentEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = "",
+        )
+
+        assertNotNull(result)
+        assertTrue(result!!.params.has("pageContext"))
+        assertTrue(result.params.isNull("pageContext"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndDuckChatFeatureAndContextualModeEnabledAndModeContextualThenCorrectData() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatContextualModeEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            Mode.CONTEXTUAL,
+            viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", true)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", true)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", true)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndContextualModeThenSupportsSuggestionsTrue() = runTest {
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatContextualModeEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            Mode.CONTEXTUAL,
+            viewModel.updatedPageContext,
+        )
+
+        assertTrue(result!!.params.getBoolean("supportsSuggestions"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndModeFullThenSupportsSuggestionsFalse() = runTest {
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatContextualModeEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            Mode.FULL,
+            viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsSuggestions"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndContextualModeDisabledThenSupportsSuggestionsFalse() = runTest {
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatContextualModeEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeConfigValues",
+            "123",
+            null,
+            Mode.CONTEXTUAL,
+            viewModel.updatedPageContext,
+        )
+
+        assertFalse(result!!.params.getBoolean("supportsSuggestions"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndContextualModeAndMultipleContextsEnabledThenReturnsSupportsMultipleContexts() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatContextualModeEnabled()).thenReturn(true)
+        whenever(mockDuckChat.areMultipleContentAttachmentsEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            Mode.CONTEXTUAL,
+            viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", true)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", true)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", true)
+            put("supportsSuggestions", true)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAnStandaloneMigrationEnabledThenReturnJsCallbackDataWithCorrectData() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isStandaloneMigrationEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", false)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", true)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNativeStorageEnabledThenReturnSupportsNativeStorageTrue() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val jsonPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", false)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", true)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        val expected = JsCallbackData(jsonPayload, featureName, method, id)
+
+        assertEquals(expected.id, result!!.id)
+        assertEquals(expected.method, result.method)
+        assertEquals(expected.featureName, result.featureName)
+        assertEquals(expected.params.toString(), result.params.toString())
+    }
+
+    @Test
+    fun whenOpenAIChatAndHasPayloadThenUpdateStoreAndOpenDuckChat() = runTest {
+        val featureName = "aiChat"
+        val method = "openAIChat"
+        val id = "123"
+        val payload = JSONObject(mapOf("key" to "value"))
+        val payloadString = payload.toString()
+        val data = JSONObject(mapOf("aiChatPayload" to payloadString))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDataStore).updateUserPreferences(payloadString)
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.CONTEXTUAL_CHAT)
+    }
+
+    @Test
+    fun whenOpenAIChatAndDataIsNullThenUpdateStoreAndOpenDuckChat() = runTest {
+        val featureName = "aiChat"
+        val method = "openAIChat"
+        val id = "123"
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                null,
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+        verify(mockDataStore).updateUserPreferences(null)
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.CONTEXTUAL_CHAT)
+    }
+
+    @Test
+    fun whenOpenAIChatAndPayloadIsNullThenUpdateStoreAndOpenDuckChat() = runTest {
+        val featureName = "aiChat"
+        val method = "openAIChat"
+        val id = "123"
+        val data = JSONObject(mapOf("aiChatPayload" to JSONObject.NULL))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                mode = Mode.CONTEXTUAL,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+        verify(mockDataStore).updateUserPreferences(null)
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.CONTEXTUAL_CHAT)
+    }
+
+    @Test
+    fun whenOpenAIChatFromOtherWebpageThenOpenDuckChatWithDirectUrlEntryPoint() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage(
+                "aiChat",
+                "openAIChat",
+                "123",
+                null,
+                mode = Mode.FULL,
+            ),
+        )
+
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.DIRECT_URL)
+    }
+
+    @Test
+    fun whenOpenAIChatFromSerpThenOpenDuckChatWithSerpEntryPoint() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage(
+                "aiChat",
+                "openAIChat",
+                "123",
+                null,
+                mode = Mode.FULL,
+                pageUrl = SERP_URL,
+            ),
+        )
+
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.SERP)
+    }
+
+    @Test
+    fun whenOpenAIChatFromNonSerpPageThenOpenDuckChatWithDirectUrlEntryPoint() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage(
+                "aiChat",
+                "openAIChat",
+                "123",
+                null,
+                mode = Mode.FULL,
+                pageUrl = "https://example.com",
+            ),
+        )
+
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.DIRECT_URL)
+    }
+
+    @Test
+    fun whenOpenAIChatFromContextualOnSerpThenOpenDuckChatWithContextualEntryPoint() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage(
+                "aiChat",
+                "openAIChat",
+                "123",
+                null,
+                mode = Mode.CONTEXTUAL,
+                pageUrl = SERP_URL,
+            ),
+        )
+
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.CONTEXTUAL_CHAT)
+    }
+
+    @Test
+    fun whenOpenAIChatFromContextualThenOpenDuckChatWithContextualEntryPoint() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage(
+                "aiChat",
+                "openAIChat",
+                "123",
+                null,
+                mode = Mode.CONTEXTUAL,
+            ),
+        )
+
+        verify(mockDuckChat).openNewDuckChatSession(DuckChatEntryPoint.CONTEXTUAL_CHAT)
+    }
+
+    @Test
+    fun whenStartStreamNewPromptResponseStateReceivedThenUpdateChatStateWithStartStreamNewPrompt() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "start_stream:new_prompt"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.START_STREAM_NEW_PROMPT, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenLoadingResponseStateReceivedThenUpdateChatStateWithLoading() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "loading"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.LOADING, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenStreamingResponseStateReceivedThenUpdateChatStateWithStreaming() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "streaming"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.STREAMING, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenErrorResponseStateReceivedThenUpdateChatStateWithError() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "error"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.ERROR, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenReadyResponseStateReceivedThenUpdateChatStateWithReady() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "ready"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.READY, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenBlockedResponseStateReceivedThenUpdateChatStateWithBlocked() = runTest {
+        val featureName = "aiChat"
+        val method = "responseState"
+        val id = "123"
+        val data = JSONObject(mapOf("status" to "blocked"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.BLOCKED, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenHideChatInputThenUpdateChatStateWithHide() = runTest {
+        chatStateStore.update("tab-1", ChatState.SHOW)
+        val featureName = "aiChat"
+        val method = "hideChatInput"
+        val id = "123"
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                null,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.HIDE, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenShowChatInputThenUpdateChatStateWithShow() = runTest {
+        val featureName = "aiChat"
+        val method = "showChatInput"
+        val id = "123"
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                null,
+                pageContext = viewModel.updatedPageContext,
+                tabId = "tab-1",
+            ),
+        )
+
+        assertEquals(ChatState.SHOW, chatStateStore.stateFor("tab-1").value)
+    }
+
+    @Test
+    fun whenResponseStateReceivedThenOtherTabsAreUnaffected() = runTest {
+        val data = JSONObject(mapOf("status" to "streaming"))
+
+        testee.processJsCallbackMessage("aiChat", "responseState", "123", data, tabId = "tab-1")
+
+        assertEquals(ChatState.STREAMING, chatStateStore.stateFor("tab-1").value)
+        assertEquals(ChatState.HIDE, chatStateStore.stateFor("tab-2").value)
+    }
+
+    @Test
+    fun whenResponseStateReceivedWithoutTabIdThenItIsDropped() = runTest {
+        val data = JSONObject(mapOf("status" to "streaming"))
+
+        testee.processJsCallbackMessage("aiChat", "responseState", "123", data)
+
+        assertEquals(ChatState.HIDE, chatStateStore.stateFor("").value)
+    }
+
+    @Test
+    fun whenDisableChatInputThenSubmitDisabledForTab() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage("aiChat", "disableChatInput", "123", null, tabId = "tab-1"),
+        )
+
+        val captor = argumentCaptor<(NativeInputState) -> NativeInputState>()
+        verify(mockNativeInputStatePublisher).update(eq("tab-1"), captor.capture())
+        assertFalse(captor.firstValue.invoke(NativeInputState.zero()).submitEnabled)
+    }
+
+    @Test
+    fun whenEnableChatInputThenSubmitEnabledForTab() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage("aiChat", "enableChatInput", "123", null, tabId = "tab-1"),
+        )
+
+        val captor = argumentCaptor<(NativeInputState) -> NativeInputState>()
+        verify(mockNativeInputStatePublisher).update(eq("tab-1"), captor.capture())
+        assertTrue(captor.firstValue.invoke(NativeInputState.zero().copy(submitEnabled = false)).submitEnabled)
+    }
+
+    @Test
+    fun whenShowModelPickerThenRequestShowModelPickerForTab() = runTest {
+        assertNull(
+            testee.processJsCallbackMessage("aiChat", "showModelPicker", "123", null, tabId = "tab-1"),
+        )
+
+        verify(mockDuckChat).requestShowModelPicker("tab-1")
+    }
+
+    @Test
+    fun whenShowModelPickerThenShowModelPickerPixelFired() = runTest {
+        testee.processJsCallbackMessage("aiChat", "showModelPicker", "123", null, tabId = "tab-1")
+
+        verify(mockDuckChatPixels).fireShowModelPicker(any())
+    }
+
+    @Test
+    fun whenShowModelPickerWithEmptyTabIdThenShowModelPickerPixelNotFired() = runTest {
+        testee.processJsCallbackMessage("aiChat", "showModelPicker", "123", null, tabId = "")
+
+        verify(mockDuckChatPixels, never()).fireShowModelPicker(any())
+    }
+
+    @Test
+    fun whenEditPromptSubmittedThenReplyCarriesTheEditedPromptAndKeptAttachments() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        whenever(mockEditPromptSessionStore.await("session-1")).thenReturn(
+            EditPromptResult.Submitted(
+                prompt = "edited",
+                images = listOf(SubmittedImage(data = "img", format = "png")),
+                files = emptyList(),
+            ),
+        )
+        val data = JSONObject(
+            """
+            {
+              "prompt": "original",
+              "images": [{"data": "img", "format": "png"}],
+              "files": [],
+              "hasResponsesToLose": true
+            }
+            """.trimIndent(),
+        )
+
+        val result = testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+
+        assertEquals("edited", result!!.params.getString("prompt"))
+        assertEquals(1, result.params.getJSONArray("images").length())
+        verify(mockDuckChat).requestEditPrompt(EditPromptRequest(sessionId = "session-1", tabId = "tab-1", contextual = false))
+    }
+
+    @Test
+    fun whenEditPromptCancelledThenReplyIsCancelled() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        whenever(mockEditPromptSessionStore.await("session-1")).thenReturn(EditPromptResult.Cancelled)
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        val result = testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+
+        assertTrue(result!!.params.getBoolean("cancelled"))
+    }
+
+    @Test
+    fun whenEditPromptHasNoIdThenNoSessionIsOpened() = runTest {
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        val result = testee.processJsCallbackMessage("aiChat", "editPrompt", null, data, tabId = "tab-1")
+
+        assertNull(result)
+        verifyNoInteractions(mockEditPromptSessionStore)
+    }
+
+    @Test
+    fun whenEditPromptSessionNeverResolvesThenBackstopTimeoutResolvesAsCancelledAndClearsSession() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        val neverCompletes = CompletableDeferred<EditPromptResult>()
+        mockEditPromptSessionStore.stub {
+            onBlocking { await("session-1") } doSuspendableAnswer { neverCompletes.await() }
+        }
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        var result: JsCallbackData? = null
+        val editJob = launch {
+            result = testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+        }
+        advanceTimeBy(RealDuckChatJSHelper.EDIT_SESSION_TIMEOUT_MS + 1_000)
+        advanceUntilIdle()
+
+        assertTrue(editJob.isCompleted)
+        assertTrue(result!!.params.getBoolean("cancelled"))
+        verify(mockEditPromptSessionStore).clear("session-1")
+    }
+
+    @Test
+    fun whenCancelEditReceivedThenPendingSessionIsCancelled() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        val pending = CompletableDeferred<EditPromptResult>()
+        mockEditPromptSessionStore.stub {
+            onBlocking { await("session-1") } doSuspendableAnswer { pending.await() }
+            on { resolve(eq("session-1"), any()) } doAnswer { invocation ->
+                pending.complete(invocation.getArgument<EditPromptResult>(1))
+                Unit
+            }
+        }
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        var result: JsCallbackData? = null
+        val editJob = launch {
+            result = testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+        }
+        // runCurrent(), not advanceUntilIdle(): the latter would fast-forward straight through the
+        // backstop timeout's scheduled delay, completing the job before cancelEdit ever runs.
+        runCurrent()
+        assertTrue(editJob.isActive)
+
+        val cancelResult = testee.processJsCallbackMessage("aiChat", "cancelEdit", null, null, tabId = "tab-1")
+        advanceUntilIdle()
+
+        assertNull(cancelResult)
+        assertTrue(editJob.isCompleted)
+        assertTrue(result!!.params.getBoolean("cancelled"))
+    }
+
+    @Test
+    fun whenCancelEditArrivesAfterAnEarlierEditAlreadyResolvedThenItDoesNotAffectALaterEdit() = runTest {
+        // Reproduces the trace: edit A opens and resolves, edit B opens next and is still pending,
+        // then a stray cancelEdit meant for A arrives. The tracker must have been released when A
+        // resolved, so this cancelEdit must not resolve anything -- in particular not B.
+        whenever(mockEditPromptSessionStore.open(any()))
+            .thenReturn("session-A")
+            .thenReturn("session-B")
+        whenever(mockEditPromptSessionStore.await("session-A")).thenReturn(EditPromptResult.Cancelled)
+        val dataA = JSONObject("""{"prompt": "a", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        testee.processJsCallbackMessage("aiChat", "editPrompt", "id-a", dataA, tabId = "tab-1")
+
+        // Stray cancelEdit for the already-resolved A arrives before B starts.
+        testee.processJsCallbackMessage("aiChat", "cancelEdit", null, null, tabId = "tab-1")
+        verify(mockEditPromptSessionStore, never()).resolve(any(), any())
+
+        val pendingB = CompletableDeferred<EditPromptResult>()
+        mockEditPromptSessionStore.stub {
+            onBlocking { await("session-B") } doSuspendableAnswer { pendingB.await() }
+        }
+        var resultB: JsCallbackData? = null
+        val dataB = JSONObject("""{"prompt": "b", "images": [], "files": [], "hasResponsesToLose": false}""")
+        val editBJob = launch {
+            resultB = testee.processJsCallbackMessage("aiChat", "editPrompt", "id-b", dataB, tabId = "tab-1")
+        }
+        // runCurrent(), not advanceUntilIdle(): see the note in whenCancelEditReceivedThenPendingSessionIsCancelled.
+        runCurrent()
+
+        assertTrue(editBJob.isActive)
+        assertNull(resultB)
+        verify(mockEditPromptSessionStore, never()).resolve(eq("session-B"), any())
+
+        editBJob.cancel()
+    }
+
+    @Test
+    fun whenEditPromptHasImagesAndFilesThenParsedPayloadMatchesTheRequest() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        whenever(mockEditPromptSessionStore.await("session-1")).thenReturn(EditPromptResult.Cancelled)
+        val data = JSONObject(
+            """
+            {
+              "prompt": "original",
+              "images": [{"data": "img-data", "format": "png"}],
+              "files": [{"data": "file-data", "fileName": "notes.txt", "mimeType": "text/plain"}],
+              "hasResponsesToLose": false
+            }
+            """.trimIndent(),
+        )
+
+        testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+
+        val captor = argumentCaptor<EditPromptPayload>()
+        verify(mockEditPromptSessionStore).open(captor.capture())
+        val payload = captor.firstValue
+        assertEquals("original", payload.prompt)
+        assertEquals(listOf(SubmittedImage(data = "img-data", format = "png")), payload.images)
+        assertEquals(listOf(SubmittedFile(data = "file-data", fileName = "notes.txt", mimeType = "text/plain")), payload.files)
+    }
+
+    @Test
+    fun whenEditPromptSubmittedWithFilesThenReplyFilesArrayHasTheCorrectFields() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        whenever(mockEditPromptSessionStore.await("session-1")).thenReturn(
+            EditPromptResult.Submitted(
+                prompt = "edited",
+                images = emptyList(),
+                files = listOf(SubmittedFile(data = "file-data", fileName = "notes.txt", mimeType = "text/plain")),
+            ),
+        )
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        val result = testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, tabId = "tab-1")
+
+        val files = result!!.params.getJSONArray("files")
+        assertEquals(1, files.length())
+        val file = files.getJSONObject(0)
+        assertEquals("file-data", file.getString("data"))
+        assertEquals("notes.txt", file.getString("fileName"))
+        assertEquals("text/plain", file.getString("mimeType"))
+    }
+
+    @Test
+    fun whenEditPromptForContextualModeThenRequestIsMarkedContextual() = runTest {
+        whenever(mockEditPromptSessionStore.open(any())).thenReturn("session-1")
+        whenever(mockEditPromptSessionStore.await("session-1")).thenReturn(EditPromptResult.Cancelled)
+        val data = JSONObject("""{"prompt": "original", "images": [], "files": [], "hasResponsesToLose": false}""")
+
+        testee.processJsCallbackMessage("aiChat", "editPrompt", "123", data, mode = Mode.CONTEXTUAL, tabId = "tab-1")
+
+        verify(mockDuckChat).requestEditPrompt(EditPromptRequest(sessionId = "session-1", tabId = "tab-1", contextual = true))
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndSupportsImageUploadThenReturnJsCallbackDataWithSupportsImageUploadEnabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isImageUploadEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", true)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndNativeInputEnabledThenReturnSupportsNativeChatInputEnabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+        whenever(mockDuckChat.isNativeChatInputEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", true)
+            put("supportsNativePrompt", true)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndChatSyncEnabledThenReturnJsCallbackDataWithSupportsAIChatSyncEnabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+        whenever(mockDuckChat.isChatSyncFeatureEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", true)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndChatSyncEnabledButFireModeThenSupportsAIChatSyncDisabled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeConfigValues"
+        val id = "123"
+
+        whenever(mockDuckChat.isDuckChatFeatureEnabled()).thenReturn(true)
+        whenever(mockDuckChat.isDuckChatFullScreenModeEnabled()).thenReturn(false)
+        whenever(mockDuckChat.isChatSyncFeatureEnabled()).thenReturn(true)
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            null,
+            pageContext = viewModel.updatedPageContext,
+            browserMode = BrowserMode.FIRE,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("platform", "android")
+            put("isAIChatHandoffEnabled", true)
+            put("supportsClosingAIChat", true)
+            put("supportsOpeningSettings", true)
+            put("supportsNativeChatInput", false)
+            put("supportsNativePrompt", false)
+            put("supportsNativePromptEditing", false)
+            put("supportsURLChatIDRestoration", false)
+            put("supportsImageUpload", false)
+            put("supportsStandaloneMigration", false)
+            put("supportsCanonicalChatFormat", true)
+            put("supportsAIChatFullMode", false)
+            put("supportsAIChatContextualMode", false)
+            put("supportsAIChatSync", false)
+            put("supportsPageContext", false)
+            put("supportsNativeStorage", false)
+            put("supportsNativeUsageWarnings", false)
+            put("supportsMultipleContexts", false)
+            put("supportsSuggestions", false)
+            put("supportsSubscription", false)
+            put("supportsHomePageChatSuggestions", false)
+            put("supportsBonusOffer", false)
+            put("supportsPromoCards", false)
+            put("installType", "new")
+            put("installAge", 0)
+        }
+
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun whenReportMetricWithoutDataThenPixelNotSent() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                null,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verifyNoInteractions(mockDuckChatPixels)
+    }
+
+    @Test
+    fun whenReportMetricWithDataThenPixelSentAndCollectMetric() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_SUBMIT_PROMPT)
+    }
+
+    @Test
+    fun whenReportMetricWithFirstPromptThenPixelSentAndCollectMetric() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitFirstPrompt"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_SUBMIT_FIRST_PROMPT)
+    }
+
+    @Test
+    fun whenReportMetricWithSubmittedPromptThenNotifiesAiPromptSubmittedOnly() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+        )
+
+        verify(mockBrowserInteractionsPlugin).onAiPromptSubmitted()
+        verify(mockBrowserInteractionsPlugin, never()).onInputSubmitted()
+    }
+
+    @Test
+    fun whenPageReportsPromptThenPromptPixelAndReturnSessionUseStoredEntrySource() = runTest {
+        whenever(tabSessions.getEntryPointSource("tab")).thenReturn("onboarding_completion_promo")
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt", "source" to "untrusted-page-source")),
+            mode = Mode.FULL,
+            tabId = "tab",
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_SUBMIT_PROMPT, source = "onboarding_completion_promo")
+        verify(mockBrowserInteractionsPlugin).onAiPromptSubmitted("onboarding_completion_promo")
+    }
+
+    @Test
+    fun whenContextualPageReportsPromptThenReturnSessionReceivesContextualSource() = runTest {
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt")),
+            mode = Mode.CONTEXTUAL,
+            tabId = "tab",
+        )
+
+        verify(mockBrowserInteractionsPlugin).onAiPromptSubmitted("contextual_chat")
+    }
+
+    @Test
+    fun whenReportMetricWithFirstSubmittedPromptThenNotifiesAiPromptSubmittedOnly() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitFirstPrompt"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+        )
+
+        verify(mockBrowserInteractionsPlugin).onAiPromptSubmitted()
+        verify(mockBrowserInteractionsPlugin, never()).onInputSubmitted()
+    }
+
+    @Test
+    fun whenReportMetricWithSubmittedPromptInFullModeThenPromptSubmittedReported() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+            mode = Mode.FULL,
+            tabId = "tab-1",
+        )
+
+        verify(mockDuckAiSessionCallback).onPromptSubmitted("tab-1")
+    }
+
+    @Test
+    fun whenReportMetricWithSubmittedPromptInContextualModeThenOnlyEntryPromptIsReported() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidSubmitPrompt"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+            mode = Mode.CONTEXTUAL,
+            tabId = "tab-1",
+        )
+
+        verify(mockDuckAiSessionCallback, never()).onPromptSubmitted(any())
+        verify(entryWideEvent).onPromptSubmitted("tab-1")
+    }
+
+    @Test
+    fun whenFirstPromptMetricInContextualModeThenEntryPromptIsReported() = runTest {
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = JSONObject(mapOf("metricName" to "userDidSubmitFirstPrompt")),
+            mode = Mode.CONTEXTUAL,
+            tabId = "tab-1",
+        )
+
+        verify(entryWideEvent).onPromptSubmitted("tab-1")
+        verify(mockDuckAiSessionCallback, never()).onPromptSubmitted(any())
+    }
+
+    @Test
+    fun whenCloseAiChatInFullModeThenPendingBackOrCloseExitRecordedBeforeClosing() = runTest {
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "closeAIChat",
+            id = "123",
+            data = null,
+            mode = Mode.FULL,
+            tabId = "tab-1",
+        )
+
+        val inOrder = inOrder(mockDuckAiSessionCallback, mockDuckChat)
+        inOrder.verify(mockDuckAiSessionCallback).onExitIntent("tab-1", DuckAiSessionExitTrigger.BACK_OR_CLOSE)
+        inOrder.verify(mockDuckChat).closeDuckChat()
+    }
+
+    @Test
+    fun whenCloseAiChatInContextualModeThenNoPendingExitRecorded() = runTest {
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "closeAIChat",
+            id = "123",
+            data = null,
+            mode = Mode.CONTEXTUAL,
+            tabId = "tab-1",
+        )
+
+        verify(mockDuckAiSessionCallback, never()).onExitIntent(any(), any())
+        verify(mockDuckChat).closeDuckChat()
+    }
+
+    @Test
+    fun whenReportMetricIsUnrelatedThenDoesNotNotifyBrowserInteractions() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidOpenHistory"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+        )
+
+        verifyNoInteractions(mockBrowserInteractionsPlugin)
+    }
+
+    @Test
+    fun whenReportMetricWithOpenHistoryThenPixelSent() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidOpenHistory"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_OPEN_HISTORY)
+    }
+
+    @Test
+    fun whenReportMetricWithSelectFirstHistoryItemThenPixelSent() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidSelectFirstHistoryItem"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_SELECT_FIRST_HISTORY_ITEM)
+    }
+
+    @Test
+    fun whenReportMetricWithCreateNewChatThenPixelSent() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidCreateNewChat"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_CREATE_NEW_CHAT)
+    }
+
+    @Test
+    fun whenReportMetricWithCreateNewChatInFullModeThenNewChatCreatedReported() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidCreateNewChat"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+            mode = Mode.FULL,
+            tabId = "tab-1",
+        )
+
+        verify(mockDuckAiSessionCallback).onNewChatCreated("tab-1")
+    }
+
+    @Test
+    fun whenReportMetricWithCreateNewChatInContextualModeThenNewChatCreatedNotReported() = runTest {
+        val data = JSONObject(mapOf("metricName" to "userDidCreateNewChat"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "reportMetric",
+            id = "123",
+            data = data,
+            mode = Mode.CONTEXTUAL,
+            tabId = "tab-1",
+        )
+
+        verify(mockDuckAiSessionCallback, never()).onNewChatCreated(any())
+    }
+
+    @Test
+    fun whenReportMetricWithKeyboardReturnKeyThenPixelSent() = runTest {
+        val featureName = "aiChat"
+        val method = "reportMetric"
+        val id = "123"
+        val data = JSONObject(mapOf("metricName" to "userDidTapKeyboardReturnKey"))
+
+        assertNull(
+            testee.processJsCallbackMessage(
+                featureName,
+                method,
+                id,
+                data,
+                pageContext = viewModel.updatedPageContext,
+            ),
+        )
+
+        verify(mockDuckChatPixels).sendReportMetricPixel(USER_DID_TAP_KEYBOARD_RETURN_KEY)
+    }
+
+    @Test
+    fun whenOpenKeyboardThenResponseSent() = runTest {
+        val featureName = "aiChat"
+        val method = "openKeyboard"
+        val id = "123"
+        val data = JSONObject(mapOf("selector" to "user-prompt"))
+
+        val result = testee.processJsCallbackMessage(
+            featureName,
+            method,
+            id,
+            data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val expectedPayload = JSONObject().apply {
+            put("selector", "document.getElementsByName(''user-prompt'')[0]?.focus();")
+            put("success", true)
+            put("error", "")
+        }
+
+        assertEquals(expectedPayload.toString(), result!!.params.toString())
+    }
+
+    @Test
+    fun whenNativeActionNewChatRequestedThenSubscriptionDataSent() = runTest {
+        val result = testee.onNativeAction(NativeAction.NEW_CHAT)
+
+        assertEquals("submitNewChatAction", result.subscriptionName)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result.featureName)
+    }
+
+    @Test
+    fun whenNativeActionHistoryRequestedThenSubscriptionDataSent() = runTest {
+        val result = testee.onNativeAction(NativeAction.SIDEBAR)
+
+        assertEquals("submitToggleSidebarAction", result.subscriptionName)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result.featureName)
+    }
+
+    @Test
+    fun whenNativeActionSettingsRequestedThenSubscriptionDataSent() = runTest {
+        val result = testee.onNativeAction(NativeAction.DUCK_AI_SETTINGS)
+
+        assertEquals("submitOpenSettingsAction", result.subscriptionName)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result.featureName)
+    }
+
+    @Test
+    fun whenNativeActionEndVoiceSessionRequestedThenSubscriptionDataSent() = runTest {
+        val result = testee.onNativeAction(NativeAction.END_VOICE_SESSION)
+
+        assertEquals("endVoiceSession", result.subscriptionName)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result.featureName)
+    }
+
+    @Test
+    fun whenNativeActionCustomizeResponsesRequestedThenSubscriptionDataSent() = runTest {
+        val result = testee.onNativeAction(NativeAction.CUSTOMIZE_RESPONSES)
+
+        assertEquals("submitCustomizeResponsesAction", result.subscriptionName)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result.featureName)
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataThenReportOpenIsCalled() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+
+        testee.processJsCallbackMessage(
+            featureName,
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        coroutineRule.testScope.testScheduler.advanceTimeBy(500)
+        coroutineRule.testScope.advanceUntilIdle()
+
+        verify(mockDuckChatPixels, times(1)).reportOpen()
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataCalledTwiceThenReportOpenIsCalledOnlyOnce() = runTest {
+        val featureName = "aiChat"
+        val method = "getAIChatNativeHandoffData"
+
+        testee.processJsCallbackMessage(
+            featureName,
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+        testee.processJsCallbackMessage(
+            featureName,
+            method,
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        coroutineRule.testScope.testScheduler.advanceTimeBy(500)
+        coroutineRule.testScope.advanceUntilIdle()
+
+        verify(mockDuckChatPixels, times(1)).reportOpen()
+    }
+
+    // region enrichPageContextIfPossible
+
+    @Test
+    fun whenEnrichPageContextWithUrlAndFaviconThenFaviconIsAdded() = runTest {
+        val pageContext = """{"title":"Example","url":"https://example.com"}"""
+        val bitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.RGB_565)
+        whenever(mockFaviconManager.loadFromDisk("tab1", "https://example.com")).thenReturn(bitmap)
+
+        val result = testee.enrichPageContextIfPossible("tab1", pageContext)
+
+        val json = JSONObject(result)
+        assertTrue(json.has("favicon"))
+        val faviconArray = json.getJSONArray("favicon")
+        assertEquals(1, faviconArray.length())
+        assertEquals("icon", faviconArray.getJSONObject(0).getString("rel"))
+        assertTrue(faviconArray.getJSONObject(0).getString("href").startsWith("data:image/png;base64,"))
+    }
+
+    @Test
+    fun whenEnrichPageContextWithUrlButNoFaviconThenNoFaviconAdded() = runTest {
+        val pageContext = """{"title":"Example","url":"https://example.com"}"""
+        whenever(mockFaviconManager.loadFromDisk("tab1", "https://example.com")).thenReturn(null)
+
+        val result = testee.enrichPageContextIfPossible("tab1", pageContext)
+
+        val json = JSONObject(result)
+        assertFalse(json.has("favicon"))
+    }
+
+    @Test
+    fun whenEnrichPageContextWithNoUrlThenFaviconNotLoaded() = runTest {
+        val pageContext = """{"title":"Example"}"""
+
+        val result = testee.enrichPageContextIfPossible("tab1", pageContext)
+
+        val json = JSONObject(result)
+        assertFalse(json.has("favicon"))
+        verify(mockFaviconManager, never()).loadFromDisk(any(), any())
+    }
+
+    @Test
+    fun whenEnrichPageContextWithBlankUrlThenFaviconNotLoaded() = runTest {
+        val pageContext = """{"title":"Example","url":""}"""
+
+        val result = testee.enrichPageContextIfPossible("tab1", pageContext)
+
+        val json = JSONObject(result)
+        assertFalse(json.has("favicon"))
+        verify(mockFaviconManager, never()).loadFromDisk(any(), any())
+    }
+
+    // endregion
+
+    // region storeTabContextPromptEvent
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun whenStoreTabContextPromptEventThenDataIsStored() = runTest {
+        mockDuckChatFeature.chatTabAttachments().setRawStoredState(Toggle.State(enable = true))
+        val pageContext = JSONObject("""{"title":"Example","url":"https://example.com"}""")
+
+        testee.storeTabContextPromptEvent("hello", listOf(pageContext))
+
+        verify(mockPendingTabContextStore).store(eq("hello"), any())
+    }
+
+    @Test
+    fun whenStoreTabContextPromptEventWithFeatureDisabledThenNothingStored() {
+        val pageContext = JSONObject("""{"title":"Example","url":"https://example.com"}""")
+
+        testee.storeTabContextPromptEvent("hello", listOf(pageContext))
+
+        verify(mockPendingTabContextStore, never()).store(any(), any())
+    }
+
+    // endregion
+
+    // region consumeTabContextPromptOnHandoff
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun whenConsumingTheHandoffPromptThenTheTermsConsentIsCarriedOnTheEvent() {
+        mockDuckChatFeature.chatTabAttachments().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockPendingTabContextStore.consume()).thenReturn(PendingTabContext("prompt", emptyList()))
+
+        val result = testee.consumeTabContextPromptOnHandoff("getAIChatNativeHandoffData", BrowserMode.REGULAR)
+
+        verify(mockTermsConsent).carry(eq(result!!.params), eq(BrowserMode.REGULAR))
+    }
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun whenConsumeTabContextPromptOnHandoffWithHandoffMethodAndFeatureEnabledThenReturnsEvent() = runTest {
+        mockDuckChatFeature.chatTabAttachments().setRawStoredState(Toggle.State(enable = true))
+        val pageContext = JSONObject("""{"title":"Example","url":"https://example.com"}""")
+        whenever(mockPendingTabContextStore.consume()).thenReturn(PendingTabContext("hello", listOf(pageContext)))
+
+        val result = testee.consumeTabContextPromptOnHandoff("getAIChatNativeHandoffData", BrowserMode.REGULAR)
+
+        assertNotNull(result)
+        assertEquals(DUCK_CHAT_FEATURE_NAME, result!!.featureName)
+        assertEquals("submitAIChatNativePrompt", result.subscriptionName)
+        assertEquals("hello", result.params.getJSONObject("query").getString("prompt"))
+        assertTrue(result.params.getJSONObject("query").getBoolean("autoSubmit"))
+        assertEquals("Example", result.params.getJSONObject("pageContext").getString("title"))
+    }
+
+    @Test
+    fun whenConsumeTabContextPromptOnHandoffWithOtherMethodThenReturnsNull() {
+        val result = testee.consumeTabContextPromptOnHandoff("getAIChatNativeConfigValues", BrowserMode.REGULAR)
+
+        assertNull(result)
+        verify(mockPendingTabContextStore, never()).consume()
+    }
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun whenConsumeTabContextPromptOnHandoffWithNothingStoredThenReturnsNull() = runTest {
+        mockDuckChatFeature.chatTabAttachments().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockPendingTabContextStore.consume()).thenReturn(null)
+
+        val result = testee.consumeTabContextPromptOnHandoff("getAIChatNativeHandoffData", BrowserMode.REGULAR)
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenConsumeTabContextPromptOnHandoffWithFeatureDisabledThenReturnsNull() {
+        val result = testee.consumeTabContextPromptOnHandoff("getAIChatNativeHandoffData", BrowserMode.REGULAR)
+
+        assertNull(result)
+        verify(mockPendingTabContextStore, never()).consume()
+    }
+
+    // endregion
+
+    // region clearTabContextPromptEvent
+
+    @SuppressLint("DenyListedApi")
+    @Test
+    fun whenClearTabContextPromptEventThenStoreIsCleared() = runTest {
+        mockDuckChatFeature.chatTabAttachments().setRawStoredState(Toggle.State(enable = true))
+
+        testee.clearTabContextPromptEvent()
+
+        verify(mockPendingTabContextStore).clear()
+    }
+
+    @Test
+    fun whenClearTabContextPromptEventWithFeatureDisabledThenNothingCleared() {
+        testee.clearTabContextPromptEvent()
+
+        verify(mockPendingTabContextStore, never()).clear()
+    }
+
+    // endregion
+
+    @Test
+    fun whenResponseStateInFullModeThenResponseWaitGetsRawStatus() = runTest {
+        testee.processJsCallbackMessage(
+            "aiChat",
+            "responseState",
+            "123",
+            JSONObject(mapOf("status" to "start_stream:restart_stream")),
+            pageContext = viewModel.updatedPageContext,
+            tabId = "tab-1",
+        )
+
+        verify(mockResponseWaitWideEvent).onResponseState("tab-1", "start_stream:restart_stream")
+    }
+
+    @Test
+    fun whenResponseStateInContextualModeThenResponseWaitIsNotCalled() = runTest {
+        testee.processJsCallbackMessage(
+            "aiChat",
+            "responseState",
+            "123",
+            JSONObject(mapOf("status" to "ready")),
+            mode = Mode.CONTEXTUAL,
+            pageContext = viewModel.updatedPageContext,
+            tabId = "tab-1",
+        )
+
+        verifyNoInteractions(mockResponseWaitWideEvent)
+    }
+
+    @Test
+    fun whenNativePromptConsumedInFullModeThenResponseWaitGetsModePendingEffortAndTool() = runTest {
+        whenever(mockPendingNativePromptStore.consume())
+            .thenReturn(PendingNativePrompt("test prompt", "model", "high", selectedTool = "WebSearch"))
+
+        testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+            tabId = "tab-1",
+            browserMode = BrowserMode.FIRE,
+        )
+
+        verify(mockResponseWaitWideEvent).onNativePromptSubmitted("tab-1", BrowserMode.FIRE, "high", "WebSearch")
+    }
+
+    @Test
+    fun whenNoPendingNativePromptThenResponseWaitIsNotCalled() = runTest {
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(null)
+
+        testee.processJsCallbackMessage("aiChat", "getAIChatNativePrompt", "123", null, pageContext = viewModel.updatedPageContext, tabId = "tab-1")
+
+        verifyNoInteractions(mockResponseWaitWideEvent)
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithPendingPromptThenReturnsPromptData() = runTest {
+        val pending = PendingNativePrompt("test prompt", "model", null)
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+        assertNotNull(result)
+        assertEquals("android", result!!.params.getString("platform"))
+        assertEquals("query", result.params.getString("tool"))
+
+        val query = result.params.getJSONObject("query")
+        assertEquals("test prompt", query.getString("prompt"))
+        assertTrue(query.getBoolean("autoSubmit"))
+        assertEquals("model", query.getString("modelId"))
+        assertFalse(query.has("reasoningEffort"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithPendingPromptThatDoesNotCarryTermsThenTheConsentIsNotCarried() = runTest {
+        whenever(mockPendingNativePromptStore.consume())
+            .thenReturn(PendingNativePrompt("test prompt", null, null, carriesTermsConsent = false))
+
+        val result = testee.processJsCallbackMessage("aiChat", "getAIChatNativePrompt", "123", null, pageContext = viewModel.updatedPageContext)
+
+        assertEquals("test prompt", result!!.params.getJSONObject("query").getString("prompt"))
+        verify(mockTermsConsent, never()).carry(any(), any())
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithPendingPromptThenTheTermsConsentIsCarriedOnThePayload() = runTest {
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(PendingNativePrompt("test prompt", null, null))
+
+        val result = testee.processJsCallbackMessage("aiChat", "getAIChatNativePrompt", "123", null, pageContext = viewModel.updatedPageContext)
+
+        verify(mockTermsConsent).carry(eq(result!!.params), any())
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithNoPendingPromptThenTheTermsConsentIsNotCarried() = runTest {
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(null)
+
+        testee.processJsCallbackMessage("aiChat", "getAIChatNativePrompt", "123", null, pageContext = viewModel.updatedPageContext)
+
+        verify(mockTermsConsent, never()).carry(any(), any())
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithPendingPromptButNoModelIdThenModelIdOmitted() = runTest {
+        val pending = PendingNativePrompt("test prompt", null, null)
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+        assertNotNull(result)
+
+        val query = result!!.params.getJSONObject("query")
+        assertEquals("test prompt", query.getString("prompt"))
+        assertFalse(query.has("modelId"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithReasoningEffortThenPayloadIncludesIt() = runTest {
+        val pending = PendingNativePrompt("test prompt", "model", "medium")
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val query = result!!.params.getJSONObject("query")
+        assertEquals("medium", query.getString("reasoningEffort"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithoutReasoningEffortThenPayloadOmitsField() = runTest {
+        val pending = PendingNativePrompt("test prompt", "model", null)
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        val query = result!!.params.getJSONObject("query")
+        assertFalse(query.has("reasoningEffort"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithNoPendingPromptThenReturnsPlatformOnly() = runTest {
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(null)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+        assertNotNull(result)
+        assertEquals("android", result!!.params.getString("platform"))
+        assertFalse(result.params.has("tool"))
+        assertFalse(result.params.has("query"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithNullIdThenReturnsNull() = runTest {
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            null,
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun whenVoiceSessionStartedThenPixelFiredAndStateUpdated() = runTest {
+        val tabId = "test-tab-id"
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "voiceSessionStarted",
+            null,
+            null,
+            pageContext = viewModel.updatedPageContext,
+            tabId = tabId,
+        )
+
+        assertNull(result)
+        verify(mockDuckChatPixels).reportVoiceSessionStarted()
+        verify(mockVoiceSessionStateManager).onVoiceSessionStarted(tabId)
+    }
+
+    @Test
+    fun whenVoiceSessionEndedThenNoPixelFiredAndStateUpdated() = runTest {
+        val tabId = "test-tab-id"
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "voiceSessionEnded",
+            null,
+            null,
+            pageContext = viewModel.updatedPageContext,
+            tabId = tabId,
+        )
+
+        assertNull(result)
+        verify(mockVoiceSessionStateManager).onVoiceSessionEnded(tabId)
+        verifyNoInteractions(mockDuckChatPixels)
+    }
+
+    @Test
+    fun whenResponseStateWithAttachmentsThenConversationImagesUsedUpdated() = runTest {
+        val data = JSONObject().apply {
+            put("status", "streaming")
+            put(
+                "attachments",
+                JSONObject().apply {
+                    put("imagesUsed", 2)
+                    put("filesUsed", 0)
+                    put("fileSizeBytesUsed", 0)
+                },
+            )
+        }
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "responseState",
+            id = "123",
+            data = data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        verify(mockLimitsHandler).setConversationImagesUsed(2)
+    }
+
+    @Test
+    fun whenResponseStateWithoutAttachmentsThenConversationImagesUsedNotUpdated() = runTest {
+        val data = JSONObject(mapOf("status" to "streaming"))
+
+        testee.processJsCallbackMessage(
+            featureName = "aiChat",
+            method = "responseState",
+            id = "123",
+            data = data,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        verify(mockLimitsHandler, never()).setConversationImagesUsed(any())
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithImagesThenImagesIncludedInResponse() = runTest {
+        val images = listOf(
+            PendingNativeImage(base64Data = "base64data1", format = "jpeg"),
+            PendingNativeImage(base64Data = "base64data2", format = "png"),
+        )
+        val pending = PendingNativePrompt(
+            prompt = "test prompt",
+            modelId = "model-id",
+            reasoningEffort = null,
+            images = images,
+        )
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        val query = result!!.params.getJSONObject("query")
+        assertTrue(query.has("images"))
+        val imagesArray = query.getJSONArray("images")
+        assertEquals(2, imagesArray.length())
+        assertEquals("base64data1", imagesArray.getJSONObject(0).getString("data"))
+        assertEquals("jpeg", imagesArray.getJSONObject(0).getString("format"))
+        assertEquals("base64data2", imagesArray.getJSONObject(1).getString("data"))
+        assertEquals("png", imagesArray.getJSONObject(1).getString("format"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithSelectedToolThenToolChoiceIncluded() = runTest {
+        val pending = PendingNativePrompt(
+            prompt = "test prompt",
+            modelId = "model-id",
+            reasoningEffort = null,
+            selectedTool = "WebSearch",
+        )
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        val query = result!!.params.getJSONObject("query")
+        assertTrue(query.has("toolChoice"))
+        val toolChoice = query.getJSONArray("toolChoice")
+        assertEquals(1, toolChoice.length())
+        assertEquals("WebSearch", toolChoice.getString(0))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithNoSelectedToolThenToolChoiceAbsent() = runTest {
+        val pending = PendingNativePrompt(
+            prompt = "test prompt",
+            modelId = "model-id",
+            reasoningEffort = null,
+            selectedTool = null,
+        )
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        val query = result!!.params.getJSONObject("query")
+        assertFalse(query.has("toolChoice"))
+    }
+
+    @Test
+    fun whenGetAIChatNativePromptWithNoImagesThenImagesKeyAbsent() = runTest {
+        val pending = PendingNativePrompt(
+            prompt = "test prompt",
+            modelId = "model-id",
+            reasoningEffort = null,
+            images = emptyList(),
+        )
+        whenever(mockPendingNativePromptStore.consume()).thenReturn(pending)
+
+        val result = testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativePrompt",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+        )
+
+        assertNotNull(result)
+        val query = result!!.params.getJSONObject("query")
+        assertFalse(query.has("images"))
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndVoiceSessionActiveThenForceEndNativeVoiceSession() = runTest {
+        val tabId = "test-tab-id"
+        whenever(mockVoiceSessionStateManager.isVoiceSessionActive(tabId)).thenReturn(true)
+
+        testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeHandoffData",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+            tabId = tabId,
+        )
+
+        verify(mockVoiceSessionStateManager).onVoiceSessionEnded(tabId)
+    }
+
+    @Test
+    fun whenGetAIChatNativeHandoffDataAndVoiceSessionNotActiveThenDoNotEndNativeVoiceSession() = runTest {
+        val tabId = "test-tab-id"
+        whenever(mockVoiceSessionStateManager.isVoiceSessionActive(tabId)).thenReturn(false)
+
+        testee.processJsCallbackMessage(
+            "aiChat",
+            "getAIChatNativeHandoffData",
+            "123",
+            null,
+            pageContext = viewModel.updatedPageContext,
+            tabId = tabId,
+        )
+
+        verify(mockVoiceSessionStateManager, never()).onVoiceSessionEnded(any())
+    }
+
+    @Test
+    fun whenGetAIChatsAndHomepageFlagDisabledThenReturnsNoChatsWithoutReadingStore() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        mockDuckChatFeature.homepageChatSuggestions().setRawStoredState(Toggle.State(enable = false))
+        whenever(mockRegularChatStore.getChats()).thenReturn(listOf(chat("a", "A", daysAgo = 0)))
+
+        val result = getAIChats()
+
+        assertEquals(0, result.getJSONArray("chats").length())
+        verify(mockRegularChatStore, never()).getChats()
+    }
+
+    @Test
+    fun whenGetAIChatsAndNotMigratedThenReturnsNoChats() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.hasMigrated()).thenReturn(false)
+        whenever(mockRegularChatStore.getChats()).thenReturn(listOf(chat("a", "A", daysAgo = 0)))
+
+        assertEquals(0, getAIChats().getJSONArray("chats").length())
+    }
+
+    @Test
+    fun whenGetAIChatsThenPinnedFirstThenRecentNewestFirstWithinLastWeek() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.getChats()).thenReturn(
+            listOf(
+                chat("recent-old", "Older", daysAgo = 2),
+                chat("pinned", "Pinned", daysAgo = 30, pinned = true),
+                chat("recent-new", "Newer", daysAgo = 0, model = "voice-mode"),
+                chat("stale", "Stale", daysAgo = 10),
+            ),
+        )
+
+        val chats = getAIChats().getJSONArray("chats")
+
+        assertEquals(listOf("pinned", "recent-new", "recent-old"), chats.chatIds())
+        assertTrue(chats.getJSONObject(0).getBoolean("pinned"))
+        assertEquals("voice-mode", chats.getJSONObject(1).getString("model"))
+        assertEquals(setOf("chatId", "title", "pinned", "lastEdit", "model"), chats.getJSONObject(1).keys().asSequence().toSet())
+    }
+
+    @Test
+    fun whenGetAIChatsWithMaxChatsThenChatsAreCappedAndClamped() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.getChats()).thenReturn((0 until 30).map { chat("c$it", "Chat $it", minutesAgo = it.toLong()) })
+
+        assertEquals(listOf("c0", "c1"), getAIChats(JSONObject().put("maxChats", 2)).getJSONArray("chats").chatIds())
+        assertEquals(20, getAIChats(JSONObject().put("maxChats", 1000)).getJSONArray("chats").length())
+    }
+
+    @Test
+    fun whenGetAIChatsWithoutMaxChatsThenCapIsRemoteMaxHistoryCount() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        fakeChatHistoryFeature.self().setRawStoredState(Toggle.State(enable = true, settings = """{"maxHistoryCount":3}"""))
+        whenever(mockRegularChatStore.getChats()).thenReturn((0 until 30).map { chat("c$it", "Chat $it", minutesAgo = it.toLong()) })
+
+        assertEquals(listOf("c0", "c1", "c2"), getAIChats().getJSONArray("chats").chatIds())
+    }
+
+    @Test
+    fun whenGetAIChatsThenPinnedChatsCountTowardMaxChats() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.getChats()).thenReturn(
+            listOf(
+                chat("recent", "Recent", daysAgo = 0),
+                chat("pinned", "Pinned", daysAgo = 30, pinned = true),
+                chat("recent-older", "Older", daysAgo = 1),
+            ),
+        )
+
+        val chats = getAIChats(JSONObject().put("maxChats", 2)).getJSONArray("chats")
+
+        assertEquals(listOf("pinned", "recent"), chats.chatIds())
+    }
+
+    @Test
+    fun whenGetAIChatsThenRecentWindowFollowsRemoteRecentDaysCutoff() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        fakeChatHistoryFeature.self().setRawStoredState(Toggle.State(enable = true, settings = """{"recentDaysCutoff":30}"""))
+        whenever(mockRegularChatStore.getChats()).thenReturn(
+            listOf(
+                chat("ten-days", "Ten days", daysAgo = 10),
+                chat("sixty-days", "Sixty days", daysAgo = 60),
+            ),
+        )
+
+        assertEquals(listOf("ten-days"), getAIChats().getJSONArray("chats").chatIds())
+    }
+
+    @Test
+    fun whenGetAIChatsWithQueryThenFiltersByTitleIncludingOlderChats() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.getChats()).thenReturn(
+            listOf(
+                chat("a", "Sourdough recipe", daysAgo = 30),
+                chat("b", "Trip ideas", daysAgo = 0),
+                chat("pinned-match", "Pinned bread recipe", daysAgo = 60, pinned = true),
+                chat("pinned-miss", "Pinned trip", daysAgo = 0, pinned = true),
+            ),
+        )
+
+        val chats = getAIChats(JSONObject().put("query", "  RECIPE ")).getJSONArray("chats")
+
+        assertEquals(listOf("pinned-match", "a"), chats.chatIds())
+    }
+
+    @Test
+    fun whenGetAIChatsAndStoreThrowsThenReturnsNoChats() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockRegularChatStore.getChats()).thenThrow(RuntimeException("boom"))
+
+        assertEquals(0, getAIChats().getJSONArray("chats").length())
+    }
+
+    @Test
+    fun whenGetAIChatsInFireModeThenReadsFireStoreOnly() = runTest {
+        givenHomepageChatSuggestionsSupported()
+        whenever(mockFireChatStore.hasMigrated()).thenReturn(true)
+        whenever(mockFireChatStore.getChats()).thenReturn(listOf(chat("fire", "Fire", daysAgo = 0)))
+
+        val chats = getAIChats(browserMode = BrowserMode.FIRE).getJSONArray("chats")
+
+        assertEquals(listOf("fire"), chats.chatIds())
+        verify(mockRegularChatStore, never()).getChats()
+    }
+
+    @Test
+    fun whenGetAIChatNativeConfigValuesAndHomepageChatSuggestionsSupportedThenFlagIsTrue() = runTest {
+        givenHomepageChatSuggestionsSupported()
+
+        val result = testee.processJsCallbackMessage("aiChat", "getAIChatNativeConfigValues", "123", null)
+
+        assertTrue(result!!.params.getBoolean("supportsHomePageChatSuggestions"))
+    }
+
+    private suspend fun givenHomepageChatSuggestionsSupported() {
+        mockDuckChatFeature.homepageChatSuggestions().setRawStoredState(Toggle.State(enable = true))
+        mockDuckChatFeature.useNativeStorageChatData().setRawStoredState(Toggle.State(enable = true))
+        whenever(mockDuckChat.isNativeStorageEnabled()).thenReturn(true)
+        whenever(mockRegularChatStore.hasMigrated()).thenReturn(true)
+    }
+
+    private suspend fun getAIChats(
+        params: JSONObject? = null,
+        browserMode: BrowserMode = BrowserMode.REGULAR,
+    ): JSONObject = testee.processJsCallbackMessage("aiChat", "getAIChats", "123", params, browserMode = browserMode)!!.params
+
+    private fun chat(
+        chatId: String,
+        title: String,
+        daysAgo: Long = 0,
+        minutesAgo: Long = 0,
+        pinned: Boolean = false,
+        model: String = "gpt-4o-mini",
+    ) = DuckAiChat(
+        chatId = chatId,
+        title = title,
+        model = model,
+        lastEdit = Instant.now().minus(daysAgo, ChronoUnit.DAYS).minus(minutesAgo, ChronoUnit.MINUTES).toString(),
+        pinned = pinned,
+    )
+
+    private fun org.json.JSONArray.chatIds(): List<String> = (0 until length()).map { getJSONObject(it).getString("chatId") }
+
+    private companion object {
+        const val SERP_URL = "https://duckduckgo.com/?q=test"
+    }
+}

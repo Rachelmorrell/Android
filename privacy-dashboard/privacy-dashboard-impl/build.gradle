@@ -1,0 +1,100 @@
+/*
+ * Copyright (c) 2022 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'com.android.library'
+    id 'dev.zacsweers.metro'
+    id 'com.google.devtools.ksp'
+}
+
+apply from: "$rootProject.projectDir/gradle/android-library.gradle"
+
+android {
+    namespace 'com.duckduckgo.privacy.dashboard.impl'
+}
+
+dependencies {
+    ksp project(':codegen-ksp')
+    implementation project(':codegen-annotations')
+    implementation project(':di')
+    implementation project(':privacy-dashboard-api')
+    implementation project(':privacy-config-api')
+    implementation project(':statistics-api')
+    implementation project(':common-utils')
+    implementation project(':design-system')
+    implementation project(':browser-api')
+    implementation project(':feedback-api')
+    implementation project(':autoconsent-api')
+    implementation project(':app-build-config-api')
+    implementation project(':navigation-api')
+    implementation project(':feature-toggles-api')
+    implementation project(':broken-site-api')
+    api AndroidX.dataStore.preferences
+
+    implementation AndroidX.appCompat
+    implementation AndroidX.lifecycle.runtime.ktx
+    implementation AndroidX.lifecycle.viewModelKtx
+    implementation Google.android.material
+
+    implementation "com.squareup.logcat:logcat:_"
+    implementation Square.moshi
+    implementation "com.squareup.moshi:moshi-adapters:_"
+    implementation "com.airbnb.android:lottie:_"
+    implementation Square.okHttp3.okHttp
+
+    testImplementation project(':common-test')
+    testImplementation project(':feature-toggles-test')
+    testImplementation Testing.junit4
+    testImplementation AndroidX.test.ext.junit
+    testImplementation CashApp.turbine
+    testImplementation Testing.mockito.kotlin
+    testImplementation "org.mockito.kotlin:mockito-kotlin:_"
+    testImplementation "androidx.test:runner:_"
+    testImplementation Testing.robolectric
+    testImplementation (KotlinX.coroutines.test) {
+        // https://github.com/Kotlin/kotlinx.coroutines/issues/2023
+        // conflicts with mockito due to direct inclusion of byte buddy
+        exclude group: "org.jetbrains.kotlinx", module: "kotlinx-coroutines-debug"
+    }
+
+    androidTestImplementation project(':common-test')
+    androidTestImplementation AndroidX.archCore.testing
+    androidTestImplementation AndroidX.test.runner
+    androidTestImplementation AndroidX.test.rules
+    androidTestImplementation CashApp.turbine
+    androidTestImplementation "org.mockito:mockito-android:_"
+    androidTestImplementation "org.mockito.kotlin:mockito-kotlin:_"
+}
+
+android {
+    lintOptions {
+        baseline file("lint-baseline.xml")
+        abortOnError = !project.hasProperty("abortOnError") || project.property("abortOnError") != "false"
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+fulladleModuleConfig {
+    maxTestShards.set(1)
+}
+
+tasks.register('androidTestsBuild') {
+    dependsOn 'assembleDebugAndroidTest'
+}

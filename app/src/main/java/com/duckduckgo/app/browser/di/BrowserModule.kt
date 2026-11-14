@@ -19,67 +19,94 @@ package com.duckduckgo.app.browser.di
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.webkit.CookieManager
-import android.webkit.WebSettings
-import androidx.lifecycle.LifecycleObserver
+import android.net.ConnectivityManager
+import android.net.DnsResolver
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
+import com.duckduckgo.adblocking.api.duckplayer.DuckPlayer
+import com.duckduckgo.adclick.api.AdClickManager
+import com.duckduckgo.app.bookmarks.BookmarkAddedDialogPlugin
 import com.duckduckgo.app.browser.*
 import com.duckduckgo.app.browser.addtohome.AddToHomeCapabilityDetector
 import com.duckduckgo.app.browser.addtohome.AddToHomeSystemCapabilityDetector
-import com.duckduckgo.app.browser.certificates.rootstore.TrustedCertificateStore
+import com.duckduckgo.app.browser.api.DuckAiChatDeletionListener
+import com.duckduckgo.app.browser.applinks.AppSchemeInterceptionFeature
+import com.duckduckgo.app.browser.applinks.ExternalAppIntentFlagsFeature
 import com.duckduckgo.app.browser.cookies.AppThirdPartyCookieManager
 import com.duckduckgo.app.browser.cookies.ThirdPartyCookieManager
 import com.duckduckgo.app.browser.cookies.db.AuthCookiesAllowedDomainsRepository
-import com.duckduckgo.app.browser.defaultbrowsing.AndroidDefaultBrowserDetector
 import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserDetector
 import com.duckduckgo.app.browser.defaultbrowsing.DefaultBrowserObserver
 import com.duckduckgo.app.browser.downloader.*
 import com.duckduckgo.app.browser.favicon.FaviconPersister
 import com.duckduckgo.app.browser.favicon.FileBasedFaviconPersister
-import com.duckduckgo.app.browser.httpauth.WebViewHttpAuthStore
+import com.duckduckgo.app.browser.httperrors.HttpCodeSiteErrorHandler
+import com.duckduckgo.app.browser.httperrors.HttpCodeSiteErrorHandlerImpl
+import com.duckduckgo.app.browser.httperrors.StringSiteErrorHandler
+import com.duckduckgo.app.browser.httperrors.StringSiteErrorHandlerImpl
 import com.duckduckgo.app.browser.logindetection.*
-import com.duckduckgo.app.browser.serviceworker.ServiceWorkerLifecycleObserver
-import com.duckduckgo.app.browser.session.WebViewSessionInMemoryStorage
-import com.duckduckgo.app.browser.session.WebViewSessionStorage
+import com.duckduckgo.app.browser.menu.BrowserMenuHighlightPlugin
+import com.duckduckgo.app.browser.menu.TopInContextSection
+import com.duckduckgo.app.browser.suggestredirect.DnsLookupApi29Impl
+import com.duckduckgo.app.browser.suggestredirect.DnsLookupPreApi29Impl
+import com.duckduckgo.app.browser.suggestredirect.HostnameResolver
+import com.duckduckgo.app.browser.suggestredirect.HostnameResolverImpl
 import com.duckduckgo.app.browser.tabpreview.FileBasedWebViewPreviewGenerator
 import com.duckduckgo.app.browser.tabpreview.FileBasedWebViewPreviewPersister
 import com.duckduckgo.app.browser.tabpreview.WebViewPreviewGenerator
 import com.duckduckgo.app.browser.tabpreview.WebViewPreviewPersister
-import com.duckduckgo.app.browser.useragent.UserAgentProvider
+import com.duckduckgo.app.browser.urlextraction.DOMUrlExtractor
+import com.duckduckgo.app.browser.urlextraction.JsUrlExtractor
+import com.duckduckgo.app.browser.webview.MaliciousSiteBlockerWebViewIntegration
 import com.duckduckgo.app.di.AppCoroutineScope
-import com.duckduckgo.app.email.EmailInjector
+import com.duckduckgo.app.di.IsMainProcess
 import com.duckduckgo.app.fire.*
-import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteDao
 import com.duckduckgo.app.fire.fireproofwebsite.data.FireproofWebsiteRepository
-import com.duckduckgo.app.global.AppUrl
-import com.duckduckgo.app.global.DispatcherProvider
-import com.duckduckgo.app.global.device.DeviceInfo
 import com.duckduckgo.app.global.events.db.UserEventsStore
-import com.duckduckgo.app.global.exception.UncaughtExceptionRepository
-import com.duckduckgo.app.global.file.FileDeleter
 import com.duckduckgo.app.global.install.AppInstallStore
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControl
-import com.duckduckgo.app.globalprivacycontrol.GlobalPrivacyControlManager
-import com.duckduckgo.app.httpsupgrade.HttpsUpgrader
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.privacy.db.PrivacyProtectionCountDao
-import com.duckduckgo.app.referral.AppReferrerDataStore
 import com.duckduckgo.app.settings.db.SettingsDataStore
-import com.duckduckgo.app.statistics.VariantManager
-import com.duckduckgo.app.statistics.pixels.ExceptionPixel
 import com.duckduckgo.app.statistics.pixels.Pixel
-import com.duckduckgo.app.statistics.store.OfflinePixelCountDataStore
 import com.duckduckgo.app.statistics.store.StatisticsDataStore
 import com.duckduckgo.app.surrogates.ResourceSurrogates
 import com.duckduckgo.app.tabs.ui.GridViewColumnCalculator
-import com.duckduckgo.app.trackerdetection.TrackerDetector
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
+import com.duckduckgo.app.trackerdetection.CloakedCnameDetector
+import com.duckduckgo.app.trackerdetection.WebTrackersBlockedHistory
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.browser.feature.toggles.AndroidBrowserConfigFeature
+import com.duckduckgo.codegen.annotations.ContributesPluginPoint
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.device.DeviceInfo
+import com.duckduckgo.common.utils.file.FileDeleter
+import com.duckduckgo.cookies.api.CookieManagerProvider
+import com.duckduckgo.cookies.api.ThirdPartyCookieNames
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.duckchat.api.DuckAiHostProvider
+import com.duckduckgo.duckchat.api.DuckChat
+import com.duckduckgo.experiments.api.VariantManager
+import com.duckduckgo.httpsupgrade.api.HttpsUpgrader
+import com.duckduckgo.privacy.config.api.AmpLinks
+import com.duckduckgo.privacy.config.api.TrackingParameters
+import com.duckduckgo.referral.api.AppReferrer
+import com.duckduckgo.request.filterer.api.RequestFilterer
+import com.duckduckgo.request.interception.impl.RequestExemptions
+import com.duckduckgo.request.interception.impl.RequestRewriteDecision
+import com.duckduckgo.subscriptions.api.Subscriptions
+import com.duckduckgo.tracker.detection.api.TrackerDetector
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import retrofit2.Retrofit
 import javax.inject.Named
-import javax.inject.Singleton
+import javax.inject.Qualifier
+import kotlin.time.Duration.Companion.milliseconds
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class BrowserModule {
 
     @Provides
@@ -87,83 +114,32 @@ class BrowserModule {
         urlDetector: DuckDuckGoUrlDetector,
         statisticsStore: StatisticsDataStore,
         variantManager: VariantManager,
-        appReferrerDataStore: AppReferrerDataStore
+        appReferrer: AppReferrer,
+        deviceInfo: DeviceInfo,
     ): RequestRewriter {
-        return DuckDuckGoRequestRewriter(urlDetector, statisticsStore, variantManager, appReferrerDataStore)
-    }
-
-    @Provides
-    fun browserWebViewClient(
-        webViewHttpAuthStore: WebViewHttpAuthStore,
-        trustedCertificateStore: TrustedCertificateStore,
-        requestRewriter: RequestRewriter,
-        specialUrlDetector: SpecialUrlDetector,
-        requestInterceptor: RequestInterceptor,
-        offlinePixelCountDataStore: OfflinePixelCountDataStore,
-        uncaughtExceptionRepository: UncaughtExceptionRepository,
-        cookieManager: CookieManager,
-        loginDetector: DOMLoginDetector,
-        dosDetector: DosDetector,
-        globalPrivacyControl: GlobalPrivacyControl,
-        thirdPartyCookieManager: ThirdPartyCookieManager,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope,
-        dispatcherProvider: DispatcherProvider,
-        emailInjector: EmailInjector
-    ): BrowserWebViewClient {
-        return BrowserWebViewClient(
-            webViewHttpAuthStore,
-            trustedCertificateStore,
-            requestRewriter,
-            specialUrlDetector,
-            requestInterceptor,
-            offlinePixelCountDataStore,
-            uncaughtExceptionRepository,
-            cookieManager,
-            loginDetector,
-            dosDetector,
-            globalPrivacyControl,
-            thirdPartyCookieManager,
-            appCoroutineScope,
-            dispatcherProvider,
-            emailInjector
+        return DuckDuckGoRequestRewriter(
+            urlDetector,
+            statisticsStore,
+            variantManager,
+            appReferrer,
+            deviceInfo,
         )
     }
 
     @Provides
-    fun webViewLongPressHandler(context: Context, pixel: Pixel): LongPressHandler {
-        return WebViewLongPressHandler(context, pixel)
-    }
-
-    @Provides
-    fun defaultWebBrowserCapability(context: Context): DefaultBrowserDetector {
-        return AndroidDefaultBrowserDetector(context)
-    }
-
-    @Provides
-    @Singleton
+    @SingleIn(AppScope::class)
     @IntoSet
     fun defaultBrowserObserver(
         defaultBrowserDetector: DefaultBrowserDetector,
         appInstallStore: AppInstallStore,
-        pixel: Pixel
-    ): LifecycleObserver {
-        return DefaultBrowserObserver(defaultBrowserDetector, appInstallStore, pixel)
+        pixel: Pixel,
+    ): MainProcessLifecycleObserver {
+        return DefaultBrowserObserver(
+            defaultBrowserDetector = defaultBrowserDetector,
+            appInstallStore = appInstallStore,
+            pixel = pixel,
+        )
     }
-
-    @Singleton
-    @Provides
-    fun webViewSessionStorage(): WebViewSessionStorage = WebViewSessionInMemoryStorage()
-
-    @Singleton
-    @Provides
-    fun webDataManager(
-        context: Context,
-        webViewSessionStorage: WebViewSessionStorage,
-        cookieManager: DuckDuckGoCookieManager,
-        fileDeleter: FileDeleter,
-        webViewHttpAuthStore: WebViewHttpAuthStore
-    ): WebDataManager =
-        WebViewDataManager(context, webViewSessionStorage, cookieManager, fileDeleter, webViewHttpAuthStore)
 
     @Provides
     fun clipboardManager(context: Context): ClipboardManager {
@@ -176,13 +152,27 @@ class BrowserModule {
     }
 
     @Provides
-    fun specialUrlDetector(packageManager: PackageManager, settingsDataStore: SettingsDataStore): SpecialUrlDetector = SpecialUrlDetectorImpl(packageManager, settingsDataStore)
-
-    @Provides
-    @Singleton
-    fun userAgentProvider(context: Context, deviceInfo: DeviceInfo): UserAgentProvider {
-        return UserAgentProvider(WebSettings.getDefaultUserAgent(context), deviceInfo)
-    }
+    fun specialUrlDetector(
+        packageManager: PackageManager,
+        ampLinks: AmpLinks,
+        trackingParameters: TrackingParameters,
+        subscriptions: Subscriptions,
+        externalAppIntentFlagsFeature: ExternalAppIntentFlagsFeature,
+        duckPlayer: DuckPlayer,
+        duckChat: DuckChat,
+        androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+        appSchemeInterceptionFeature: AppSchemeInterceptionFeature,
+    ): SpecialUrlDetector = SpecialUrlDetectorImpl(
+        packageManager,
+        ampLinks,
+        trackingParameters,
+        subscriptions,
+        externalAppIntentFlagsFeature,
+        duckPlayer,
+        duckChat,
+        androidBrowserConfigFeature,
+        appSchemeInterceptionFeature,
+    )
 
     @Provides
     fun webViewRequestInterceptor(
@@ -190,37 +180,37 @@ class BrowserModule {
         trackerDetector: TrackerDetector,
         httpsUpgrader: HttpsUpgrader,
         privacyProtectionCountDao: PrivacyProtectionCountDao,
-        globalPrivacyControl: GlobalPrivacyControl,
-        userAgentProvider: UserAgentProvider
-    ): RequestInterceptor = WebViewRequestInterceptor(resourceSurrogates, trackerDetector, httpsUpgrader, privacyProtectionCountDao, globalPrivacyControl, userAgentProvider)
-
-    @Provides
-    fun cookieManager(
-        cookieManager: CookieManager,
-        removeCookies: RemoveCookies,
-        dispatcherProvider: DispatcherProvider
-    ): DuckDuckGoCookieManager {
-        return WebViewCookieManager(cookieManager, AppUrl.Url.COOKIES, removeCookies, dispatcherProvider)
-    }
-
-    @Provides
-    fun removeCookiesStrategy(
-        cookieManagerRemover: CookieManagerRemover,
-        sqlCookieRemover: SQLCookieRemover
-    ): RemoveCookies {
-        return RemoveCookies(cookieManagerRemover, sqlCookieRemover)
-    }
-
-    @Provides
-    fun sqlCookieRemover(
-        @Named("webViewDbLocator") webViewDatabaseLocator: DatabaseLocator,
-        getCookieHostsToPreserve: GetCookieHostsToPreserve,
-        offlinePixelCountDataStore: OfflinePixelCountDataStore,
-        exceptionPixel: ExceptionPixel,
-        dispatcherProvider: DispatcherProvider
-    ): SQLCookieRemover {
-        return SQLCookieRemover(webViewDatabaseLocator, getCookieHostsToPreserve, offlinePixelCountDataStore, exceptionPixel, dispatcherProvider)
-    }
+        adClickManager: AdClickManager,
+        cloakedCnameDetector: CloakedCnameDetector,
+        requestFilterer: RequestFilterer,
+        requestExemptions: RequestExemptions,
+        requestRewriteDecision: RequestRewriteDecision,
+        duckPlayer: DuckPlayer,
+        maliciousSiteBlockerWebViewIntegration: MaliciousSiteBlockerWebViewIntegration,
+        androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+        dispatchers: DispatcherProvider,
+        @AppCoroutineScope appCoroutineScope: CoroutineScope,
+        @IsMainProcess isMainProcess: Boolean,
+        webTrackersBlockedHistory: WebTrackersBlockedHistory,
+    ): RequestInterceptor =
+        WebViewRequestInterceptor(
+            resourceSurrogates,
+            trackerDetector,
+            httpsUpgrader,
+            privacyProtectionCountDao,
+            adClickManager,
+            cloakedCnameDetector,
+            requestFilterer,
+            requestExemptions,
+            requestRewriteDecision,
+            duckPlayer,
+            maliciousSiteBlockerWebViewIntegration,
+            dispatchers,
+            androidBrowserConfigFeature,
+            appCoroutineScope,
+            isMainProcess,
+            webTrackersBlockedHistory,
+        )
 
     @Provides
     @Named("webViewDbLocator")
@@ -233,48 +223,46 @@ class BrowserModule {
     @Provides
     fun databaseCleanerHelper(): DatabaseCleaner = DatabaseCleanerHelper()
 
-    @Provides
-    fun getCookieHostsToPreserve(fireproofWebsiteDao: FireproofWebsiteDao): GetCookieHostsToPreserve = GetCookieHostsToPreserve(fireproofWebsiteDao)
-
-    @Provides
-    fun cookieManagerRemover(
-        cookieManager: CookieManager
-    ): CookieManagerRemover {
-        return CookieManagerRemover(cookieManager)
-    }
-
-    @Singleton
-    @Provides
-    fun webViewCookieManager(): CookieManager {
-        return CookieManager.getInstance()
-    }
-
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
     fun gridViewColumnCalculator(context: Context): GridViewColumnCalculator {
         return GridViewColumnCalculator(context)
     }
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
-    fun webViewPreviewPersister(context: Context, fileDeleter: FileDeleter): WebViewPreviewPersister {
-        return FileBasedWebViewPreviewPersister(context, fileDeleter)
+    fun webViewPreviewPersister(
+        context: Context,
+        fileDeleter: FileDeleter,
+        dispatchers: DispatcherProvider,
+    ): WebViewPreviewPersister {
+        return FileBasedWebViewPreviewPersister(context, fileDeleter, dispatchers)
     }
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
-    fun faviconPersister(context: Context, fileDeleter: FileDeleter, dispatcherProvider: DispatcherProvider): FaviconPersister {
-        return FileBasedFaviconPersister(context, fileDeleter, dispatcherProvider)
+    fun faviconPersister(
+        context: Context,
+        fileDeleter: FileDeleter,
+        dispatcherProvider: DispatcherProvider,
+        androidBrowserConfigFeature: AndroidBrowserConfigFeature,
+    ): FaviconPersister {
+        return FileBasedFaviconPersister(context, fileDeleter, androidBrowserConfigFeature, dispatcherProvider)
     }
 
     @Provides
-    fun webViewPreviewGenerator(): WebViewPreviewGenerator {
-        return FileBasedWebViewPreviewGenerator()
+    fun webViewPreviewGenerator(dispatchers: DispatcherProvider): WebViewPreviewGenerator {
+        return FileBasedWebViewPreviewGenerator(dispatchers = dispatchers)
     }
 
     @Provides
     fun domLoginDetector(settingsDataStore: SettingsDataStore): DOMLoginDetector {
         return JsLoginDetector(settingsDataStore)
+    }
+
+    @Provides
+    fun domUrlExtractor(): DOMUrlExtractor {
+        return JsUrlExtractor()
     }
 
     @Provides
@@ -285,22 +273,9 @@ class BrowserModule {
     @Provides
     fun navigationAwareLoginDetector(
         settingsDataStore: SettingsDataStore,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
+        @AppCoroutineScope appCoroutineScope: CoroutineScope,
     ): NavigationAwareLoginDetector {
         return NextPageLoginDetection(settingsDataStore, appCoroutineScope)
-    }
-
-    @Provides
-    fun downloadFileService(@Named("api") retrofit: Retrofit): DownloadFileService = retrofit.create(DownloadFileService::class.java)
-
-    @Provides
-    fun fileDownloader(dataUriDownloader: DataUriDownloader, networkFileDownloader: NetworkFileDownloader): FileDownloader {
-        return AndroidFileDownloader(dataUriDownloader, networkFileDownloader)
-    }
-
-    @Provides
-    fun doNotSell(appSettingsPreferencesStore: SettingsDataStore): GlobalPrivacyControl {
-        return GlobalPrivacyControlManager(appSettingsPreferencesStore)
     }
 
     @Provides
@@ -309,20 +284,78 @@ class BrowserModule {
         pixel: Pixel,
         fireproofWebsiteRepository: FireproofWebsiteRepository,
         appSettingsPreferencesStore: SettingsDataStore,
-        variantManager: VariantManager,
-        dispatchers: DispatcherProvider
+        dispatchers: DispatcherProvider,
     ): FireproofDialogsEventHandler {
-        return BrowserTabFireproofDialogsEventHandler(userEventsStore, pixel, fireproofWebsiteRepository, appSettingsPreferencesStore, variantManager, dispatchers)
+        return BrowserTabFireproofDialogsEventHandler(
+            userEventsStore,
+            pixel,
+            fireproofWebsiteRepository,
+            appSettingsPreferencesStore,
+            dispatchers,
+        )
     }
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
-    fun thirdPartyCookieManager(cookieManager: CookieManager, authCookiesAllowedDomainsRepository: AuthCookiesAllowedDomainsRepository): ThirdPartyCookieManager {
-        return AppThirdPartyCookieManager(cookieManager, authCookiesAllowedDomainsRepository)
+    fun thirdPartyCookieManager(
+        cookieManagerProvider: CookieManagerProvider,
+        authCookiesAllowedDomainsRepository: AuthCookiesAllowedDomainsRepository,
+        thirdPartyCookieNames: ThirdPartyCookieNames,
+        duckAiHostProvider: DuckAiHostProvider,
+    ): ThirdPartyCookieManager {
+        return AppThirdPartyCookieManager(cookieManagerProvider, authCookiesAllowedDomainsRepository, thirdPartyCookieNames, duckAiHostProvider)
+    }
+
+    private val Context.indonesiaNewTabSectionDataStore: DataStore<Preferences> by preferencesDataStore(
+        name = "indonesia_new_tab_section_store",
+    )
+
+    @Provides
+    @SingleIn(AppScope::class)
+    @IndonesiaNewTabSection
+    fun provideIndonesiaNewTabSectionDataStore(context: Context): DataStore<Preferences> {
+        return context.indonesiaNewTabSectionDataStore
     }
 
     @Provides
-    @Singleton
-    @IntoSet
-    fun serviceWorkerLifecycleObserver(serviceWorkerLifecycleObserver: ServiceWorkerLifecycleObserver): LifecycleObserver = serviceWorkerLifecycleObserver
+    fun provideSiteErrorStringHandler(): StringSiteErrorHandler {
+        return StringSiteErrorHandlerImpl()
+    }
+
+    @Provides
+    fun provideSiteErrorCodeHandler(): HttpCodeSiteErrorHandler {
+        return HttpCodeSiteErrorHandlerImpl()
+    }
+
+    @SingleIn(AppScope::class)
+    @Provides
+    fun provideHostnameResolver(
+        appBuildConfig: AppBuildConfig,
+        connectivityManager: ConnectivityManager,
+        dispatcherProvider: DispatcherProvider,
+    ): HostnameResolver {
+        val lookupTimeout = HostnameResolver.LOOKUP_TIMEOUT_MS.milliseconds
+        val dnsLookup = if (appBuildConfig.sdkInt >= 29) {
+            @Suppress("NewApi") // we use appBuildConfig
+            DnsLookupApi29Impl(dispatcherProvider, DnsResolver.getInstance())
+        } else {
+            DnsLookupPreApi29Impl(dispatcherProvider)
+        }
+        return HostnameResolverImpl(lookupTimeout, connectivityManager, dispatcherProvider, dnsLookup)
+    }
 }
+
+@Qualifier
+annotation class IndonesiaNewTabSection
+
+@ContributesPluginPoint(scope = AppScope::class, boundType = BookmarkAddedDialogPlugin::class)
+private interface BookmarkAddedDialogPluginPoint
+
+@ContributesPluginPoint(scope = AppScope::class, boundType = DuckAiChatDeletionListener::class)
+private interface DuckAiChatDeletionListenerPluginPoint
+
+@ContributesPluginPoint(scope = AppScope::class, boundType = BrowserMenuHighlightPlugin::class)
+private interface BrowserMenuHighlightPluginPoint
+
+@ContributesPluginPoint(scope = AppScope::class, boundType = TopInContextSection::class)
+private interface TopInContextSectionPluginPoint

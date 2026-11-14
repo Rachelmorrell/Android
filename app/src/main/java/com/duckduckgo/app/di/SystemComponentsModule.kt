@@ -18,61 +18,85 @@ package com.duckduckgo.app.di
 
 import android.content.Context
 import android.content.pm.PackageManager
-import androidx.lifecycle.LifecycleObserver
+import android.location.LocationManager
+import android.net.ConnectivityManager
 import com.duckduckgo.app.fire.FireAnimationLoader
 import com.duckduckgo.app.fire.LottieFireAnimationLoader
-import com.duckduckgo.app.global.DispatcherProvider
 import com.duckduckgo.app.global.shortcut.AppShortcutCreator
 import com.duckduckgo.app.icon.api.AppIconModifier
 import com.duckduckgo.app.icon.api.IconModifier
+import com.duckduckgo.app.lifecycle.MainProcessLifecycleObserver
 import com.duckduckgo.app.settings.db.SettingsDataStore
 import com.duckduckgo.app.systemsearch.DeviceAppListProvider
 import com.duckduckgo.app.systemsearch.DeviceAppLookup
 import com.duckduckgo.app.systemsearch.InstalledDeviceAppListProvider
 import com.duckduckgo.app.systemsearch.InstalledDeviceAppLookup
-import com.duckduckgo.di.scopes.AppObjectGraph
-import com.squareup.anvil.annotations.ContributesTo
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
+import com.duckduckgo.appbuildconfig.api.AppBuildConfig
+import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.Binds
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
-import javax.inject.Singleton
 
-@Module
-class SystemComponentsModule {
+@BindingContainer
+@ContributesTo(AppScope::class)
+object SystemComponentsModule {
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
     fun packageManager(context: Context): PackageManager = context.packageManager
 
-    @Singleton
+    @SingleIn(AppScope::class)
     @Provides
-    fun deviceAppsListProvider(packageManager: PackageManager): DeviceAppListProvider = InstalledDeviceAppListProvider(packageManager)
+    fun locationManager(context: Context): LocationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    @SingleIn(AppScope::class)
+    @Provides
+    fun connectivityManager(context: Context): ConnectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    @SingleIn(AppScope::class)
+    @Provides
+    fun deviceAppsListProvider(packageManager: PackageManager, dispatcherProvider: DispatcherProvider): DeviceAppListProvider =
+        InstalledDeviceAppListProvider(packageManager, dispatcherProvider)
 
     @Provides
-    @Singleton
-    fun deviceAppLookup(deviceAppListProvider: DeviceAppListProvider): DeviceAppLookup = InstalledDeviceAppLookup(deviceAppListProvider)
+    @SingleIn(AppScope::class)
+    fun deviceAppLookup(deviceAppListProvider: DeviceAppListProvider, dispatcherProvider: DispatcherProvider): DeviceAppLookup =
+        InstalledDeviceAppLookup(deviceAppListProvider, dispatcherProvider)
 
     @Provides
-    fun appIconModifier(context: Context, appShortcutCreator: AppShortcutCreator): IconModifier =
-        AppIconModifier(context, appShortcutCreator)
+    fun appIconModifier(
+        context: Context,
+        appShortcutCreator: AppShortcutCreator,
+        appBuildConfig: AppBuildConfig,
+    ): IconModifier =
+        AppIconModifier(context, appShortcutCreator, appBuildConfig)
 
     @Provides
     fun animatorLoader(
         context: Context,
         settingsDataStore: SettingsDataStore,
         dispatcherProvider: DispatcherProvider,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
+        @AppCoroutineScope appCoroutineScope: CoroutineScope,
     ): FireAnimationLoader {
-        return LottieFireAnimationLoader(context, settingsDataStore, dispatcherProvider, appCoroutineScope)
+        return LottieFireAnimationLoader(
+            context = context,
+            settingsDataStore = settingsDataStore,
+            dispatchers = dispatcherProvider,
+            appCoroutineScope = appCoroutineScope,
+        )
     }
 }
 
-@Module
-@ContributesTo(AppObjectGraph::class)
+@BindingContainer
+@ContributesTo(AppScope::class)
 abstract class SystemComponentsModuleBindings {
     @Binds
     @IntoSet
-    abstract fun animatorLoaderObserver(fireAnimationLoader: FireAnimationLoader): LifecycleObserver
+    abstract fun animatorLoaderObserver(fireAnimationLoader: FireAnimationLoader): MainProcessLifecycleObserver
 }

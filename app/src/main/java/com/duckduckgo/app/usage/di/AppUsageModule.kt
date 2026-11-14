@@ -16,34 +16,22 @@
 
 package com.duckduckgo.app.usage.di
 
-import androidx.lifecycle.LifecycleObserver
-import com.duckduckgo.app.di.AppCoroutineScope
 import com.duckduckgo.app.usage.app.AppDaysUsedDao
 import com.duckduckgo.app.usage.app.AppDaysUsedDatabaseRepository
-import com.duckduckgo.app.usage.app.AppDaysUsedRecorder
 import com.duckduckgo.app.usage.app.AppDaysUsedRepository
-import dagger.Module
-import dagger.Provides
-import dagger.multibindings.IntoSet
-import kotlinx.coroutines.CoroutineScope
-import javax.inject.Singleton
+import com.duckduckgo.di.scopes.AppScope
+import dev.zacsweers.metro.BindingContainer
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
 
-@Module
+@BindingContainer
+@ContributesTo(AppScope::class)
 class AppUsageModule {
 
     @Provides
-    @Singleton
-    @IntoSet
-    fun appDaysUsedRecorderObserver(
-        appDaysUsedRepository: AppDaysUsedRepository,
-        @AppCoroutineScope appCoroutineScope: CoroutineScope
-    ): LifecycleObserver {
-        return AppDaysUsedRecorder(appDaysUsedRepository, appCoroutineScope)
-    }
-
-    @Provides
-    @Singleton
-    fun appDaysUsedRespository(appDaysUsedDao: AppDaysUsedDao): AppDaysUsedRepository {
+    @SingleIn(AppScope::class)
+    fun appDaysUsedRepository(appDaysUsedDao: AppDaysUsedDao): AppDaysUsedRepository {
         return AppDaysUsedDatabaseRepository(appDaysUsedDao)
     }
 }

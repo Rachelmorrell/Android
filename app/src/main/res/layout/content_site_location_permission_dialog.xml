@@ -16,87 +16,67 @@
   ~ limitations under the License.
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:background="?toolbarBgColor"
-    android:gravity="center"
-    android:orientation="vertical">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            style="@style/Widget.DuckDuckGo.Dialog.Content"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <FrameLayout
-        android:id="@+id/sitePermissionDialogFaviconContainer"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="24dp"
-        android:background="@drawable/list_item_image_background"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/sitePermissionDialogFavicon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_gravity="center"
-            android:importantForAccessibility="no"
-            android:src="@drawable/ic_globe_gray_16dp" />
-    </FrameLayout>
+        <com.duckduckgo.common.ui.view.text.DaxTextView
+                android:id="@+id/sitePermissionDialogTitle"
+                app:typography="h2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/preciseLocationSiteDialogTitle"/>
 
-    <TextView
-        android:id="@+id/sitePermissionDialogTitle"
-        style="@style/LocationPermissionDialogTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/preciseLocationSiteDialogTitle" />
+        <com.duckduckgo.common.ui.view.text.DaxTextView
+                android:id="@+id/sitePermissionDialogSubtitle"
+                app:typography="body1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/keyline_2"
+                android:text="@string/preciseLocationSiteDialogSubtitle"/>
 
-    <TextView
-        android:id="@+id/sitePermissionDialogSubtitle"
-        style="@style/LocationPermissionDialogSubtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="24dp"
-        android:text="@string/preciseLocationSiteDialogSubtitle" />
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/keyline_5"
+                android:gravity="end"
+                android:orientation="vertical">
 
-    <View style="@style/LocationPermissionDialogSplitter" />
+            <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+                    android:id="@+id/siteAllowAlwaysLocationPermission"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preciseLocationSiteDialogAllowAlways"/>
 
-    <Button
-        android:id="@+id/siteAllowAlwaysLocationPermission"
-        style="@style/LocationPermissionDialogButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/preciseLocationSiteDialogAllowAlways" />
+            <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+                    android:id="@+id/siteAllowOnceLocationPermission"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preciseLocationSiteDialogAllowOnce"/>
 
-    <View
-        android:id="@+id/siteAllowOnceLocationPermissionDivider"
-        style="@style/LocationPermissionDialogSplitter" />
+            <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+                    android:id="@+id/siteDenyOnceLocationPermission"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preciseLocationSiteDialogDenyOnce"/>
 
-    <Button
-        android:id="@+id/siteAllowOnceLocationPermission"
-        style="@style/LocationPermissionDialogButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/preciseLocationSiteDialogAllowOnce" />
+            <com.duckduckgo.common.ui.view.button.DaxButtonGhost
+                    android:id="@+id/siteDenyAlwaysLocationPermission"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preciseLocationSiteDialogDenyAlways"/>
 
-    <View style="@style/LocationPermissionDialogSplitter"
-        android:id="@+id/siteDenyLocationPermissionDivider"/>
+        </LinearLayout>
 
-    <Button
-        android:id="@+id/siteDenyOnceLocationPermission"
-        style="@style/LocationPermissionDialogButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/preciseLocationSiteDialogDenyOnce" />
+    </LinearLayout>
 
-    <View style="@style/LocationPermissionDialogSplitter" />
-
-    <Button
-        android:id="@+id/siteDenyAlwaysLocationPermission"
-        style="@style/LocationPermissionDialogButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/preciseLocationSiteDialogDenyAlways" />
-
-</LinearLayout>
+</ScrollView>

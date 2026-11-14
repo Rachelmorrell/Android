@@ -1,0 +1,148 @@
+/*
+ * Copyright (c) 2023 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.subscriptions.impl.services
+
+import com.duckduckgo.codegen.annotations.ContributesNonCachingServiceApi
+import com.duckduckgo.di.scopes.AppScope
+import com.duckduckgo.subscriptions.impl.auth.AuthRequired
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
+
+@ContributesNonCachingServiceApi(AppScope::class)
+interface SubscriptionsService {
+    @AuthRequired
+    @GET("https://subscriptions.duckduckgo.com/api/subscription")
+    suspend fun subscription(): SubscriptionResponse
+
+    @AuthRequired
+    @GET("https://subscriptions.duckduckgo.com/api/checkout/portal")
+    suspend fun portal(): PortalResponse
+
+    @AuthRequired
+    @POST("https://subscriptions.duckduckgo.com/api/purchase/confirm/google")
+    suspend fun confirm(
+        @Body confirmationBody: ConfirmationBody,
+    ): ConfirmationResponse
+
+    @GET("https://subscriptions.duckduckgo.com/api/products/{sku}/features")
+    suspend fun features(@Path("sku") sku: String): FeaturesResponse
+
+    @GET("https://subscriptions.duckduckgo.com/api/v2/products")
+    suspend fun tierProducts(
+        @Query("platform") platform: String,
+        @Query("region") region: String? = null,
+        @Query("country") country: String? = null,
+    ): TierProductsResponse
+
+    @AuthRequired
+    @GET("https://subscriptions.duckduckgo.com/api/subscription/withdraw")
+    suspend fun withdrawalEligibility(): WithdrawalEligibilityResponse
+
+    @AuthRequired
+    @POST("https://subscriptions.duckduckgo.com/api/subscription/withdraw")
+    suspend fun withdraw(): WithdrawResponse
+}
+
+data class PortalResponse(val customerPortalUrl: String)
+
+data class SubscriptionResponse(
+    val productId: String,
+    val billingPeriod: String,
+    val startedAt: Long,
+    val expiresOrRenewsAt: Long,
+    val platform: String,
+    val status: String,
+    val activeOffers: List<ActiveOfferResponse>,
+    val pendingPlans: List<PendingPlanResponse> = emptyList(),
+    val planCountry: String? = null,
+)
+
+data class PendingPlanResponse(
+    val productId: String,
+    val billingPeriod: String,
+    val effectiveAt: Long,
+    val status: String,
+    val tier: String,
+)
+
+data class ActiveOfferResponse(
+    val type: String,
+)
+
+data class ConfirmationBody(
+    val packageName: String,
+    val purchaseToken: String,
+    val experiments: List<ExperimentData>? = null,
+    val experimentName: String? = null,
+    val experimentCohort: String? = null,
+)
+
+data class ExperimentData(
+    val experimentName: String,
+    val experimentCohort: String,
+)
+
+data class ConfirmationResponse(
+    val email: String,
+    val entitlements: List<ConfirmationEntitlement>,
+    val subscription: SubscriptionResponse,
+)
+
+data class ConfirmationEntitlement(
+    val product: String,
+    val name: String,
+)
+
+data class FeaturesResponse(
+    val features: List<String>,
+)
+
+data class TierProductsResponse(
+    val products: List<TierProductResponse>,
+)
+
+data class TierProductResponse(
+    val productName: String,
+    val tier: String,
+    val regions: List<String>,
+    val entitlements: List<TierFeatureResponse>,
+    val billingCycles: List<BillingCycleResponse>,
+)
+
+data class BillingCycleResponse(
+    val productId: String,
+    val period: String,
+    val price: String,
+    val currency: String,
+)
+
+data class WithdrawalEligibilityResponse(
+    val eligible: Boolean,
+    val eligibleUntil: Long?,
+    val refundAmount: String?,
+    val refundCurrency: String?,
+    val reason: String?,
+)
+
+data class WithdrawResponse(
+    val refundedAmount: String?,
+    val currency: String?,
+    val requestedAt: Long?,
+)

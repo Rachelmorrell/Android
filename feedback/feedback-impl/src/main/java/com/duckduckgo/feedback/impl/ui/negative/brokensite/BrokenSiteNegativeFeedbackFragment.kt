@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2019 DuckDuckGo
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.duckduckgo.feedback.impl.ui.negative.brokensite
+
+import android.os.Bundle
+import androidx.core.view.doOnNextLayout
+import com.duckduckgo.codegen.annotations.InjectWith
+import com.duckduckgo.common.ui.store.AppBrandDesignUpdateToggles
+import com.duckduckgo.common.ui.viewbinding.viewBinding
+import com.duckduckgo.di.scopes.FragmentScope
+import com.duckduckgo.feedback.impl.R
+import com.duckduckgo.feedback.impl.databinding.ContentFeedbackNegativeBrokenSiteFeedbackBinding
+import com.duckduckgo.feedback.impl.ui.common.FeedbackFragment
+import com.duckduckgo.feedback.impl.ui.common.LayoutScrollingTouchListener
+import com.duckduckgo.feedback.impl.ui.common.resolveFeedbackFaceAsset
+import javax.inject.Inject
+
+@InjectWith(FragmentScope::class)
+class BrokenSiteNegativeFeedbackFragment : FeedbackFragment(R.layout.content_feedback_negative_broken_site_feedback) {
+
+    interface BrokenSiteFeedbackListener {
+        fun onProvidedBrokenSiteFeedback(
+            feedback: String,
+            url: String?,
+        )
+
+        fun userCancelled()
+    }
+
+    private val binding: ContentFeedbackNegativeBrokenSiteFeedbackBinding by viewBinding()
+
+    private val viewModel by bindViewModel<BrokenSiteNegativeFeedbackViewModel>()
+
+    private val listener: BrokenSiteFeedbackListener?
+        get() = activity as BrokenSiteFeedbackListener
+
+    @Inject
+    lateinit var appBrandDesignUpdateToggles: AppBrandDesignUpdateToggles
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+
+        if (appBrandDesignUpdateToggles.pictograms().isEnabled()) {
+            binding.emoticonImage.setImageResource(
+                resolveFeedbackFaceAsset(isPositive = false, isPictogramsEnabled = true),
+            )
+        }
+    }
+
+    override fun configureViewModelObservers() {
+        viewModel.command.observe(this) { command ->
+            when (command) {
+                is BrokenSiteNegativeFeedbackViewModel.Command.Exit -> {
+                    listener?.userCancelled()
+                }
+                is BrokenSiteNegativeFeedbackViewModel.Command.ExitAndSubmitFeedback -> {
+                    listener?.onProvidedBrokenSiteFeedback(command.feedback, command.brokenSite)
+                }
+            }
+        }
+    }
+
+    override fun configureListeners() {
+        with(binding) {
+            submitFeedbackButton.doOnNextLayout {
+                brokenSiteInput.setOnTouchListener(LayoutScrollingTouchListener(rootScrollView, brokenSiteInput.y.toInt()))
+                openEndedFeedback.setOnTouchListener(LayoutScrollingTouchListener(rootScrollView, openEndedFeedback.y.toInt()))
+            }
+
+            submitFeedbackButton.setOnClickListener {
+                val feedback = openEndedFeedback.text
+                val brokenSite = brokenSiteInput.text
+
+                viewModel.userSubmittingFeedback(feedback, brokenSite)
+            }
+        }
+    }
+
+    companion object {
+        fun instance(): BrokenSiteNegativeFeedbackFragment {
+            return BrokenSiteNegativeFeedbackFragment()
+        }
+    }
+}
